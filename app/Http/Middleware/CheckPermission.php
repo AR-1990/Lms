@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class CheckPermission
+{
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  string  ...$permissions
+     */
+    public function handle(Request $request, Closure $next, ...$permissions): Response
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+                'data' => null,
+                'errors' => ['auth' => ['You must be logged in to perform this action.']],
+            ], 401);
+        }
+
+        if (!$user->hasPermission($permissions)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden: You do not have the required permission to access this resource.',
+                'data' => null,
+                'errors' => [
+                    'permission' => [
+                        'Required permission(s): ' . implode(', ', (array) $permissions),
+                    ],
+                ],
+            ], 403);
+        }
+
+        return $next($request);
+    }
+}
