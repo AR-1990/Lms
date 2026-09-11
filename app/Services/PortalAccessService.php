@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 class PortalAccessService
 {
@@ -24,7 +25,20 @@ class PortalAccessService
      */
     public function getPortalKeys(): array
     {
-        return array_keys($this->getPortalDefinitions());
+        return collect($this->getPortalDefinitions())->keys()->values()->all();
+    }
+
+    /**
+     * Get all portals the user can open.
+     *
+     * @return array<int, string>
+     */
+    public function getAccessiblePortals(User $user): array
+    {
+        return collect($this->getPortalKeys())
+            ->filter(fn (string $portal): bool => $this->canAccessPortal($user, $portal))
+            ->values()
+            ->all();
     }
 
     /**
@@ -56,28 +70,26 @@ class PortalAccessService
      */
     public function resolveDashboard(User $user, ?string $preferredPortal = null): ?array
     {
-        $portalCandidates = $this->getPortalCandidates($user);
+        $portalCandidates = collect($this->getPortalCandidates($user));
 
-        if ($preferredPortal !== null && in_array($preferredPortal, $portalCandidates, true)) {
-            $portalCandidates = [
-                $preferredPortal,
-                ...array_values(array_diff($portalCandidates, [$preferredPortal])),
-            ];
+        if ($preferredPortal !== null && $portalCandidates->contains($preferredPortal)) {
+            $portalCandidates = $portalCandidates
+                ->reject(fn (string $portal): bool => $portal === $preferredPortal)
+                ->prepend($preferredPortal);
         }
 
-        foreach ($portalCandidates as $portal) {
-            if (! $this->canAccessPortal($user, $portal)) {
-                continue;
-            }
+        $selectedPortal = $portalCandidates
+            ->first(fn (string $portal): bool => $this->canAccessPortal($user, $portal));
 
-            return [
-                'portal' => $portal,
-                'view' => $this->getPortalDefinitions()[$portal]['dashboard_view'],
-                'data' => $this->getDashboardData($portal, $user),
-            ];
+        if ($selectedPortal === null) {
+            return null;
         }
 
-        return null;
+        return [
+            'portal' => $selectedPortal,
+            'view' => $this->getPortalDefinitions()[$selectedPortal]['dashboard_view'],
+            'data' => $this->getDashboardData($selectedPortal, $user),
+        ];
     }
 
     /**
@@ -85,22 +97,19 @@ class PortalAccessService
      */
     private function getPortalCandidates(User $user): array
     {
-        $candidates = [];
+        $definitions = $this->getPortalDefinitions();
 
-        if ($user->hasRole('admin')) {
-            $candidates[] = 'admin';
-        }
-
-        foreach ($user->roles as $role) {
-            if (array_key_exists($role->slug, $this->getPortalDefinitions())) {
-                $candidates[] = $role->slug;
-            }
-        }
-
-        return array_values(array_unique([
-            ...$candidates,
-            ...$this->getPortalKeys(),
-        ]));
+        return $user->roles
+            ->pluck('slug')
+            ->filter(fn (string $slug): bool => array_key_exists($slug, $definitions))
+            ->when(
+                $user->hasRole('admin'),
+                fn (Collection $roles): Collection => $roles->prepend('admin'),
+            )
+            ->concat($this->getPortalKeys())
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

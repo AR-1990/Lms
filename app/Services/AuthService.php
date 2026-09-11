@@ -9,41 +9,36 @@ use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
+    public function __construct(private PortalAccessService $portalAccessService) {}
+
     /**
      * Authenticate a user and create a personal access token.
      *
-     * @param array $credentials
-     * @param string $deviceName
-     * @return array
      * @throws ValidationException
      */
     public function login(array $credentials, string $deviceName = 'mobile-or-web'): array
     {
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Invalid email or password.'],
             ]);
         }
 
-        // Generate Sanctum Token
         $token = $user->createToken($deviceName)->plainTextToken;
+        $payload = $this->buildAuthenticatedPayload($user->fresh(), $deviceName);
 
         return [
             'token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->loadMissing(['roles.permissions']),
+            'user' => $payload['user'],
+            'authorization' => $payload['authorization'],
         ];
     }
 
     /**
      * Register a new user and assign default/specified role.
-     *
-     * @param array $data
-     * @param string $roleSlug
-     * @param string $deviceName
-     * @return array
      */
     public function register(array $data, string $roleSlug = 'student', string $deviceName = 'mobile-or-web'): array
     {
@@ -53,18 +48,20 @@ class AuthService
             'password' => Hash::make($data['password']),
         ]);
 
-        // Find or fallback to student role
         $role = Role::where('slug', $roleSlug)->first();
+
         if ($role) {
             $user->assignRole($role);
         }
 
         $token = $user->createToken($deviceName)->plainTextToken;
+        $payload = $this->buildAuthenticatedPayload($user->fresh(), $deviceName);
 
         return [
             'token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->loadMissing(['roles.permissions']),
+            'user' => $payload['user'],
+            'authorization' => $payload['authorization'],
         ];
     }
 
@@ -79,9 +76,9 @@ class AuthService
     /**
      * Get user profile details with roles and permissions directly.
      */
-    public function getProfile(User $user): User
+    public function getProfile(User $user, ?string $deviceName = null): array
     {
-        return $user->loadMissing(['roles.permissions']);
+        return $this->buildAuthenticatedPayload($user, $deviceName);
     }
 
     /**
@@ -102,7 +99,7 @@ class AuthService
      */
     public function changePassword(User $user, string $currentPassword, string $newPassword): bool
     {
-        if (!Hash::check($currentPassword, $user->password)) {
+        if (! Hash::check($currentPassword, $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => ['The provided password does not match your current password.'],
             ]);
@@ -113,5 +110,52 @@ class AuthService
         ]);
 
         return true;
+    }
+
+    /**
+     * @return array{user: User, authorization: array<string, mixed>}
+     */
+    private function buildAuthenticatedPayload(User $user, ?string $deviceName = null): array
+    {
+        $authenticatedUser = $user->loadMissing(['roles.permissions']);
+        $roles = $authenticatedUser->roles->pluck('slug')->filter()->values();
+        $permissions = $authenticatedUser->roles
+            ->pluck('permissions')
+            ->flatten()
+            ->pluck('slug')
+            ->filter()
+            ->unique()
+            ->values();
+        $currentAccessToken = $authenticatedUser->currentAccessToken();
+
+        return [
+            'user' => $authenticatedUser,
+            'authorization' => [
+                'role' => $roles->first(),
+                'roles' => $roles->all(),
+                'permissions' => $permissions->all(),
+                'portals' => $this->portalAccessService->getAccessiblePortals($authenticatedUser),
+                'is_admin' => $authenticatedUser->hasRole('admin'),
+                'device_name' => $deviceName ?? $currentAccessToken?->name,
+                'token' => $this->formatCurrentAccessToken($currentAccessToken),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function formatCurrentAccessToken(mixed $token): ?array
+    {
+        if ($token === null) {
+            return null;
+        }
+
+        return [
+            'id' => $token->id,
+            'name' => $token->name,
+            'last_used_at' => $token->last_used_at,
+            'expires_at' => $token->expires_at,
+        ];
     }
 }

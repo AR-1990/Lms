@@ -45,7 +45,10 @@ class User extends Authenticatable
      */
     public function hasRole(string|array $roles): bool
     {
-        $roleList = array_values(array_filter(array_map('trim', is_array($roles) ? $roles : explode(',', $roles))));
+        $roleList = collect(is_array($roles) ? $roles : explode(',', str_replace(' ', '', $roles)))
+            ->filter()
+            ->values()
+            ->all();
 
         if ($roleList === []) {
             return false;
@@ -81,7 +84,10 @@ class User extends Authenticatable
             return true;
         }
 
-        $permissionList = array_values(array_filter(array_map('trim', is_array($permissions) ? $permissions : explode(',', $permissions))));
+        $permissionList = collect(is_array($permissions) ? $permissions : explode(',', str_replace(' ', '', $permissions)))
+            ->filter()
+            ->values()
+            ->all();
 
         if ($permissionList === []) {
             return false;

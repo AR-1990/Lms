@@ -63,9 +63,12 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        $profile = $this->authService->getProfile($request->user());
+        $profile = $this->authService->getProfile(
+            $request->user(),
+            $request->user()->currentAccessToken()?->name,
+        );
 
-        return $this->successResponse($profile, 'User profile fetched successfully.');
+        return $this->successResponse($profile, 'Authenticated user profile fetched successfully.');
     }
 
     /**
