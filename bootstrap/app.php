@@ -32,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->group(base_path($file));
             };
 
-            $registerErpPublicRoutes('api/erp/auth', 'erp.auth.', 'routes/auth.php');
+            $registerErpPublicRoutes('api', 'api.', 'routes/auth.php');
             $registerErpProtectedRoutes('routes/erp-access.php');
             $registerErpProtectedRoutes('routes/erp-admin.php');
             $registerErpProtectedRoutes('routes/erp-teacher.php');

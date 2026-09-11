@@ -18,6 +18,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Administrator',
                 'description' => 'Full access to ERP system, configuration, and users.',
+                'dashboard_view' => 'dashboards.portal',
                 'is_system' => true,
             ],
         );
@@ -27,6 +28,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Teacher',
                 'description' => 'Access to classes, attendance, and grading.',
+                'dashboard_view' => 'dashboards.portal',
                 'is_system' => true,
             ],
         );
@@ -36,6 +38,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Student',
                 'description' => 'Access to academic and self-service features.',
+                'dashboard_view' => 'dashboards.portal',
                 'is_system' => true,
             ],
         );
@@ -45,6 +48,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Parent',
                 'description' => 'Access to children, fees, and notices.',
+                'dashboard_view' => 'dashboards.portal',
                 'is_system' => true,
             ],
         );
@@ -54,6 +58,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Accounts',
                 'description' => 'Access to collections, challans, and payroll.',
+                'dashboard_view' => 'dashboards.portal',
                 'is_system' => true,
             ],
         );

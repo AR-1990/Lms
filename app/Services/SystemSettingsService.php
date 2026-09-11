@@ -6,6 +6,10 @@ use App\Models\Country;
 use App\Models\Currency;
 use App\Models\Region;
 use App\Models\SystemSetting;
+use Database\Seeders\CountrySeeder;
+use Database\Seeders\CurrencySeeder;
+use Database\Seeders\RegionSeeder;
+use Database\Seeders\SystemSettingSeeder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
@@ -15,6 +19,7 @@ class SystemSettingsService
 {
     public function getSettingsPageData(): array
     {
+        $this->ensureReferenceData();
         $settings = $this->getSettingsRecord();
 
         return [
@@ -27,11 +32,14 @@ class SystemSettingsService
 
     public function getSettingsPayload(): array
     {
+        $this->ensureReferenceData();
+
         return $this->formatSettings($this->getSettingsRecord());
     }
 
     public function updateSettings(array $validatedData, ?UploadedFile $logo = null): array
     {
+        $this->ensureReferenceData();
         $settings = $this->getSettingsRecord();
 
         $payload = [
@@ -128,6 +136,22 @@ class SystemSettingsService
             }
         } catch (Throwable) {
         }
+    }
+
+    private function ensureReferenceData(): void
+    {
+        if (! Schema::hasTable('countries') || ! Schema::hasTable('regions') || ! Schema::hasTable('currencies')) {
+            return;
+        }
+
+        if (Country::query()->exists() && Region::query()->exists() && Currency::query()->exists()) {
+            return;
+        }
+
+        (new CountrySeeder)->run();
+        (new RegionSeeder)->run();
+        (new CurrencySeeder)->run();
+        (new SystemSettingSeeder)->run();
     }
 
     private function getSettingsRecord(): SystemSetting

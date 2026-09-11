@@ -15,6 +15,7 @@ class Role extends Model
         'name',
         'slug',
         'description',
+        'dashboard_view',
         'is_system',
     ];
 

@@ -20,7 +20,7 @@ class ErpApiTest extends TestCase
 
     public function test_admin_can_login_and_get_sanctum_token(): void
     {
-        $response = $this->postJson('/api/erp/auth/login', [
+        $response = $this->postJson('/api/login', [
             'email' => 'admin@lms.test',
             'password' => 'password',
             'device_name' => 'flutter-app',
@@ -46,9 +46,43 @@ class ErpApiTest extends TestCase
         $this->assertNotEmpty($response->json('data.token'));
     }
 
+    public function test_admin_can_login_from_api_auth_route_and_get_sanctum_token(): void
+    {
+        $response = $this->postJson('/api/login', [
+            'email' => 'admin@lms.test',
+            'password' => 'password',
+            'device_name' => 'mobile-app',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Login successful.',
+            ])
+            ->assertJsonStructure([
+                'data' => [
+                    'token',
+                    'token_type',
+                    'user' => [
+                        'id',
+                        'name',
+                        'email',
+                    ],
+                    'authorization' => [
+                        'roles',
+                        'permissions',
+                        'portals',
+                        'device_name',
+                    ],
+                ],
+            ]);
+
+        $this->assertNotEmpty($response->json('data.token'));
+    }
+
     public function test_user_cannot_login_with_invalid_credentials(): void
     {
-        $response = $this->postJson('/api/erp/auth/login', [
+        $response = $this->postJson('/api/login', [
             'email' => 'admin@lms.test',
             'password' => 'wrong-password',
         ]);
@@ -64,7 +98,7 @@ class ErpApiTest extends TestCase
 
     public function test_login_validation_response_is_returned_in_custom_keyed_format(): void
     {
-        $response = $this->postJson('/api/erp/auth/login', []);
+        $response = $this->postJson('/api/login', []);
 
         $response->assertStatus(422)
             ->assertJson([
@@ -81,7 +115,7 @@ class ErpApiTest extends TestCase
         $admin = User::where('email', 'admin@lms.test')->first();
 
         $response = $this->actingAs($admin, 'sanctum')
-            ->getJson('/api/erp/auth/me');
+            ->getJson('/api/me');
 
         $response->assertStatus(200)
             ->assertJson([

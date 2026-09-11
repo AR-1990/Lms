@@ -100,42 +100,8 @@ class AdminService
         return [
             'overview' => $summary['overview'],
             'roles_breakdown' => $summary['roles_breakdown'],
-            'reports' => [
-                [
-                    'name' => 'Enrollment Summary',
-                    'period' => 'Fall 2026',
-                    'owner' => 'Academics',
-                    'status' => 'Ready',
-                    'updated' => '02 Sep 2026',
-                ],
-                [
-                    'name' => 'Attendance Compliance',
-                    'period' => 'Aug 2026',
-                    'owner' => 'Faculty Desk',
-                    'status' => 'Ready',
-                    'updated' => '01 Sep 2026',
-                ],
-                [
-                    'name' => 'Fee Collection vs Target',
-                    'period' => 'Q3 2026',
-                    'owner' => 'Accounts',
-                    'status' => 'In Review',
-                    'updated' => '31 Aug 2026',
-                ],
-                [
-                    'name' => 'Staff Access Audit',
-                    'period' => 'Last 30 days',
-                    'owner' => 'IT Security',
-                    'status' => 'Ready',
-                    'updated' => '30 Aug 2026',
-                ],
-            ],
-            'kpis' => [
-                ['label' => 'Avg. Class Attendance', 'value' => '94.8%'],
-                ['label' => 'Fee Recovery Rate', 'value' => '87.2%'],
-                ['label' => 'Open Support Tickets', 'value' => '12'],
-                ['label' => 'Portal Uptime', 'value' => '99.9%'],
-            ],
+            'reports' => [],
+            'kpis' => [],
         ];
     }
 }
