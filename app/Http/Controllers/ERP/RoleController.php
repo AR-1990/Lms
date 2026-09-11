@@ -5,12 +5,12 @@ namespace App\Http\Controllers\ERP;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ERP\AssignRoleRequest;
 use App\Http\Requests\ERP\CreateRoleRequest;
+use App\Http\Requests\ERP\SyncUserRolesRequest;
 use App\Http\Requests\ERP\UpdateRoleRequest;
 use App\Models\Role;
 use App\Services\RolePermissionService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
@@ -135,16 +135,12 @@ class RoleController extends Controller
     /**
      * Sync multiple roles for a user.
      */
-    public function syncUserRoles(Request $request): JsonResponse
+    public function syncUserRoles(SyncUserRolesRequest $request): JsonResponse
     {
-        $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'roles' => ['required', 'array'],
-            'roles.*' => ['required'],
-        ]);
+        $validated = $request->validated();
 
         try {
-            $user = $this->roleService->syncUserRoles($request->user_id, $request->roles);
+            $user = $this->roleService->syncUserRoles($validated['user_id'], $validated['roles']);
 
             return $this->successResponse([
                 'user_id' => $user->id,

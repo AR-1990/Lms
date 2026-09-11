@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,7 +19,7 @@ class PortalAccessTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     public function test_parent_can_login_and_open_parent_portal_pages(): void
@@ -51,6 +51,22 @@ class PortalAccessTest extends TestCase
         $this->get('/parent/children')->assertOk();
         $this->get('/parent/fees')->assertOk();
         $this->get('/parent/notices')->assertOk();
+    }
+
+    public function test_admin_always_lands_on_admin_dashboard_and_can_see_settings_option(): void
+    {
+        $response = $this->post('/login', [
+            'role' => 'student',
+            'username' => 'admin@lms.test',
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('dashboard'));
+
+        $this->get('/dashboard')
+            ->assertOk()
+            ->assertSee('System Overview')
+            ->assertSee('Settings');
     }
 
     public function test_custom_role_can_login_to_accounts_portal_through_permissions(): void

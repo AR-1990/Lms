@@ -8,6 +8,8 @@ use App\Models\User;
 
 class AdminService
 {
+    public function __construct(private SystemSettingsService $systemSettingsService) {}
+
     /**
      * Get system-wide dashboard overview and statistics directly via Eloquent SQL.
      */
@@ -21,6 +23,7 @@ class AdminService
 
         $recentUsers = User::with('roles')->latest()->take(5)->get();
         $rolesBreakdown = Role::withCount('users')->orderBy('name')->get();
+        $settings = $this->systemSettingsService->getSettingsPayload();
 
         return [
             'overview' => [
@@ -37,6 +40,9 @@ class AdminService
                 'php_version' => PHP_VERSION,
                 'laravel_version' => app()->version(),
                 'status' => 'operational',
+                'timezone' => $settings['timezone'],
+                'school_name' => $settings['school_name'] ?? config('app.name'),
+                'currency' => $settings['currency']['code'] ?? null,
             ],
         ];
     }

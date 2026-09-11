@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +15,7 @@ class ErpApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     public function test_admin_can_login_and_get_sanctum_token(): void
@@ -57,7 +57,23 @@ class ErpApiTest extends TestCase
             ->assertJson([
                 'success' => false,
                 'message' => 'Authentication failed.',
-            ]);
+            ])
+            ->assertJsonPath('errors.first_key', 'email')
+            ->assertJsonPath('errors.fields.email.0', 'Invalid email or password.');
+    }
+
+    public function test_login_validation_response_is_returned_in_custom_keyed_format(): void
+    {
+        $response = $this->postJson('/api/erp/auth/login', []);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Validation failed.',
+            ])
+            ->assertJsonPath('errors.first_key', 'email')
+            ->assertJsonPath('errors.fields.email.0', 'The email field is required.')
+            ->assertJsonPath('errors.fields.password.0', 'The password field is required.');
     }
 
     public function test_me_endpoint_returns_user_role_permissions_and_portals(): void
@@ -127,7 +143,8 @@ class ErpApiTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-            ]);
+            ])
+            ->assertJsonPath('errors.first_key', 'permission');
     }
 
     public function test_teacher_can_access_teacher_dashboard_and_classes(): void
@@ -323,6 +340,8 @@ class ErpApiTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-            ]);
+            ])
+            ->assertJsonPath('errors.first_key', 'role')
+            ->assertJsonPath('errors.fields.role.0', 'System roles cannot be deleted.');
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Portal\AccountsPortalController;
 use App\Http\Controllers\Portal\AdminPortalController;
+use App\Http\Controllers\Portal\AdminSettingsController;
 use App\Http\Controllers\Portal\ParentPortalController;
 use App\Http\Controllers\Portal\StudentPortalController;
 use App\Http\Controllers\Portal\TeacherPortalController;
@@ -36,6 +37,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', [AdminPortalController::class, 'users'])->middleware('permission:manage-users')->name('users');
         Route::get('/roles', [AdminPortalController::class, 'roles'])->middleware('permission:manage-roles')->name('roles');
         Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats')->name('reports');
+        Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:manage-settings')->name('settings');
+        Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('permission:manage-settings')->name('settings.update');
     });
 
     Route::prefix('teacher')->name('teacher.')->group(function () {

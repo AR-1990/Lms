@@ -2,43 +2,29 @@
 
 namespace App\Traits;
 
+use App\Support\ApiResponseHelper;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\MessageBag;
 
 trait ApiResponse
 {
     /**
      * Return a success JSON response.
      *
-     * @param mixed $data
-     * @param string $message
-     * @param int $code
-     * @return JsonResponse
+     * @param  mixed  $data
      */
     protected function successResponse($data = null, string $message = 'Success', int $code = 200): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => $data,
-            'errors' => null,
-        ], $code);
+        return ApiResponseHelper::success($data, $message, $code);
     }
 
     /**
      * Return an error JSON response.
      *
-     * @param string $message
-     * @param int $code
-     * @param mixed $errors
-     * @return JsonResponse
+     * @param  mixed  $errors
      */
-    protected function errorResponse(string $message = 'Error', int $code = 400, $errors = null): JsonResponse
+    protected function errorResponse(string $message = 'Error', int $code = 400, MessageBag|array|null $errors = null): JsonResponse
     {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'data' => null,
-            'errors' => $errors,
-        ], $code);
+        return ApiResponseHelper::error($message, $code, $errors);
     }
 }

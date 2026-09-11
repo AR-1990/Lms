@@ -27,6 +27,7 @@ class DashboardController extends Controller
             'data' => $dashboard['data'],
             'active' => 'dashboard',
             'portal' => $dashboard['portal'],
+            'sidebar' => $this->portalAccessService->getSidebarConfig($user, $dashboard['portal'], 'dashboard'),
         ]);
     }
 }

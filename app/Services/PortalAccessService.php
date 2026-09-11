@@ -3,10 +3,45 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Collection;
 
 class PortalAccessService
 {
+    private const PORTAL_DEFINITIONS = [
+        'admin' => [
+            'roles' => ['admin'],
+            'permissions' => ['manage-users', 'manage-roles', 'view-stats'],
+            'dashboard_view' => 'dashboards.admin',
+        ],
+        'teacher' => [
+            'roles' => ['teacher'],
+            'permissions' => ['manage-classes', 'record-attendance', 'submit-grades'],
+            'dashboard_view' => 'dashboards.teacher',
+        ],
+        'student' => [
+            'roles' => ['student'],
+            'permissions' => ['view-courses', 'view-attendance', 'view-grades'],
+            'dashboard_view' => 'dashboards.student',
+        ],
+        'parent' => [
+            'roles' => ['parent'],
+            'permissions' => ['view-children', 'view-fees', 'view-attendance', 'view-grades', 'view-notices'],
+            'dashboard_view' => 'dashboards.parent',
+        ],
+        'accounts' => [
+            'roles' => ['accounts'],
+            'permissions' => ['manage-fees', 'view-payroll', 'view-fees'],
+            'dashboard_view' => 'dashboards.accounts',
+        ],
+    ];
+
+    private const ROLE_LABELS = [
+        'admin' => 'Administration',
+        'teacher' => 'Faculty',
+        'student' => 'Student LMS',
+        'parent' => 'Parent Portal',
+        'accounts' => 'Accounts',
+    ];
+
     /**
      * Create a new class instance.
      */
@@ -25,7 +60,7 @@ class PortalAccessService
      */
     public function getPortalKeys(): array
     {
-        return collect($this->getPortalDefinitions())->keys()->values()->all();
+        return array_keys(self::PORTAL_DEFINITIONS);
     }
 
     /**
@@ -35,10 +70,26 @@ class PortalAccessService
      */
     public function getAccessiblePortals(User $user): array
     {
-        return collect($this->getPortalKeys())
-            ->filter(fn (string $portal): bool => $this->canAccessPortal($user, $portal))
-            ->values()
-            ->all();
+        return array_values(array_filter(
+            $this->getPortalKeys(),
+            fn (string $portal): bool => $this->canAccessPortal($user, $portal),
+        ));
+    }
+
+    /**
+     * Build sidebar configuration for the dashboard shell.
+     *
+     * @return array{role_slug: string, role_label: string, markup: string}
+     */
+    public function getSidebarConfig(User $user, ?string $portal = null, string $active = 'dashboard'): array
+    {
+        $roleSlug = $this->resolveSidebarRoleSlug($user, $portal);
+
+        return [
+            'role_slug' => $roleSlug,
+            'role_label' => $this->getSidebarRoleLabel($roleSlug),
+            'markup' => $this->getSidebarMarkup($user, $roleSlug, $active),
+        ];
     }
 
     /**
@@ -46,7 +97,7 @@ class PortalAccessService
      */
     public function canAccessPortal(User $user, string $portal): bool
     {
-        $definition = $this->getPortalDefinitions()[$portal] ?? null;
+        $definition = $this->getPortalDefinition($portal);
 
         if ($definition === null) {
             return false;
@@ -70,24 +121,17 @@ class PortalAccessService
      */
     public function resolveDashboard(User $user, ?string $preferredPortal = null): ?array
     {
-        $portalCandidates = collect($this->getPortalCandidates($user));
-
-        if ($preferredPortal !== null && $portalCandidates->contains($preferredPortal)) {
-            $portalCandidates = $portalCandidates
-                ->reject(fn (string $portal): bool => $portal === $preferredPortal)
-                ->prepend($preferredPortal);
-        }
-
-        $selectedPortal = $portalCandidates
-            ->first(fn (string $portal): bool => $this->canAccessPortal($user, $portal));
+        $selectedPortal = $this->resolveSelectedPortal($user, $preferredPortal);
 
         if ($selectedPortal === null) {
             return null;
         }
 
+        $definition = $this->getPortalDefinition($selectedPortal);
+
         return [
             'portal' => $selectedPortal,
-            'view' => $this->getPortalDefinitions()[$selectedPortal]['dashboard_view'],
+            'view' => $definition['dashboard_view'],
             'data' => $this->getDashboardData($selectedPortal, $user),
         ];
     }
@@ -97,53 +141,140 @@ class PortalAccessService
      */
     private function getPortalCandidates(User $user): array
     {
-        $definitions = $this->getPortalDefinitions();
+        if ($user->hasRole('admin')) {
+            return array_values(array_unique(['admin', ...$this->getPortalKeys()]));
+        }
 
-        return $user->roles
-            ->pluck('slug')
-            ->filter(fn (string $slug): bool => array_key_exists($slug, $definitions))
-            ->when(
-                $user->hasRole('admin'),
-                fn (Collection $roles): Collection => $roles->prepend('admin'),
-            )
-            ->concat($this->getPortalKeys())
-            ->unique()
-            ->values()
-            ->all();
+        $roleSlugs = $user->roles->pluck('slug')->all();
+        $portalRoles = array_values(array_filter(
+            $roleSlugs,
+            fn (string $slug): bool => isset(self::PORTAL_DEFINITIONS[$slug]),
+        ));
+
+        return array_values(array_unique([...$portalRoles, ...$this->getPortalKeys()]));
+    }
+
+    private function resolveSelectedPortal(User $user, ?string $preferredPortal = null): ?string
+    {
+        $resolvedPreferredPortal = $user->hasRole('admin') ? 'admin' : $preferredPortal;
+        $portalCandidates = $this->getPortalCandidates($user);
+
+        if ($resolvedPreferredPortal !== null && in_array($resolvedPreferredPortal, $portalCandidates, true)) {
+            $portalCandidates = [
+                $resolvedPreferredPortal,
+                ...array_values(array_filter(
+                    $portalCandidates,
+                    fn (string $portal): bool => $portal !== $resolvedPreferredPortal,
+                )),
+            ];
+        }
+
+        return collect($portalCandidates)->first(
+            fn (string $portal): bool => $this->canAccessPortal($user, $portal),
+        );
     }
 
     /**
-     * @return array<string, array{roles: array<int, string>, permissions: array<int, string>, dashboard_view: string}>
+     * @return array{roles: array<int, string>, permissions: array<int, string>, dashboard_view: string}|null
      */
-    private function getPortalDefinitions(): array
+    private function getPortalDefinition(string $portal): ?array
     {
-        return [
-            'admin' => [
-                'roles' => ['admin'],
-                'permissions' => ['manage-users', 'manage-roles', 'view-stats'],
-                'dashboard_view' => 'dashboards.admin',
-            ],
-            'teacher' => [
-                'roles' => ['teacher'],
-                'permissions' => ['manage-classes', 'record-attendance', 'submit-grades'],
-                'dashboard_view' => 'dashboards.teacher',
-            ],
-            'student' => [
-                'roles' => ['student'],
-                'permissions' => ['view-courses', 'view-attendance', 'view-grades'],
-                'dashboard_view' => 'dashboards.student',
-            ],
-            'parent' => [
-                'roles' => ['parent'],
-                'permissions' => ['view-children', 'view-fees', 'view-attendance', 'view-grades', 'view-notices'],
-                'dashboard_view' => 'dashboards.parent',
-            ],
-            'accounts' => [
-                'roles' => ['accounts'],
-                'permissions' => ['manage-fees', 'view-payroll', 'view-fees'],
-                'dashboard_view' => 'dashboards.accounts',
-            ],
-        ];
+        return self::PORTAL_DEFINITIONS[$portal] ?? null;
+    }
+
+    private function resolveSidebarRoleSlug(User $user, ?string $portal = null): string
+    {
+        if ($user->hasRole('admin')) {
+            return 'admin';
+        }
+
+        return $portal ?? $user->roles->first()->slug ?? 'user';
+    }
+
+    private function getSidebarRoleLabel(string $roleSlug): string
+    {
+        return self::ROLE_LABELS[$roleSlug] ?? 'Portal';
+    }
+
+    private function getSidebarMarkup(User $user, string $roleSlug, string $active): string
+    {
+        if ($user->hasRole('admin')) {
+            return $this->getUniversalAdminSidebarMarkup($active);
+        }
+
+        return match ($roleSlug) {
+            'admin' => $this->getAdminSidebarMarkup($active),
+            'teacher' => $this->getTeacherSidebarMarkup($active),
+            'student' => $this->getStudentSidebarMarkup($active),
+            'parent' => $this->getParentSidebarMarkup($active),
+            'accounts' => $this->getAccountsSidebarMarkup($active),
+            default => $this->sidebarLink('dashboard', 'Overview', route('dashboard'), $active),
+        };
+    }
+
+    private function getUniversalAdminSidebarMarkup(string $active): string
+    {
+        return $this->getAdminSidebarMarkup($active)
+            .$this->sidebarLink('classes', 'Teacher Classes', route('teacher.classes'), $active)
+            .$this->sidebarLink('attendance', 'Teacher Attendance', route('teacher.attendance'), $active)
+            .$this->sidebarLink('grades', 'Teacher Grades', route('teacher.grades'), $active)
+            .$this->sidebarLink('courses', 'Student Courses', route('student.courses'), $active)
+            .$this->sidebarLink('student-attendance', 'Student Attendance', route('student.attendance'), $active)
+            .$this->sidebarLink('student-grades', 'Student Grades', route('student.grades'), $active)
+            .$this->sidebarLink('children', 'Parent Children', route('parent.children'), $active)
+            .$this->sidebarLink('fees', 'Parent Fees', route('parent.fees'), $active)
+            .$this->sidebarLink('notices', 'Parent Notices', route('parent.notices'), $active)
+            .$this->sidebarLink('collections', 'Accounts Collections', route('accounts.collections'), $active)
+            .$this->sidebarLink('challans', 'Accounts Challans', route('accounts.challans'), $active)
+            .$this->sidebarLink('payroll', 'Accounts Payroll', route('accounts.payroll'), $active);
+    }
+
+    private function getAdminSidebarMarkup(string $active): string
+    {
+        return $this->sidebarLink('dashboard', 'Overview', route('dashboard'), $active)
+            .$this->sidebarLink('users', 'Users', route('admin.users'), $active)
+            .$this->sidebarLink('roles', 'Roles', route('admin.roles'), $active)
+            .$this->sidebarLink('reports', 'Reports', route('admin.reports'), $active)
+            .$this->sidebarLink('settings', 'Settings', route('admin.settings'), $active);
+    }
+
+    private function getTeacherSidebarMarkup(string $active): string
+    {
+        return $this->sidebarLink('dashboard', 'Overview', route('dashboard'), $active)
+            .$this->sidebarLink('classes', 'My Classes', route('teacher.classes'), $active)
+            .$this->sidebarLink('attendance', 'Attendance', route('teacher.attendance'), $active)
+            .$this->sidebarLink('grades', 'Gradebook', route('teacher.grades'), $active);
+    }
+
+    private function getStudentSidebarMarkup(string $active): string
+    {
+        return $this->sidebarLink('dashboard', 'Overview', route('dashboard'), $active)
+            .$this->sidebarLink('courses', 'Courses', route('student.courses'), $active)
+            .$this->sidebarLink('attendance', 'Attendance', route('student.attendance'), $active)
+            .$this->sidebarLink('grades', 'Grades', route('student.grades'), $active);
+    }
+
+    private function getParentSidebarMarkup(string $active): string
+    {
+        return $this->sidebarLink('dashboard', 'Overview', route('dashboard'), $active)
+            .$this->sidebarLink('children', 'Children', route('parent.children'), $active)
+            .$this->sidebarLink('fees', 'Fees', route('parent.fees'), $active)
+            .$this->sidebarLink('notices', 'Notices', route('parent.notices'), $active);
+    }
+
+    private function getAccountsSidebarMarkup(string $active): string
+    {
+        return $this->sidebarLink('dashboard', 'Overview', route('dashboard'), $active)
+            .$this->sidebarLink('collections', 'Collections', route('accounts.collections'), $active)
+            .$this->sidebarLink('challans', 'Challans', route('accounts.challans'), $active)
+            .$this->sidebarLink('payroll', 'Payroll', route('accounts.payroll'), $active);
+    }
+
+    private function sidebarLink(string $key, string $label, string $href, string $active): string
+    {
+        $activeClass = $active === $key ? ' is-active' : '';
+
+        return '<a href="'.$href.'" class="dash-nav-link'.$activeClass.'">'.$label.'</a>';
     }
 
     /**

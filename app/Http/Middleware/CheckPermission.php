@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ApiResponseHelper;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,12 +22,7 @@ class CheckPermission
 
         if (! $user) {
             if ($wantsJson) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthenticated.',
-                    'data' => null,
-                    'errors' => ['auth' => ['You must be logged in to perform this action.']],
-                ], 401);
+                return ApiResponseHelper::unauthenticated();
             }
 
             return redirect()->guest(route('login'));
@@ -34,16 +30,11 @@ class CheckPermission
 
         if (! $user->hasPermission($permissions)) {
             if ($wantsJson) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Forbidden: You do not have the required permission to access this resource.',
-                    'data' => null,
-                    'errors' => [
-                        'permission' => [
-                            'Required permission(s): '.implode(', ', (array) $permissions),
-                        ],
-                    ],
-                ], 403);
+                return ApiResponseHelper::forbidden(
+                    'Forbidden: You do not have the required permission to access this resource.',
+                    'permission',
+                    'Required permission(s): '.implode(', ', (array) $permissions),
+                );
             }
 
             abort(403, 'You do not have permission to access this area.');
