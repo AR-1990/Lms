@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,12 +15,12 @@ class ErpApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     public function test_admin_can_login_and_get_sanctum_token(): void
     {
-        $response = $this->postJson('/api/erp/auth/login', [
+        $response = $this->postJson('/api/login', [
             'email' => 'admin@lms.test',
             'password' => 'password',
             'device_name' => 'flutter-app',
@@ -46,9 +46,43 @@ class ErpApiTest extends TestCase
         $this->assertNotEmpty($response->json('data.token'));
     }
 
+    public function test_admin_can_login_from_api_auth_route_and_get_sanctum_token(): void
+    {
+        $response = $this->postJson('/api/login', [
+            'email' => 'admin@lms.test',
+            'password' => 'password',
+            'device_name' => 'mobile-app',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Login successful.',
+            ])
+            ->assertJsonStructure([
+                'data' => [
+                    'token',
+                    'token_type',
+                    'user' => [
+                        'id',
+                        'name',
+                        'email',
+                    ],
+                    'authorization' => [
+                        'roles',
+                        'permissions',
+                        'portals',
+                        'device_name',
+                    ],
+                ],
+            ]);
+
+        $this->assertNotEmpty($response->json('data.token'));
+    }
+
     public function test_user_cannot_login_with_invalid_credentials(): void
     {
-        $response = $this->postJson('/api/erp/auth/login', [
+        $response = $this->postJson('/api/login', [
             'email' => 'admin@lms.test',
             'password' => 'wrong-password',
         ]);
@@ -57,7 +91,23 @@ class ErpApiTest extends TestCase
             ->assertJson([
                 'success' => false,
                 'message' => 'Authentication failed.',
-            ]);
+            ])
+            ->assertJsonPath('errors.first_key', 'email')
+            ->assertJsonPath('errors.fields.email.0', 'Invalid email or password.');
+    }
+
+    public function test_login_validation_response_is_returned_in_custom_keyed_format(): void
+    {
+        $response = $this->postJson('/api/login', []);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Validation failed.',
+            ])
+            ->assertJsonPath('errors.first_key', 'email')
+            ->assertJsonPath('errors.fields.email.0', 'The email field is required.')
+            ->assertJsonPath('errors.fields.password.0', 'The password field is required.');
     }
 
     public function test_me_endpoint_returns_user_role_permissions_and_portals(): void
@@ -65,7 +115,7 @@ class ErpApiTest extends TestCase
         $admin = User::where('email', 'admin@lms.test')->first();
 
         $response = $this->actingAs($admin, 'sanctum')
-            ->getJson('/api/erp/auth/me');
+            ->getJson('/api/me');
 
         $response->assertStatus(200)
             ->assertJson([
@@ -127,7 +177,8 @@ class ErpApiTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-            ]);
+            ])
+            ->assertJsonPath('errors.first_key', 'permission');
     }
 
     public function test_teacher_can_access_teacher_dashboard_and_classes(): void
@@ -323,6 +374,8 @@ class ErpApiTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-            ]);
+            ])
+            ->assertJsonPath('errors.first_key', 'role')
+            ->assertJsonPath('errors.fields.role.0', 'System roles cannot be deleted.');
     }
 }

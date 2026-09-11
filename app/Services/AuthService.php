@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Support\ValidationHelper;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -21,7 +22,7 @@ class AuthService
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
+            throw ValidationHelper::exception([
                 'email' => ['Invalid email or password.'],
             ]);
         }
@@ -100,7 +101,7 @@ class AuthService
     public function changePassword(User $user, string $currentPassword, string $newPassword): bool
     {
         if (! Hash::check($currentPassword, $user->password)) {
-            throw ValidationException::withMessages([
+            throw ValidationHelper::exception([
                 'current_password' => ['The provided password does not match your current password.'],
             ]);
         }

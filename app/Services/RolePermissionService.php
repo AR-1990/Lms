@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\ValidationHelper;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class RolePermissionService
 {
@@ -39,7 +39,7 @@ class RolePermissionService
         $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
 
         if (Role::where('slug', $slug)->exists()) {
-            throw ValidationException::withMessages([
+            throw ValidationHelper::exception([
                 'slug' => ['A role with this slug already exists.'],
             ]);
         }
@@ -64,7 +64,7 @@ class RolePermissionService
     public function updateRole(Role $role, array $data): Role
     {
         if ($role->is_system && isset($data['slug']) && $data['slug'] !== $role->slug) {
-            throw ValidationException::withMessages([
+            throw ValidationHelper::exception([
                 'slug' => ['System roles cannot change their unique slug.'],
             ]);
         }
@@ -90,7 +90,7 @@ class RolePermissionService
     public function deleteRole(Role $role): bool
     {
         if ($role->is_system) {
-            throw ValidationException::withMessages([
+            throw ValidationHelper::exception([
                 'role' => ['System roles cannot be deleted.'],
             ]);
         }
@@ -147,7 +147,7 @@ class RolePermissionService
         $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
 
         if (Permission::where('slug', $slug)->exists()) {
-            throw ValidationException::withMessages([
+            throw ValidationHelper::exception([
                 'slug' => ['A permission with this slug already exists.'],
             ]);
         }

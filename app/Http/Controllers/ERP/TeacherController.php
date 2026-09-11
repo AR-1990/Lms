@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\ERP;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ERP\RecordAttendanceRequest;
+use App\Http\Requests\ERP\SubmitGradesRequest;
 use App\Services\TeacherService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -42,15 +44,9 @@ class TeacherController extends Controller
     /**
      * Record Class Attendance.
      */
-    public function recordAttendance(Request $request): JsonResponse
+    public function recordAttendance(RecordAttendanceRequest $request): JsonResponse
     {
-        $request->validate([
-            'class_id' => ['required'],
-            'date' => ['nullable', 'date'],
-            'attendance' => ['required', 'array'],
-        ]);
-
-        $result = $this->teacherService->recordAttendance($request->user(), $request->all());
+        $result = $this->teacherService->recordAttendance($request->user(), $request->validated());
 
         return $this->successResponse($result, 'Class attendance recorded successfully.');
     }
@@ -58,15 +54,9 @@ class TeacherController extends Controller
     /**
      * Submit Student Grades.
      */
-    public function submitGrades(Request $request): JsonResponse
+    public function submitGrades(SubmitGradesRequest $request): JsonResponse
     {
-        $request->validate([
-            'class_id' => ['required'],
-            'assessment_title' => ['required', 'string'],
-            'grades' => ['required', 'array'],
-        ]);
-
-        $result = $this->teacherService->submitGrades($request->user(), $request->all());
+        $result = $this->teacherService->submitGrades($request->user(), $request->validated());
 
         return $this->successResponse($result, 'Student grades recorded successfully.');
     }

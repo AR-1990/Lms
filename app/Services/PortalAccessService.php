@@ -2,21 +2,43 @@
 
 namespace App\Services;
 
+use App\Models\Role;
 use App\Models\User;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class PortalAccessService
 {
     /**
-     * Create a new class instance.
+     * @var array<string, array<int, array{key: string, label: string, route: string}>>
      */
-    public function __construct(
-        private AdminService $adminService,
-        private TeacherService $teacherService,
-        private StudentService $studentService,
-        private ParentService $parentService,
-        private AccountsService $accountsService,
-    ) {}
+    private const SIDEBAR_LINKS = [
+        'admin' => [
+            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+            ['key' => 'settings', 'label' => 'Settings', 'route' => 'admin.settings'],
+        ],
+        'teacher' => [
+            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+        ],
+        'student' => [
+            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+        ],
+        'parent' => [
+            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+        ],
+        'accounts' => [
+            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+        ],
+    ];
+
+    /**
+     * @var array<string, Role|null>
+     */
+    private array $roleCache = [];
+
+    /**
+     * @var array<int, string>|null
+     */
+    private ?array $portalKeysCache = null;
 
     /**
      * Get supported portal keys.
@@ -25,7 +47,16 @@ class PortalAccessService
      */
     public function getPortalKeys(): array
     {
-        return collect($this->getPortalDefinitions())->keys()->values()->all();
+        if ($this->portalKeysCache !== null) {
+            return $this->portalKeysCache;
+        }
+
+        $this->portalKeysCache = Role::query()
+            ->whereNotNull('dashboard_view')
+            ->pluck('slug')
+            ->all();
+
+        return $this->portalKeysCache;
     }
 
     /**
@@ -37,8 +68,23 @@ class PortalAccessService
     {
         return collect($this->getPortalKeys())
             ->filter(fn (string $portal): bool => $this->canAccessPortal($user, $portal))
-            ->values()
             ->all();
+    }
+
+    /**
+     * Build sidebar configuration for the dashboard shell.
+     *
+     * @return array{role_slug: string, role_label: string, markup: string}
+     */
+    public function getSidebarConfig(User $user, ?string $portal = null, string $active = 'dashboard'): array
+    {
+        $roleSlug = $this->resolveSidebarRoleSlug($user, $portal);
+
+        return [
+            'role_slug' => $roleSlug,
+            'role_label' => $this->getSidebarRoleLabel($roleSlug),
+            'markup' => $this->getSidebarMarkup($user, $roleSlug, $active),
+        ];
     }
 
     /**
@@ -46,9 +92,7 @@ class PortalAccessService
      */
     public function canAccessPortal(User $user, string $portal): bool
     {
-        $definition = $this->getPortalDefinitions()[$portal] ?? null;
-
-        if ($definition === null) {
+        if (! filled($this->getPortalDashboardView($portal))) {
             return false;
         }
 
@@ -56,11 +100,17 @@ class PortalAccessService
             return true;
         }
 
-        if ($user->hasRole($definition['roles'])) {
+        if ($user->hasRole($portal)) {
             return true;
         }
 
-        return $user->hasPermission($definition['permissions']);
+        $permissionSlugs = $this->getPortalPermissionSlugs($portal);
+
+        if ($permissionSlugs === []) {
+            return false;
+        }
+
+        return $user->hasPermission($permissionSlugs);
     }
 
     /**
@@ -70,24 +120,21 @@ class PortalAccessService
      */
     public function resolveDashboard(User $user, ?string $preferredPortal = null): ?array
     {
-        $portalCandidates = collect($this->getPortalCandidates($user));
-
-        if ($preferredPortal !== null && $portalCandidates->contains($preferredPortal)) {
-            $portalCandidates = $portalCandidates
-                ->reject(fn (string $portal): bool => $portal === $preferredPortal)
-                ->prepend($preferredPortal);
-        }
-
-        $selectedPortal = $portalCandidates
-            ->first(fn (string $portal): bool => $this->canAccessPortal($user, $portal));
+        $selectedPortal = $this->resolveSelectedPortal($user, $preferredPortal);
 
         if ($selectedPortal === null) {
             return null;
         }
 
+        $dashboardView = $this->getPortalDashboardView($selectedPortal);
+
+        if (! filled($dashboardView)) {
+            return null;
+        }
+
         return [
             'portal' => $selectedPortal,
-            'view' => $this->getPortalDefinitions()[$selectedPortal]['dashboard_view'],
+            'view' => $dashboardView,
             'data' => $this->getDashboardData($selectedPortal, $user),
         ];
     }
@@ -97,53 +144,129 @@ class PortalAccessService
      */
     private function getPortalCandidates(User $user): array
     {
-        $definitions = $this->getPortalDefinitions();
+        if ($user->hasRole('admin')) {
+            return collect(['admin', ...$this->getPortalKeys()])
+                ->unique()
+                ->all();
+        }
 
-        return $user->roles
-            ->pluck('slug')
-            ->filter(fn (string $slug): bool => array_key_exists($slug, $definitions))
-            ->when(
-                $user->hasRole('admin'),
-                fn (Collection $roles): Collection => $roles->prepend('admin'),
-            )
-            ->concat($this->getPortalKeys())
+        $portalKeys = collect($this->getPortalKeys());
+        $roleSlugs = $user->roles->pluck('slug')->all();
+        $portalRoles = collect($roleSlugs)
+            ->filter(fn (string $slug): bool => $portalKeys->contains($slug))
+            ->all();
+
+        return collect([...$portalRoles, ...$this->getPortalKeys()])
             ->unique()
-            ->values()
             ->all();
     }
 
-    /**
-     * @return array<string, array{roles: array<int, string>, permissions: array<int, string>, dashboard_view: string}>
-     */
-    private function getPortalDefinitions(): array
+    private function resolveSelectedPortal(User $user, ?string $preferredPortal = null): ?string
     {
-        return [
-            'admin' => [
-                'roles' => ['admin'],
-                'permissions' => ['manage-users', 'manage-roles', 'view-stats'],
-                'dashboard_view' => 'dashboards.admin',
-            ],
-            'teacher' => [
-                'roles' => ['teacher'],
-                'permissions' => ['manage-classes', 'record-attendance', 'submit-grades'],
-                'dashboard_view' => 'dashboards.teacher',
-            ],
-            'student' => [
-                'roles' => ['student'],
-                'permissions' => ['view-courses', 'view-attendance', 'view-grades'],
-                'dashboard_view' => 'dashboards.student',
-            ],
-            'parent' => [
-                'roles' => ['parent'],
-                'permissions' => ['view-children', 'view-fees', 'view-attendance', 'view-grades', 'view-notices'],
-                'dashboard_view' => 'dashboards.parent',
-            ],
-            'accounts' => [
-                'roles' => ['accounts'],
-                'permissions' => ['manage-fees', 'view-payroll', 'view-fees'],
-                'dashboard_view' => 'dashboards.accounts',
-            ],
+        $resolvedPreferredPortal = $user->hasRole('admin') ? 'admin' : $preferredPortal;
+        $portalCandidates = $this->getPortalCandidates($user);
+
+        if ($resolvedPreferredPortal !== null && in_array($resolvedPreferredPortal, $portalCandidates, true)) {
+            $portalCandidates = [
+                $resolvedPreferredPortal,
+                ...collect($portalCandidates)
+                    ->filter(fn (string $portal): bool => $portal !== $resolvedPreferredPortal)
+                    ->all(),
+            ];
+        }
+
+        return collect($portalCandidates)->first(
+            fn (string $portal): bool => $this->canAccessPortal($user, $portal),
+        );
+    }
+
+    private function getCachedRole(string $slug): ?Role
+    {
+        if (array_key_exists($slug, $this->roleCache)) {
+            return $this->roleCache[$slug];
+        }
+
+        $this->roleCache[$slug] = Role::query()
+            ->with('permissions:id,slug')
+            ->where('slug', $slug)
+            ->first();
+
+        return $this->roleCache[$slug];
+    }
+
+    private function getPortalDashboardView(string $portal): ?string
+    {
+        $dashboardView = $this->getCachedRole($portal)?->dashboard_view;
+
+        if (! filled($dashboardView)) {
+            return null;
+        }
+
+        return $dashboardView;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getPortalPermissionSlugs(string $portal): array
+    {
+        $portalRole = $this->getCachedRole($portal);
+
+        if ($portalRole === null) {
+            return [];
+        }
+
+        return $portalRole->permissions->pluck('slug')->filter()->all();
+    }
+
+    private function resolveSidebarRoleSlug(User $user, ?string $portal = null): string
+    {
+        if ($user->hasRole('admin')) {
+            return 'admin';
+        }
+
+        return $portal ?? $user->roles->first()->slug ?? 'user';
+    }
+
+    private function getSidebarRoleLabel(string $roleSlug): string
+    {
+        $roleName = $this->getCachedRole($roleSlug)?->name;
+
+        if (filled($roleName)) {
+            return $roleName;
+        }
+
+        return $roleSlug === 'user' ? 'Portal' : Str::headline($roleSlug);
+    }
+
+    private function getSidebarMarkup(User $user, string $roleSlug, string $active): string
+    {
+        $sidebarLinks = self::SIDEBAR_LINKS[$roleSlug] ?? [
+            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
         ];
+
+        return $this->buildSidebarMarkup($sidebarLinks, $active);
+    }
+
+    /**
+     * @param  array<int, array{key: string, label: string, route: string}>  $links
+     */
+    private function buildSidebarMarkup(array $links, string $active): string
+    {
+        return (string) collect($links)->reduce(
+            fn (string $markup, array $link): string => $markup.$this->renderSidebarLink($link, $active),
+            '',
+        );
+    }
+
+    /**
+     * @param  array{key: string, label: string, route: string}  $link
+     */
+    private function renderSidebarLink(array $link, string $active): string
+    {
+        $activeClass = $active === $link['key'] ? ' is-active' : '';
+
+        return '<a href="'.route($link['route']).'" class="dash-nav-link'.$activeClass.'">'.$link['label'].'</a>';
     }
 
     /**
@@ -151,13 +274,14 @@ class PortalAccessService
      */
     private function getDashboardData(string $portal, User $user): array
     {
-        return match ($portal) {
-            'admin' => $this->adminService->getDashboardSummary(),
-            'teacher' => $this->teacherService->getTeacherDashboard($user),
-            'student' => $this->studentService->getStudentDashboard($user),
-            'parent' => $this->parentService->getParentDashboard($user),
-            'accounts' => $this->accountsService->getAccountsDashboard($user),
-            default => [],
-        };
+        return [
+            'portal' => $portal,
+            'message' => 'Welcome to LMS',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+        ];
     }
 }
