@@ -32,33 +32,33 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [SchoolController::class, 'logout'])->name('logout');
 
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/users', [AdminPortalController::class, 'users'])->name('users');
-        Route::get('/roles', [AdminPortalController::class, 'roles'])->name('roles');
-        Route::get('/reports', [AdminPortalController::class, 'reports'])->name('reports');
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/users', [AdminPortalController::class, 'users'])->middleware('permission:manage-users')->name('users');
+        Route::get('/roles', [AdminPortalController::class, 'roles'])->middleware('permission:manage-roles')->name('roles');
+        Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats')->name('reports');
     });
 
-    Route::middleware('role:teacher,admin')->prefix('teacher')->name('teacher.')->group(function () {
-        Route::get('/classes', [TeacherPortalController::class, 'classes'])->name('classes');
-        Route::get('/attendance', [TeacherPortalController::class, 'attendance'])->name('attendance');
-        Route::get('/grades', [TeacherPortalController::class, 'grades'])->name('grades');
+    Route::prefix('teacher')->name('teacher.')->group(function () {
+        Route::get('/classes', [TeacherPortalController::class, 'classes'])->middleware('permission:manage-classes')->name('classes');
+        Route::get('/attendance', [TeacherPortalController::class, 'attendance'])->middleware('permission:record-attendance')->name('attendance');
+        Route::get('/grades', [TeacherPortalController::class, 'grades'])->middleware('permission:submit-grades')->name('grades');
     });
 
-    Route::middleware('role:student,admin')->prefix('student')->name('student.')->group(function () {
-        Route::get('/courses', [StudentPortalController::class, 'courses'])->name('courses');
-        Route::get('/attendance', [StudentPortalController::class, 'attendance'])->name('attendance');
-        Route::get('/grades', [StudentPortalController::class, 'grades'])->name('grades');
+    Route::prefix('student')->name('student.')->group(function () {
+        Route::get('/courses', [StudentPortalController::class, 'courses'])->middleware('permission:view-courses')->name('courses');
+        Route::get('/attendance', [StudentPortalController::class, 'attendance'])->middleware('permission:view-attendance')->name('attendance');
+        Route::get('/grades', [StudentPortalController::class, 'grades'])->middleware('permission:view-grades')->name('grades');
     });
 
-    Route::middleware('role:parent,admin')->prefix('parent')->name('parent.')->group(function () {
-        Route::get('/children', [ParentPortalController::class, 'children'])->name('children');
-        Route::get('/fees', [ParentPortalController::class, 'fees'])->name('fees');
-        Route::get('/notices', [ParentPortalController::class, 'notices'])->name('notices');
+    Route::prefix('parent')->name('parent.')->group(function () {
+        Route::get('/children', [ParentPortalController::class, 'children'])->middleware('permission:view-children')->name('children');
+        Route::get('/fees', [ParentPortalController::class, 'fees'])->middleware('permission:view-fees')->name('fees');
+        Route::get('/notices', [ParentPortalController::class, 'notices'])->middleware('permission:view-notices')->name('notices');
     });
 
-    Route::middleware('role:accounts,admin')->prefix('accounts')->name('accounts.')->group(function () {
-        Route::get('/collections', [AccountsPortalController::class, 'collections'])->name('collections');
-        Route::get('/challans', [AccountsPortalController::class, 'challans'])->name('challans');
-        Route::get('/payroll', [AccountsPortalController::class, 'payroll'])->name('payroll');
+    Route::prefix('accounts')->name('accounts.')->group(function () {
+        Route::get('/collections', [AccountsPortalController::class, 'collections'])->middleware('permission:manage-fees')->name('collections');
+        Route::get('/challans', [AccountsPortalController::class, 'challans'])->middleware('permission:view-fees')->name('challans');
+        Route::get('/payroll', [AccountsPortalController::class, 'payroll'])->middleware('permission:view-payroll')->name('payroll');
     });
 });

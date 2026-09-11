@@ -11,16 +11,16 @@ class AdminPortalController extends PortalController
 
     public function users(): View
     {
-        return $this->page('dashboards.admin.users', 'users', $this->adminService->getUsersDirectory());
+        return $this->page('dashboards.admin.users', 'admin', 'users', $this->adminService->getUsersDirectory());
     }
 
     public function roles(): View
     {
-        return $this->page('dashboards.admin.roles', 'roles', $this->adminService->getRolesDirectory());
+        return $this->page('dashboards.admin.roles', 'admin', 'roles', $this->adminService->getRolesDirectory());
     }
 
     public function reports(): View
     {
-        return $this->page('dashboards.admin.reports', 'reports', $this->adminService->getReportsSnapshot());
+        return $this->page('dashboards.admin.reports', 'admin', 'reports', $this->adminService->getReportsSnapshot());
     }
 }

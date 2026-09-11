@@ -13,7 +13,7 @@ class TeacherPortalController extends PortalController
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.teacher.classes', 'classes', [
+        return $this->page('dashboards.teacher.classes', 'teacher', 'classes', [
             'classes' => $this->teacherService->getAssignedClasses($user),
         ]);
     }
@@ -22,13 +22,13 @@ class TeacherPortalController extends PortalController
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.teacher.attendance', 'attendance', $this->teacherService->getAttendanceRegister($user));
+        return $this->page('dashboards.teacher.attendance', 'teacher', 'attendance', $this->teacherService->getAttendanceRegister($user));
     }
 
     public function grades(): View
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.teacher.grades', 'grades', $this->teacherService->getGradebook($user));
+        return $this->page('dashboards.teacher.grades', 'teacher', 'grades', $this->teacherService->getGradebook($user));
     }
 }

@@ -41,7 +41,7 @@ class UserController extends Controller
      */
     public function store(CreateUserRequest $request): JsonResponse
     {
-        $roles = $request->input('roles', 'student');
+        $roles = $request->input('roles');
         $user = $this->userService->createUser($request->validated(), $roles);
 
         return $this->successResponse($user, 'User created successfully.', 201);

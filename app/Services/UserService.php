@@ -24,7 +24,7 @@ class UserService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -42,7 +42,7 @@ class UserService
     /**
      * Create a user with specified roles.
      */
-    public function createUser(array $data, array|string $roles = 'student'): User
+    public function createUser(array $data, array|string|null $roles = null): User
     {
         $user = User::create([
             'name' => $data['name'],
@@ -50,11 +50,11 @@ class UserService
             'password' => Hash::make($data['password']),
         ]);
 
-        if (is_string($roles)) {
-            $roles = [$roles];
-        }
+        $normalizedRoles = $this->normalizeRoles($roles);
 
-        $user->syncRoles($roles);
+        if ($normalizedRoles !== []) {
+            $user->syncRoles($normalizedRoles);
+        }
 
         return $user->load('roles');
     }
@@ -69,14 +69,14 @@ class UserService
             'email' => $data['email'] ?? $user->email,
         ];
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $updateData['password'] = Hash::make($data['password']);
         }
 
         $user->update($updateData);
 
-        if (isset($data['roles'])) {
-            $user->syncRoles($data['roles']);
+        if (array_key_exists('roles', $data)) {
+            $user->syncRoles($this->normalizeRoles($data['roles']));
         }
 
         return $user->load('roles');
@@ -88,6 +88,23 @@ class UserService
     public function deleteUser(User $user): bool
     {
         $user->tokens()->delete();
+
         return (bool) $user->delete();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeRoles(array|string|null $roles): array
+    {
+        if ($roles === null) {
+            return [];
+        }
+
+        if (is_string($roles)) {
+            return [$roles];
+        }
+
+        return array_values(array_filter($roles, fn ($role) => $role !== null && $role !== ''));
     }
 }

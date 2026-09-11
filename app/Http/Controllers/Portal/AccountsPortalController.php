@@ -13,20 +13,20 @@ class AccountsPortalController extends PortalController
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.accounts.collections', 'collections', $this->accountsService->getCollections($user));
+        return $this->page('dashboards.accounts.collections', 'accounts', 'collections', $this->accountsService->getCollections($user));
     }
 
     public function challans(): View
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.accounts.challans', 'challans', $this->accountsService->getChallans($user));
+        return $this->page('dashboards.accounts.challans', 'accounts', 'challans', $this->accountsService->getChallans($user));
     }
 
     public function payroll(): View
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.accounts.payroll', 'payroll', $this->accountsService->getPayroll($user));
+        return $this->page('dashboards.accounts.payroll', 'accounts', 'payroll', $this->accountsService->getPayroll($user));
     }
 }

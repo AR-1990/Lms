@@ -160,6 +160,87 @@ class ErpApiTest extends TestCase
             ]);
     }
 
+    public function test_parent_can_access_parent_dashboard_children_fees_and_notices(): void
+    {
+        $parent = User::where('email', 'parent@lms.test')->first();
+
+        $dashboardResponse = $this->actingAs($parent, 'sanctum')
+            ->getJson('/api/erp/parent/dashboard');
+
+        $dashboardResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'parent',
+                    'children',
+                    'summary',
+                    'recent_notices',
+                ],
+            ]);
+
+        $childrenResponse = $this->actingAs($parent, 'sanctum')
+            ->getJson('/api/erp/parent/children');
+
+        $childrenResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'children',
+                ],
+            ]);
+
+        $feesResponse = $this->actingAs($parent, 'sanctum')
+            ->getJson('/api/erp/parent/fees');
+
+        $feesResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'summary',
+                    'ledger',
+                ],
+            ]);
+
+        $noticesResponse = $this->actingAs($parent, 'sanctum')
+            ->getJson('/api/erp/parent/notices');
+
+        $noticesResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'notices',
+                ],
+            ]);
+    }
+
+    public function test_custom_role_with_permission_can_access_teacher_classes_route(): void
+    {
+        $coordinatorRole = Role::create([
+            'name' => 'Academic Coordinator',
+            'slug' => 'academic-coordinator',
+            'description' => 'Can supervise teacher workflows.',
+        ]);
+        $coordinatorRole->syncPermissions(['manage-classes']);
+
+        $coordinator = User::create([
+            'name' => 'Coordinator User',
+            'email' => 'coordinator@lms.test',
+            'password' => 'password',
+        ]);
+        $coordinator->syncRoles(['academic-coordinator']);
+
+        $response = $this->actingAs($coordinator, 'sanctum')
+            ->getJson('/api/erp/teacher/classes');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'course_code',
+                        'title',
+                        'section',
+                    ],
+                ],
+            ]);
+    }
+
     public function test_admin_can_create_dynamic_custom_role_and_assign_to_user(): void
     {
         $admin = User::where('email', 'admin@lms.test')->first();

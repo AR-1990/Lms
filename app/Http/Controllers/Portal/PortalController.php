@@ -13,10 +13,11 @@ abstract class PortalController extends Controller
         return auth()->user()->load('roles');
     }
 
-    protected function page(string $view, string $active, array $data = []): View
+    protected function page(string $view, string $portal, string $active, array $data = []): View
     {
         return view($view, [
             'user' => $this->portalUser(),
+            'portal' => $portal,
             'active' => $active,
             'data' => $data,
         ]);

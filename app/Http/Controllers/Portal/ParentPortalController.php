@@ -13,20 +13,20 @@ class ParentPortalController extends PortalController
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.parent.children', 'children', $this->parentService->getChildrenProfiles($user));
+        return $this->page('dashboards.parent.children', 'parent', 'children', $this->parentService->getChildrenProfiles($user));
     }
 
     public function fees(): View
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.parent.fees', 'fees', $this->parentService->getFeeLedger($user));
+        return $this->page('dashboards.parent.fees', 'parent', 'fees', $this->parentService->getFeeLedger($user));
     }
 
     public function notices(): View
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.parent.notices', 'notices', $this->parentService->getNotices($user));
+        return $this->page('dashboards.parent.notices', 'parent', 'notices', $this->parentService->getNotices($user));
     }
 }

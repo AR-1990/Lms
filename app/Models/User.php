@@ -42,13 +42,14 @@ class User extends Authenticatable
 
     /**
      * Check if user has specific role or one of given roles using direct SQL whereIn.
-     *
-     * @param string|array $roles
-     * @return bool
      */
     public function hasRole(string|array $roles): bool
     {
-        $roleList = is_array($roles) ? $roles : explode(',', $roles);
+        $roleList = array_values(array_filter(array_map('trim', is_array($roles) ? $roles : explode(',', $roles))));
+
+        if ($roleList === []) {
+            return false;
+        }
 
         return $this->roles()->whereIn('slug', $roleList)->exists();
     }
@@ -67,6 +68,7 @@ class User extends Authenticatable
     public function hasAllRoles(array $roles): bool
     {
         $count = $this->roles()->whereIn('slug', $roles)->count();
+
         return $count === count($roles);
     }
 
@@ -75,7 +77,15 @@ class User extends Authenticatable
      */
     public function hasPermission(string|array $permissions): bool
     {
-        $permissionList = is_array($permissions) ? $permissions : explode(',', $permissions);
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
+        $permissionList = array_values(array_filter(array_map('trim', is_array($permissions) ? $permissions : explode(',', $permissions))));
+
+        if ($permissionList === []) {
+            return false;
+        }
 
         return $this->roles()
             ->whereHas('permissions', function ($query) use ($permissionList) {

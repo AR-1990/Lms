@@ -1,5 +1,5 @@
 @php
-    $roleSlug = $user->roles->first()->slug ?? 'user';
+    $roleSlug = $portal ?? $user->roles->first()->slug ?? 'user';
     $roleLabel = match ($roleSlug) {
         'admin' => 'Administration',
         'teacher' => 'Faculty',

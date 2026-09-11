@@ -36,7 +36,7 @@ class RolePermissionService
      */
     public function createRole(array $data): Role
     {
-        $slug = !empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
+        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
 
         if (Role::where('slug', $slug)->exists()) {
             throw ValidationException::withMessages([
@@ -51,7 +51,7 @@ class RolePermissionService
             'is_system' => $data['is_system'] ?? false,
         ]);
 
-        if (!empty($data['permissions'])) {
+        if (! empty($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
 
@@ -69,7 +69,7 @@ class RolePermissionService
             ]);
         }
 
-        $slug = !empty($data['slug']) ? Str::slug($data['slug']) : $role->slug;
+        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : $role->slug;
 
         $role->update([
             'name' => $data['name'] ?? $role->name,
@@ -91,7 +91,7 @@ class RolePermissionService
     {
         if ($role->is_system) {
             throw ValidationException::withMessages([
-                'role' => ['System roles (admin, teacher, student) cannot be deleted.'],
+                'role' => ['System roles cannot be deleted.'],
             ]);
         }
 
@@ -144,7 +144,7 @@ class RolePermissionService
      */
     public function createPermission(array $data): Permission
     {
-        $slug = !empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
+        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
 
         if (Permission::where('slug', $slug)->exists()) {
             throw ValidationException::withMessages([

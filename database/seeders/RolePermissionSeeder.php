@@ -73,6 +73,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'View Grades', 'slug' => 'view-grades', 'group' => 'student'],
             ['name' => 'View Children', 'slug' => 'view-children', 'group' => 'parent'],
             ['name' => 'View Fee Status', 'slug' => 'view-fees', 'group' => 'parent'],
+            ['name' => 'View Notices', 'slug' => 'view-notices', 'group' => 'parent'],
             ['name' => 'Manage Fee Collections', 'slug' => 'manage-fees', 'group' => 'accounts'],
             ['name' => 'View Payroll', 'slug' => 'view-payroll', 'group' => 'accounts'],
         ];
@@ -101,7 +102,7 @@ class RolePermissionSeeder extends Seeder
 
         $parentRole->syncPermissions(
             Permission::whereIn('slug', [
-                'view-children', 'view-fees', 'view-attendance', 'view-grades',
+                'view-children', 'view-fees', 'view-attendance', 'view-grades', 'view-notices',
             ])->pluck('id')->toArray()
         );
 

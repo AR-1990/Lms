@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PortalAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SchoolController extends Controller
 {
+    public function __construct(private PortalAccessService $portalAccessService) {}
+
     /**
      * Homepage with Hero, Wings, Metrics, Testimonials, and Announcements
      */
@@ -187,6 +191,10 @@ class SchoolController extends Controller
 
         $role = $request->query('role', 'student');
 
+        if (! in_array($role, $this->portalAccessService->getPortalKeys(), true)) {
+            $role = 'student';
+        }
+
         return view('pages.login', compact('role'));
     }
 
@@ -196,7 +204,7 @@ class SchoolController extends Controller
     public function handleLogin(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => 'required|string|in:student,parent,teacher,accounts,admin',
+            'role' => ['required', 'string', Rule::in($this->portalAccessService->getPortalKeys())],
             'username' => 'required|string|max:100',
             'password' => 'required|string|min:4',
         ]);
@@ -213,10 +221,11 @@ class SchoolController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->put('portal', $validated['role']);
 
         $user = Auth::user()->load('roles');
 
-        if (! $user->hasRole($validated['role']) && ! $user->hasRole('admin')) {
+        if (! $this->portalAccessService->canAccessPortal($user, $validated['role'])) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
