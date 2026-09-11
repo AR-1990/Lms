@@ -60,6 +60,38 @@ class ErpApiTest extends TestCase
             ]);
     }
 
+    public function test_me_endpoint_returns_user_role_permissions_and_portals(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/erp/auth/me');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+            ])
+            ->assertJsonStructure([
+                'data' => [
+                    'user' => [
+                        'id',
+                        'name',
+                        'email',
+                        'roles',
+                    ],
+                    'authorization' => [
+                        'role',
+                        'roles',
+                        'permissions',
+                        'portals',
+                        'is_admin',
+                        'device_name',
+                        'token',
+                    ],
+                ],
+            ]);
+    }
+
     public function test_admin_can_access_admin_dashboard(): void
     {
         $admin = User::where('email', 'admin@lms.test')->first();

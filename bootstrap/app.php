@@ -16,10 +16,27 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::middleware(['api', ForceJsonResponse::class])
-                ->prefix('api/erp')
-                ->name('erp.')
-                ->group(base_path('routes/erp.php'));
+            $registerErpPublicRoutes = static function (string $prefix, string $name, string $file): void {
+                Route::middleware(['api', ForceJsonResponse::class])
+                    ->prefix($prefix)
+                    ->name($name)
+                    ->group(base_path($file));
+            };
+
+            $registerErpProtectedRoutes = static function (string $file): void {
+                Route::middleware(['api', ForceJsonResponse::class, 'auth:sanctum'])
+                    ->prefix('api/erp')
+                    ->name('erp.')
+                    ->group(base_path($file));
+            };
+
+            $registerErpPublicRoutes('api/erp/auth', 'erp.auth.', 'routes/auth.php');
+            $registerErpProtectedRoutes('routes/erp-access.php');
+            $registerErpProtectedRoutes('routes/erp-admin.php');
+            $registerErpProtectedRoutes('routes/erp-teacher.php');
+            $registerErpProtectedRoutes('routes/erp-student.php');
+            $registerErpProtectedRoutes('routes/erp-parent.php');
+            $registerErpProtectedRoutes('routes/erp-accounts.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
