@@ -9,26 +9,31 @@ use Illuminate\Support\Str;
 class PortalAccessService
 {
     /**
-     * @var array<string, array<int, array{key: string, label: string, route: string}>>
+     * @var array<string, array<int, array{key: string, label: string, route: string, icon: string, tone: string}>>
      */
-    private const SIDEBAR_LINKS = [
+    private const NAVIGATION_LINKS = [
         'admin' => [
-            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
-            ['key' => 'settings', 'label' => 'Settings', 'route' => 'admin.settings'],
+            ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'users', 'label' => 'Users', 'route' => 'admin.users', 'icon' => 'users', 'tone' => 'blue'],
+            ['key' => 'roles', 'label' => 'Roles', 'route' => 'admin.roles', 'icon' => 'shield', 'tone' => 'violet'],
+            ['key' => 'reports', 'label' => 'Reports', 'route' => 'admin.reports', 'icon' => 'chart', 'tone' => 'emerald'],
+            ['key' => 'settings', 'label' => 'Settings', 'route' => 'admin.settings', 'icon' => 'settings', 'tone' => 'rose'],
         ],
         'teacher' => [
-            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+            ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
         ],
         'student' => [
-            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+            ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
         ],
         'parent' => [
-            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+            ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
         ],
         'accounts' => [
-            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+            ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
         ],
     ];
+
+    public function __construct(private AdminService $adminService) {}
 
     /**
      * @var array<string, Role|null>
@@ -72,18 +77,18 @@ class PortalAccessService
     }
 
     /**
-     * Build sidebar configuration for the dashboard shell.
+     * Build top navigation configuration for the dashboard shell.
      *
-     * @return array{role_slug: string, role_label: string, markup: string}
+     * @return array{role_slug: string, role_label: string, links: array<int, array{key: string, label: string, url: string, icon: string, tone: string, active: bool}>}
      */
-    public function getSidebarConfig(User $user, ?string $portal = null, string $active = 'dashboard'): array
+    public function getNavigationConfig(User $user, ?string $portal = null, string $active = 'dashboard'): array
     {
-        $roleSlug = $this->resolveSidebarRoleSlug($user, $portal);
+        $roleSlug = $this->resolveNavigationRoleSlug($user, $portal);
 
         return [
             'role_slug' => $roleSlug,
-            'role_label' => $this->getSidebarRoleLabel($roleSlug),
-            'markup' => $this->getSidebarMarkup($user, $roleSlug, $active),
+            'role_label' => $this->getNavigationRoleLabel($roleSlug),
+            'links' => $this->getNavigationLinks($roleSlug, $active),
         ];
     }
 
@@ -219,7 +224,7 @@ class PortalAccessService
         return $portalRole->permissions->pluck('slug')->filter()->all();
     }
 
-    private function resolveSidebarRoleSlug(User $user, ?string $portal = null): string
+    private function resolveNavigationRoleSlug(User $user, ?string $portal = null): string
     {
         if ($user->hasRole('admin')) {
             return 'admin';
@@ -228,7 +233,7 @@ class PortalAccessService
         return $portal ?? $user->roles->first()->slug ?? 'user';
     }
 
-    private function getSidebarRoleLabel(string $roleSlug): string
+    private function getNavigationRoleLabel(string $roleSlug): string
     {
         $roleName = $this->getCachedRole($roleSlug)?->name;
 
@@ -239,34 +244,25 @@ class PortalAccessService
         return $roleSlug === 'user' ? 'Portal' : Str::headline($roleSlug);
     }
 
-    private function getSidebarMarkup(User $user, string $roleSlug, string $active): string
+    /**
+     * @return array<int, array{key: string, label: string, url: string, icon: string, tone: string, active: bool}>
+     */
+    private function getNavigationLinks(string $roleSlug, string $active): array
     {
-        $sidebarLinks = self::SIDEBAR_LINKS[$roleSlug] ?? [
-            ['key' => 'dashboard', 'label' => 'Overview', 'route' => 'dashboard'],
+        $navigationLinks = self::NAVIGATION_LINKS[$roleSlug] ?? [
+            ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
         ];
 
-        return $this->buildSidebarMarkup($sidebarLinks, $active);
-    }
-
-    /**
-     * @param  array<int, array{key: string, label: string, route: string}>  $links
-     */
-    private function buildSidebarMarkup(array $links, string $active): string
-    {
-        return (string) collect($links)->reduce(
-            fn (string $markup, array $link): string => $markup.$this->renderSidebarLink($link, $active),
-            '',
-        );
-    }
-
-    /**
-     * @param  array{key: string, label: string, route: string}  $link
-     */
-    private function renderSidebarLink(array $link, string $active): string
-    {
-        $activeClass = $active === $link['key'] ? ' is-active' : '';
-
-        return '<a href="'.route($link['route']).'" class="dash-nav-link'.$activeClass.'">'.$link['label'].'</a>';
+        return collect($navigationLinks)
+            ->map(fn (array $link): array => [
+                'key' => $link['key'],
+                'label' => $link['label'],
+                'url' => route($link['route']),
+                'icon' => $link['icon'],
+                'tone' => $link['tone'],
+                'active' => $link['key'] === $active,
+            ])
+            ->all();
     }
 
     /**
@@ -274,7 +270,7 @@ class PortalAccessService
      */
     private function getDashboardData(string $portal, User $user): array
     {
-        return [
+        $dashboardData = [
             'portal' => $portal,
             'message' => 'Welcome to LMS',
             'user' => [
@@ -283,5 +279,11 @@ class PortalAccessService
                 'email' => $user->email,
             ],
         ];
+
+        if ($portal === 'admin') {
+            return [...$dashboardData, ...$this->adminService->getDashboardSummary()];
+        }
+
+        return $dashboardData;
     }
 }

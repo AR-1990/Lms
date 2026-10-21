@@ -69,10 +69,116 @@ class PortalAccessTest extends TestCase
 
         $this->get('/dashboard')
             ->assertOk()
-            ->assertSee('Welcome to LMS')
-            ->assertSee('Settings')
+            ->assertViewIs('dashboards.admin')
+            ->assertSee('Super Administrator')
+            ->assertSee('Role Mix')
+            ->assertSee(route('admin.users'))
+            ->assertSee(route('admin.roles'))
+            ->assertSee(route('admin.reports'))
+            ->assertSee(route('admin.settings'))
             ->assertDontSee('Teacher Classes')
             ->assertDontSee('Accounts Payroll');
+    }
+
+    public function test_admin_dashboard_shows_live_user_counts(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+
+        $response = $this->actingAs($admin)->get('/dashboard');
+
+        $response->assertViewHas('data', fn (array $data): bool => $data['overview']['total_users'] === 5
+            && $data['overview']['total_teachers'] === 1
+            && $data['overview']['total_students'] === 1
+            && $data['overview']['total_roles'] === 5);
+        $response->assertSeeInOrder(['Total Users', 'data-count-up="5"'], false);
+    }
+
+    public function test_admin_dashboard_charts_show_signups_for_the_last_six_months(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+        User::factory()->create(['created_at' => now()->subMonths(2)->startOfMonth()->addDay()]);
+        User::factory()->create(['created_at' => now()->subMonths(8)]);
+
+        $response = $this->actingAs($admin)->get('/dashboard');
+
+        $response->assertViewHas('data', function (array $data): bool {
+            $counts = array_column($data['monthly_signups'], 'count');
+
+            return count($counts) === 6
+                && $counts[3] === 1
+                && $counts[5] === 5
+                && array_sum($counts) === 6
+                && $data['overview']['new_this_month'] === 5
+                && $data['overview']['total_users'] === 7;
+        });
+        $response->assertSee('Account Growth');
+        $response->assertSee('Role Mix');
+    }
+
+    public function test_non_admin_dashboard_does_not_link_to_admin_pages(): void
+    {
+        $teacher = User::where('email', 'teacher@lms.test')->first();
+
+        $response = $this->actingAs($teacher)->get('/dashboard');
+
+        $response->assertViewIs('dashboards.portal');
+        $response->assertDontSee(route('admin.users'));
+        $response->assertDontSee(route('admin.settings'));
+    }
+
+    public function test_navigation_marks_the_current_page_link_as_active(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+
+        $response = $this->actingAs($admin)->get('/admin/roles');
+
+        $response->assertSeeInOrder([
+            'href="'.route('admin.roles').'"',
+            'class="dash-nav-link is-active"',
+            'aria-current="page"',
+        ], false);
+    }
+
+    public function test_dashboard_renders_collapsed_sidebar_from_cookie(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+
+        $this->actingAs($admin)
+            ->withUnencryptedCookie('dash_sidebar', 'collapsed')
+            ->get('/dashboard')
+            ->assertSee('class="dash-body is-sidebar-collapsed"', false);
+    }
+
+    public function test_dashboard_renders_expanded_sidebar_without_cookie(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertSee('class="dash-body"', false);
+    }
+
+    public function test_dashboard_shows_flash_status_in_banner(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+
+        $response = $this->actingAs($admin)
+            ->withSession(['status' => 'System settings updated successfully.'])
+            ->get('/dashboard');
+
+        $response->assertSeeInOrder(['dash-banner-success', 'System settings updated successfully.'], false);
+    }
+
+    public function test_login_page_hides_demo_credentials_outside_local_environment(): void
+    {
+        $this->get('/login')->assertDontSee('Instant Demo Autofill');
+    }
+
+    public function test_login_page_shows_demo_credentials_in_local_environment(): void
+    {
+        $this->app['env'] = 'local';
+
+        $this->get('/login')->assertSee('Instant Demo Autofill');
     }
 
     public function test_custom_role_can_login_to_accounts_portal_through_permissions(): void

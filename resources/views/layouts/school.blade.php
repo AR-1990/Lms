@@ -13,10 +13,20 @@
 
     <!-- External Theme CSS (Separated from Blade) -->
     <link rel="stylesheet" href="{{ asset('css/school-theme.css') }}">
-    
+
+    <!-- Prefetch pages on hover so navigation feels instant -->
+    <script type="speculationrules">
+        {"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/logout"}}]}, "eagerness": "moderate"}]}
+    </script>
+
     @yield('extra_css')
 </head>
 <body>
+    <div class="site-progress" aria-hidden="true"></div>
+    <div class="scroll-meter" aria-hidden="true"></div>
+    <button type="button" class="back-to-top" aria-label="Back to top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+    </button>
 
     <!-- Modular Header Partial -->
     @include('partials.header')

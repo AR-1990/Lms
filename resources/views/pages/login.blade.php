@@ -116,7 +116,8 @@
                 </button>
             </div>
 
-            <!-- Single-Click Quick Autofill Helper -->
+            @if (app()->isLocal())
+            <!-- Single-Click Quick Autofill Helper (local development only) -->
             <div class="demo-credentials-box">
                 <div style="font-size: 0.8rem; font-weight: 800; color: #9a3412; display: flex; align-items: center; gap: 0.4rem;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -129,6 +130,7 @@
                     <button type="button" class="demo-chip-btn" data-fill-role="accounts">💼 Accounts Demo</button>
                 </div>
             </div>
+            @endif
 
             <!-- Interactive Login Form -->
             <form id="portalLoginForm" action="{{ route('login.submit') }}" method="POST">

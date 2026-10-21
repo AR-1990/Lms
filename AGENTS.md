@@ -165,3 +165,61 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 
 </laravel-boost-guidelines>
+
+# Pinnacle Project Rules
+
+These rules are decided by the project owner and override any generic guidance above. `PLAN.md` is the source of truth for modules and database fields; read it before adding or changing any table, and update it in the same change when the schema changes.
+
+## 1. API-first
+- Every feature is built as an API first: route in `routes/api.php` or a `routes/erp-*.php` file (behind `auth:sanctum` + `permission:` middleware), then Controller → Service → Model.
+- Blade/admin screens reuse the same Service classes; business logic never lives in Blade views or web-only controllers.
+- One API serves every client: the web admin panel, the web portals, and the Android/iOS mobile apps. Build each feature once; never build a separate mobile-only or web-only version of the same logic.
+- Mobile apps authenticate with Sanctum personal access tokens (one per device, tracked in `user_devices`); web uses the Sanctum session. Output is shaped with Eloquent API Resources so all clients get identical fields.
+
+## 2. JSON is only for API responses
+- JSON is used only to send API responses. Data is never stored as JSON.
+- No `json`/`jsonb` columns, no `array`/`json`/`collection` casts, no serialized arrays in text columns, no JSON blobs in Blade `data-*` attributes, no JSON files as a data store.
+- Lists and repeating values go into proper columns, child tables, or pivot tables.
+
+## 3. Every API endpoint always returns the standard response
+- Always return through the `ApiResponse` trait / `App\Support\ApiResponseHelper`, with the envelope `{ success, message, data, errors }`, on success and on failure.
+- Never return a raw model, array, string, or empty response from an API route. Validation, auth, 403, 404, and server errors must also come back in this envelope.
+
+## 4. Simplest code, fewest functions
+- Write the simplest code that works, in the fewest functions. No extra layers (repositories, interfaces, DTOs, helpers) unless the same logic is reused in at least two places.
+- Prefer built-in Laravel features (Form Requests, Eloquent relations, scopes, policies/middleware) over custom code.
+
+## 5. Optimized by default
+- Eager load relations, select only the columns needed, and never cause N+1 queries.
+- Add indexes on every foreign key and on every column used for filtering, searching, or sorting.
+- Every list is paginated or server-side. Never load a full table into memory.
+
+## 6. Data tables use Yajra DataTables (server-side)
+- Every listing grid (admin and portals) uses Yajra DataTables in server-side mode, so the screen stays fast as data grows.
+- Package: `yajra/laravel-datatables-oracle`. It is not installed yet; install it (with approval) when the first module grid is built.
+- Grid endpoints still follow rule 3: the Yajra payload goes inside the envelope's `data`, and the grid reads it with `dataSrc: 'data.data'`. Mobile uses the same Service query with normal pagination (`data.items` + `data.meta`).
+
+## 7. Business options are dynamic, never hard-coded
+- Categories, types, payment methods, fee heads, leave types, document types, designations, relations, and any option a school may want to add or rename live in database tables managed from the admin panel.
+- Do not use PHP enums, config arrays, or hard-coded `<option>` lists for them. Use the shared `lookups` table for simple lists, or a dedicated master table when the option has its own fields (see `PLAN.md`).
+- Only internal workflow states that code branches on (e.g. invoice `draft`/`posted`/`paid`) may be fixed string constants.
+
+## 8. Files and images
+- Images and documents are stored with Laravel `Storage` on a disk, never as base64 or blobs in the database.
+- Every uploaded file gets a row in the polymorphic `attachments` table. A single profile photo may be kept as a `photo_path` column.
+
+## 9. Data safety
+- Money is stored as integer minor units (paisa) in `bigInteger` columns, never as float or decimal.
+- People and master records use soft deletes. Financial records (posted invoices, payments, journal entries) are never edited or deleted after posting; corrections are made by reversal entries.
+- Most fields beyond the identifying ones are nullable (optional), so records can be created quickly and completed later.
+
+## 10. No database foreign-key constraints
+- Never add foreign-key constraints: no `->constrained()`, `->foreign()`, `->references()`, or `cascadeOnDelete()` in migrations. Reference columns are plain `unsignedBigInteger` (or `foreignId()` without `constrained()`) and always get an index.
+- This keeps data easy to export, import, and move between databases and campuses.
+- Integrity is enforced in code: `exists:` validation in Form Requests, soft deletes, and Services that block deleting a record still in use and clean up child rows themselves.
+- Tables created before this rule (`role_user`, `permission_role`, `regions`, `currencies`, `system_settings`) still have constraints; do not copy that pattern.
+
+## 11. Everything is logged in the activity log
+- Every create, update, delete, restore, status change, approve/reject, post/reverse, assign/return, print, export/import, login/logout, and failed login is written to `activity_logs` (one row: user, module, action, record, readable description, platform, IP, time), with changed fields in `activity_log_changes` (old/new value per field, no JSON).
+- Logging happens automatically in the same transaction: a shared model trait/observer for CRUD events, plus one call in Services for business actions. Never skip it for a new model or action.
+- Secrets (passwords, tokens) are never logged; activity logs are append-only.

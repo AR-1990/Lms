@@ -38,6 +38,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 11. Interactive Luxury Login Portal Engine
     initLoginPage();
+
+    // 12. Page-to-page navigation progress bar
+    initNavigationProgress();
+
+    // 13. Click shine, ripple and pen ink effects
+    initInteractionEffects();
+
+    // 14. Scroll meter + back-to-top progress ring
+    initScrollMeter();
+
+    // 15. 3D tilt + glare on cards, magnetic primary buttons (mouse only)
+    initTiltCards();
+    initMagneticButtons();
 });
 
 /**
@@ -633,3 +646,218 @@ function showToast(message, type = 'success') {
 window.PinnacleSchool = {
     showToast: showToast
 };
+
+/**
+ * Navigation progress bar: shown while the next page loads.
+ */
+function initNavigationProgress() {
+    document.addEventListener('click', function (event) {
+        const link = event.target.closest('a[href]');
+
+        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+        }
+
+        const isSameOrigin = link.origin === window.location.origin;
+        const isNewTab = link.target && link.target !== '_self';
+        const isHashOnly = link.pathname === window.location.pathname && link.hash;
+
+        if (isSameOrigin && !isNewTab && !isHashOnly && !link.hasAttribute('download')) {
+            document.body.classList.add('is-navigating');
+        }
+    });
+
+    window.addEventListener('pageshow', function () {
+        document.body.classList.remove('is-navigating');
+    });
+}
+
+/**
+ * Press feedback: shine sweep + ripple on buttons and links, ink dot where the pen touches.
+ */
+function initInteractionEffects() {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const hosts = '.btn, .nav-link, .drawer-link, .role-chip, .demo-chip-btn, .floating-action-btn, .topbar-link';
+    const noInkTargets = 'input, textarea, select, [contenteditable="true"]';
+
+    const removeAfterAnimation = function (element) {
+        element.addEventListener('animationend', function () {
+            element.remove();
+        }, { once: true });
+    };
+
+    document.addEventListener('pointerdown', function (event) {
+        if (reducedMotion.matches || event.button !== 0) {
+            return;
+        }
+
+        const host = event.target.closest(hosts);
+
+        if (host) {
+            let layer = host.querySelector(':scope > .fx-layer');
+
+            if (!layer) {
+                if (window.getComputedStyle(host).position === 'static') {
+                    host.style.position = 'relative';
+                }
+
+                layer = document.createElement('span');
+                layer.className = 'fx-layer';
+                layer.setAttribute('aria-hidden', 'true');
+                host.appendChild(layer);
+            }
+
+            const bounds = host.getBoundingClientRect();
+            const size = Math.max(bounds.width, bounds.height) * 2;
+            const ripple = document.createElement('span');
+            ripple.className = 'fx-ripple';
+            ripple.style.width = size + 'px';
+            ripple.style.height = size + 'px';
+            ripple.style.left = (event.clientX - bounds.left - size / 2) + 'px';
+            ripple.style.top = (event.clientY - bounds.top - size / 2) + 'px';
+
+            const shine = document.createElement('span');
+            shine.className = 'fx-shine';
+
+            layer.append(ripple, shine);
+            removeAfterAnimation(ripple);
+            removeAfterAnimation(shine);
+        }
+
+        if (!event.target.closest(noInkTargets)) {
+            const ink = document.createElement('span');
+            ink.className = 'fx-ink';
+            ink.style.left = event.clientX + 'px';
+            ink.style.top = event.clientY + 'px';
+            document.body.appendChild(ink);
+            removeAfterAnimation(ink);
+        }
+    });
+}
+
+/**
+ * Thin progress bar at the top + back-to-top button whose ring fills as you scroll.
+ */
+function initScrollMeter() {
+    const meter = document.querySelector('.scroll-meter');
+    const backToTop = document.querySelector('.back-to-top');
+    let ticking = false;
+
+    const update = function () {
+        const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = scrollable > 0 ? Math.min(window.scrollY / scrollable, 1) : 0;
+
+        document.documentElement.style.setProperty('--scroll', progress.toFixed(4));
+
+        if (backToTop) {
+            backToTop.classList.toggle('is-visible', window.scrollY > 400);
+        }
+
+        ticking = false;
+    };
+
+    window.addEventListener('scroll', function () {
+        if (!ticking) {
+            ticking = true;
+            window.requestAnimationFrame(update);
+        }
+    }, { passive: true });
+
+    if (backToTop) {
+        backToTop.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    if (!meter && !backToTop) {
+        return;
+    }
+
+    update();
+}
+
+/**
+ * Cards lean toward the pointer with a soft light glare (fine pointers only).
+ */
+function initTiltCards() {
+    const canTilt = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!canTilt) {
+        return;
+    }
+
+    document.querySelectorAll('.glow-card, .facility-card, .portal-card, .program-card, .event-card, .stat-item, .card').forEach(function (card) {
+        if (card.closest('.login-split-container') || card.querySelector('form, input, textarea, select')) {
+            return;
+        }
+
+        card.classList.add('tilt-ready');
+
+        if (window.getComputedStyle(card).position === 'static') {
+            card.style.position = 'relative';
+        }
+
+        const glare = document.createElement('span');
+        glare.className = 'tilt-glare';
+        glare.setAttribute('aria-hidden', 'true');
+        card.appendChild(glare);
+
+        let frame = null;
+
+        card.addEventListener('pointermove', function (event) {
+            if (frame) {
+                return;
+            }
+
+            frame = window.requestAnimationFrame(function () {
+                const bounds = card.getBoundingClientRect();
+                const x = (event.clientX - bounds.left) / bounds.width;
+                const y = (event.clientY - bounds.top) / bounds.height;
+
+                card.style.setProperty('--ry', ((x - 0.5) * 10).toFixed(2) + 'deg');
+                card.style.setProperty('--rx', ((0.5 - y) * 8).toFixed(2) + 'deg');
+                card.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
+                card.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+                card.classList.add('is-tilting');
+                frame = null;
+            });
+        });
+
+        card.addEventListener('pointerleave', function () {
+            card.classList.remove('is-tilting');
+        });
+    });
+}
+
+/**
+ * Primary buttons gently follow the pointer while hovered.
+ */
+function initMagneticButtons() {
+    const canMove = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!canMove) {
+        return;
+    }
+
+    document.querySelectorAll('.btn-primary, .btn-lg').forEach(function (button) {
+        button.addEventListener('pointermove', function (event) {
+            const bounds = button.getBoundingClientRect();
+            const offsetX = (event.clientX - bounds.left - bounds.width / 2) * 0.18;
+            const offsetY = (event.clientY - bounds.top - bounds.height / 2) * 0.25;
+
+            button.classList.add('is-magnetic');
+            button.style.setProperty('--bx', offsetX.toFixed(1) + 'px');
+            button.style.setProperty('--by', offsetY.toFixed(1) + 'px');
+        });
+
+        button.addEventListener('pointerleave', function () {
+            button.style.setProperty('--bx', '0px');
+            button.style.setProperty('--by', '0px');
+            window.setTimeout(function () {
+                button.classList.remove('is-magnetic');
+            }, 200);
+        });
+    });
+}

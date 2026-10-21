@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Portal\AccountsPortalController;
 use App\Http\Controllers\Portal\AdminPortalController;
 use App\Http\Controllers\Portal\AdminSettingsController;
+use App\Http\Controllers\Portal\AdminUserController;
 use App\Http\Controllers\Portal\ParentPortalController;
 use App\Http\Controllers\Portal\StudentPortalController;
 use App\Http\Controllers\Portal\TeacherPortalController;
@@ -34,7 +35,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [SchoolController::class, 'logout'])->name('logout');
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/users', [AdminPortalController::class, 'users'])->middleware('permission:manage-users')->name('users');
+        Route::middleware('permission:manage-users')->group(function () {
+            Route::get('/users', [AdminUserController::class, 'index'])->name('users');
+            Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
+            Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+            Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+            Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
+            Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+            Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+        });
         Route::get('/roles', [AdminPortalController::class, 'roles'])->middleware('permission:manage-roles')->name('roles');
         Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats')->name('reports');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:manage-settings')->name('settings');

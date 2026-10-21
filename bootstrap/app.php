@@ -47,6 +47,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
             'force.json' => ForceJsonResponse::class,
         ]);
+
+        $middleware->encryptCookies(except: ['dash_sidebar']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

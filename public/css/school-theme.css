@@ -2116,3 +2116,494 @@ p:last-child {
         left: 1.5rem;
     }
 }
+
+/* ==============================================================================
+   Mobile hardening: no horizontal scroll, shrinkable grid tracks, compact header
+   ============================================================================== */
+html,
+body {
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
+.grid-2 > *,
+.grid-3 > *,
+.grid-4 > *,
+[class*="-grid"] > * {
+    min-width: 0;
+}
+
+img,
+video,
+iframe {
+    max-width: 100%;
+}
+
+@media (max-width: 560px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .nav-container {
+        gap: 0.75rem;
+        height: 68px;
+    }
+
+    .brand {
+        gap: 0.6rem;
+        min-width: 0;
+        flex-shrink: 1;
+    }
+
+    .brand-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .brand-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .brand-name {
+        font-size: 1.05rem;
+    }
+
+    .brand-tagline {
+        font-size: 0.58rem;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
+    }
+
+    .nav-actions {
+        gap: 0.35rem;
+    }
+
+    .nav-actions .btn-sm {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .menu-toggle {
+        padding: 0.35rem;
+    }
+
+    .grid-2,
+    .grid-3 {
+        gap: 1.75rem;
+    }
+
+    .grid-4 {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .brand-tagline {
+        display: none;
+    }
+
+    .nav-actions .btn-sm {
+        padding: 0.45rem 0.7rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .grid-4 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
+/* ==============================================================================
+   Interactive layer: pen cursor, page transitions, nav underline,
+   navigation progress, click shine/ripple and ink dots
+   ============================================================================== */
+
+@media (hover: hover) and (pointer: fine) {
+    body {
+        cursor: url('../images/cursors/pen.svg') 3 29, auto;
+    }
+
+    :is(a, button, [role="button"], [role="tab"], summary, label, select, input[type="range"], input[type="checkbox"], input[type="radio"], input[type="submit"], .role-chip, .demo-chip-btn) {
+        cursor: url('../images/cursors/pen-active.svg') 3 29, pointer;
+    }
+
+    :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]), textarea, [contenteditable="true"]) {
+        cursor: text;
+    }
+}
+
+/* Cross-page transitions: header and top bar stay put, content glides */
+@view-transition {
+    navigation: auto;
+}
+
+.site-header {
+    view-transition-name: site-header;
+}
+
+.topbar {
+    view-transition-name: site-topbar;
+}
+
+::view-transition-old(root) {
+    animation: site-page-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(root) {
+    animation: site-page-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes site-page-out {
+    to { opacity: 0; transform: translateY(-10px) scale(0.99); }
+}
+
+@keyframes site-page-in {
+    from { opacity: 0; transform: translateY(18px); }
+}
+
+/* Navigation progress */
+.site-progress {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 4000;
+    height: 3px;
+    background: linear-gradient(90deg, #fbbf24, var(--primary), #c2410c);
+    box-shadow: 0 0 12px rgba(234, 88, 12, 0.6);
+    transform: scaleX(0);
+    transform-origin: left;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.is-navigating .site-progress {
+    opacity: 1;
+    animation: site-progress 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes site-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(0.85); }
+}
+
+/* Sliding underline on desktop navigation */
+.nav-link {
+    position: relative;
+}
+
+.nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
+    bottom: 3px;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #fbbf24, var(--primary));
+    transform: scaleX(0);
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover::after {
+    transform: scaleX(1);
+}
+
+.nav-link.active {
+    box-shadow: none;
+}
+
+.nav-link.active::after {
+    transform: scaleX(1);
+}
+
+/* Drawer links arrive one after another */
+.mobile-drawer.is-open .drawer-menu li {
+    animation: site-drawer-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mobile-drawer.is-open .drawer-menu li:nth-child(2) { animation-delay: 40ms; }
+.mobile-drawer.is-open .drawer-menu li:nth-child(3) { animation-delay: 80ms; }
+.mobile-drawer.is-open .drawer-menu li:nth-child(4) { animation-delay: 120ms; }
+.mobile-drawer.is-open .drawer-menu li:nth-child(5) { animation-delay: 160ms; }
+.mobile-drawer.is-open .drawer-menu li:nth-child(6) { animation-delay: 200ms; }
+.mobile-drawer.is-open .drawer-menu li:nth-child(7) { animation-delay: 240ms; }
+.mobile-drawer.is-open .drawer-menu li:nth-child(n + 8) { animation-delay: 280ms; }
+
+@keyframes site-drawer-in {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* Click shine + ripple */
+.fx-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.fx-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--fx-ripple, rgba(234, 88, 12, 0.2));
+    transform: scale(0);
+    animation: fx-ripple 600ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+.fx-shine {
+    position: absolute;
+    top: -50%;
+    bottom: -50%;
+    left: -60%;
+    width: 45%;
+    background: linear-gradient(105deg, transparent 15%, var(--fx-shine, rgba(251, 146, 60, 0.45)) 50%, transparent 85%);
+    animation: fx-shine 650ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+.btn-primary,
+.btn-amber,
+.floating-action-btn {
+    --fx-ripple: rgba(255, 255, 255, 0.4);
+    --fx-shine: rgba(255, 255, 255, 0.75);
+}
+
+.fx-ink {
+    position: fixed;
+    z-index: 5000;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border-radius: 50%;
+    background: var(--primary);
+    pointer-events: none;
+    animation: fx-ink-dot 550ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+.fx-ink::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border: 2px solid #fb923c;
+    border-radius: 50%;
+    animation: fx-ink-ring 550ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes fx-ripple {
+    from { transform: scale(0); opacity: 1; }
+    to { transform: scale(1); opacity: 0; }
+}
+
+@keyframes fx-shine {
+    from { transform: translateX(0) skewX(-20deg); opacity: 1; }
+    to { transform: translateX(500%) skewX(-20deg); opacity: 0.2; }
+}
+
+@keyframes fx-ink-dot {
+    0% { transform: scale(0.4); opacity: 1; }
+    60% { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(0.6); opacity: 0; }
+}
+
+@keyframes fx-ink-ring {
+    from { transform: scale(0.5); opacity: 0.9; }
+    to { transform: scale(2.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition {
+        navigation: none;
+    }
+
+    .fx-ink,
+    .fx-ripple,
+    .fx-shine,
+    .site-progress {
+        display: none;
+    }
+
+    .mobile-drawer.is-open .drawer-menu li {
+        animation: none;
+    }
+}
+
+/* ==============================================================================
+   Site v2: colour tones, scroll meter, back-to-top ring, 3D tilt + glare cards,
+   magnetic buttons, colourful stat icons, animated section titles
+   ============================================================================== */
+
+.tone-orange { --t1: #f59e0b; --t2: #ea580c; --tsoft: #fff1e6; }
+.tone-blue { --t1: #38bdf8; --t2: #2563eb; --tsoft: #eaf1ff; }
+.tone-emerald { --t1: #34d399; --t2: #059669; --tsoft: #e7f8f1; }
+.tone-violet { --t1: #c084fc; --t2: #7c3aed; --tsoft: #f2edff; }
+.tone-rose { --t1: #fb7185; --t2: #e11d48; --tsoft: #ffeef1; }
+
+.card-icon[class*="tone-"] {
+    background: var(--tsoft);
+    color: var(--t2);
+    transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1), background 250ms ease, color 250ms ease, box-shadow 250ms ease;
+}
+
+.glow-card:hover .card-icon[class*="tone-"],
+.card:hover .card-icon[class*="tone-"] {
+    background: linear-gradient(135deg, var(--t1), var(--t2));
+    color: #ffffff;
+    box-shadow: 0 12px 24px -12px var(--t2);
+}
+
+.card-icon-sm {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 0;
+}
+
+/* Colourful animated stat icons on the home page */
+.stat-item .stat-icon-box {
+    background: linear-gradient(135deg, #fbbf24, #ea580c);
+    color: #ffffff;
+    box-shadow: 0 12px 24px -12px rgba(234, 88, 12, 0.8);
+    transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stat-item:nth-child(4n + 2) .stat-icon-box { background: linear-gradient(135deg, #38bdf8, #2563eb); box-shadow: 0 12px 24px -12px rgba(37, 99, 235, 0.8); }
+.stat-item:nth-child(4n + 3) .stat-icon-box { background: linear-gradient(135deg, #34d399, #059669); box-shadow: 0 12px 24px -12px rgba(5, 150, 105, 0.8); }
+.stat-item:nth-child(4n + 4) .stat-icon-box { background: linear-gradient(135deg, #c084fc, #7c3aed); box-shadow: 0 12px 24px -12px rgba(124, 58, 237, 0.8); }
+
+.stat-item:hover .stat-icon-box {
+    transform: translateY(-4px) rotate(-8deg) scale(1.08);
+}
+
+/* Section titles: underline grows in when revealed */
+.section-title {
+    position: relative;
+}
+
+.section-subtitle {
+    background-image: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%);
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+    animation: site-subtitle-shine 4.5s ease-in-out infinite;
+}
+
+@keyframes site-subtitle-shine {
+    from { background-position: 130% 0; }
+    60%, to { background-position: -30% 0; }
+}
+
+/* Scroll meter */
+.scroll-meter {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 3500;
+    height: 3px;
+    background: linear-gradient(90deg, #fbbf24, var(--primary), #c2410c);
+    transform: scaleX(var(--scroll, 0));
+    transform-origin: left;
+    pointer-events: none;
+}
+
+/* Back to top with progress ring */
+.back-to-top {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 2500;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) calc(var(--scroll, 0) * 360deg), #ffedd5 0);
+    box-shadow: 0 12px 28px -12px rgba(234, 88, 12, 0.7);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(16px) scale(0.9);
+    transition: opacity 250ms ease, transform 400ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 250ms;
+}
+
+.back-to-top::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.back-to-top svg {
+    position: relative;
+    color: var(--primary);
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.back-to-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: opacity 250ms ease, transform 400ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+}
+
+.back-to-top:hover svg {
+    transform: translateY(-3px);
+}
+
+/* 3D tilt + glare cards (JS adds .is-tilting and sets --rx/--ry/--mx/--my) */
+.tilt-ready {
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.tilt-ready.is-tilting {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-8px);
+    transition: transform 120ms ease-out, box-shadow 300ms ease, border-color 300ms ease;
+}
+
+.tilt-glare {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.35), rgba(251, 146, 60, 0.08) 40%, transparent 65%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+}
+
+.is-tilting > .tilt-glare {
+    opacity: 1;
+}
+
+/* Magnetic buttons (JS sets --bx/--by) */
+.btn.is-magnetic {
+    transform: translate(var(--bx, 0px), var(--by, 0px));
+}
+
+@media (max-width: 768px) {
+    .back-to-top {
+        right: 1rem;
+        bottom: 1rem;
+        width: 46px;
+        height: 46px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tilt-ready.is-tilting,
+    .btn.is-magnetic {
+        transform: none;
+    }
+
+    .section-subtitle {
+        animation: none;
+    }
+}

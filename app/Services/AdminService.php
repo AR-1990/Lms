@@ -15,24 +15,21 @@ class AdminService
      */
     public function getDashboardSummary(): array
     {
-        $totalUsers = User::count();
-        $totalAdmins = User::whereHas('roles', fn ($q) => $q->where('slug', 'admin'))->count();
-        $totalTeachers = User::whereHas('roles', fn ($q) => $q->where('slug', 'teacher'))->count();
-        $totalStudents = User::whereHas('roles', fn ($q) => $q->where('slug', 'student'))->count();
-        $totalRoles = Role::count();
-
-        $recentUsers = User::with('roles')->latest()->take(5)->get();
         $rolesBreakdown = Role::withCount('users')->orderBy('name')->get();
+        $roleCounts = $rolesBreakdown->pluck('users_count', 'slug');
+        $recentUsers = User::with('roles:id,name,slug')->latest()->latest('id')->take(5)->get();
         $settings = $this->systemSettingsService->getSettingsPayload();
 
         return [
             'overview' => [
-                'total_users' => $totalUsers,
-                'total_admins' => $totalAdmins,
-                'total_teachers' => $totalTeachers,
-                'total_students' => $totalStudents,
-                'total_roles' => $totalRoles,
+                'total_users' => User::count(),
+                'total_admins' => $roleCounts->get('admin', 0),
+                'total_teachers' => $roleCounts->get('teacher', 0),
+                'total_students' => $roleCounts->get('student', 0),
+                'total_roles' => $rolesBreakdown->count(),
+                'new_this_month' => User::where('created_at', '>=', now()->startOfMonth())->count(),
             ],
+            'monthly_signups' => $this->getMonthlySignups(6),
             'recent_users' => $recentUsers,
             'roles_breakdown' => $rolesBreakdown,
             'system_status' => [
@@ -48,22 +45,28 @@ class AdminService
     }
 
     /**
-     * Full user directory for the admin portal.
+     * New accounts per month for the last N months, oldest first (months with none included).
+     *
+     * @return array<int, array{label: string, count: int}>
      */
-    public function getUsersDirectory(): array
+    private function getMonthlySignups(int $months): array
     {
-        $users = User::with('roles')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get();
+        $firstMonth = now()->startOfMonth()->subMonths($months - 1);
 
-        return [
-            'users' => $users,
-            'counts' => [
-                'total' => $users->count(),
-                'active_roles' => Role::count(),
-            ],
-        ];
+        $countsByMonth = User::where('created_at', '>=', $firstMonth)
+            ->pluck('created_at')
+            ->countBy(fn ($createdAt): string => $createdAt->format('Y-m'));
+
+        return collect(range(0, $months - 1))
+            ->map(function (int $offset) use ($firstMonth, $countsByMonth): array {
+                $month = $firstMonth->copy()->addMonths($offset);
+
+                return [
+                    'label' => $month->format('M'),
+                    'count' => $countsByMonth->get($month->format('Y-m'), 0),
+                ];
+            })
+            ->all();
     }
 
     /**

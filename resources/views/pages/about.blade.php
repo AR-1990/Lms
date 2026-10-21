@@ -69,7 +69,7 @@
         <div class="grid-3">
             <!-- Vision -->
             <div class="glow-card" data-reveal="fade-up" style="padding: 2.5rem;">
-                <div class="card-icon" style="background: var(--primary-light); color: var(--primary);">
+                <div class="card-icon tone-orange">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/></svg>
                 </div>
                 <h3 class="card-title">Our Vision</h3>
@@ -80,7 +80,7 @@
 
             <!-- Mission -->
             <div class="glow-card" data-reveal="fade-up" style="padding: 2.5rem; transition-delay: 0.15s;">
-                <div class="card-icon" style="background: var(--amber-light); color: var(--amber);">
+                <div class="card-icon tone-blue">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
                 <h3 class="card-title">Our Mission</h3>
@@ -91,7 +91,7 @@
 
             <!-- Legacy -->
             <div class="glow-card" data-reveal="fade-up" style="padding: 2.5rem; transition-delay: 0.3s;">
-                <div class="card-icon" style="background: var(--emerald-light); color: var(--emerald);">
+                <div class="card-icon tone-emerald">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
                 </div>
                 <h3 class="card-title">28-Year Legacy</h3>

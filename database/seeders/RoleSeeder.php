@@ -18,7 +18,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Administrator',
                 'description' => 'Full access to ERP system, configuration, and users.',
-                'dashboard_view' => 'dashboards.portal',
+                'dashboard_view' => 'dashboards.admin',
                 'is_system' => true,
             ],
         );

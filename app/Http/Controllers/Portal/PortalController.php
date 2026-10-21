@@ -23,7 +23,7 @@ abstract class PortalController extends Controller
             'portal' => $portal,
             'active' => $active,
             'data' => $data,
-            'sidebar' => app(PortalAccessService::class)->getSidebarConfig($user, $portal, $active),
+            'navigation' => app(PortalAccessService::class)->getNavigationConfig($user, $portal, $active),
         ]);
     }
 }
