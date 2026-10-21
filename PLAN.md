@@ -4,7 +4,7 @@ This file is the single source of truth for what the system contains and how the
 Read it before adding a table or field, and update it in the same change when the schema changes.
 Project rules (API-first, no JSON storage, dynamic options, Yajra DataTables, etc.) are in `AGENTS.md`.
 
-**One API, every screen.** Every module is built once as an API and the same endpoints serve the web admin panel, all web portals, and the Android/iOS mobile apps. No feature is built twice. See section 23.
+**One API, every screen.** Every module is built once as an API and the same endpoints serve the web admin panel, all web portals, and the Android/iOS mobile apps. No feature is built twice. See section 24.
 
 **Modules**
 
@@ -24,9 +24,12 @@ Project rules (API-first, no JSON storage, dynamic options, Yajra DataTables, et
 13. Inventory & procurement (consumable stock and who was issued what)
 14. Communication (announcements for students / parents / employees / public, real-time employee chat like WhatsApp, SMS/email/push logs)
 15. Transport (optional)
-16. Portals (teacher, student, parent, accounts) — screens built on top of modules 1–15
-17. Printables (fee challans, receipts, admit cards, report cards, certificates, payslips…)
-18. API for web + mobile (one API, all clients)
+16. Portals (teacher, student, parent, accounts) — screens built on top of the other modules
+17. Student performance tracker (trends, skills, goals, at-risk alerts)
+18. Task management (boards, assignees, checklists, reminders)
+19. Sticky notes (personal reminder notes shown on every user's dashboard)
+
+Plus: Printables & cards (section 23) and the one API for web + mobile (section 24).
 
 ---
 
@@ -154,6 +157,7 @@ Which ledger account each event uses is configured, not hard-coded: fee heads, p
 - Academics: `wing`, `subject_type`, `calendar_event_type`, `house` (student houses), `discipline_category`, `achievement_category`, `exam_type`, `diary_entry_type`, `diary_remark_type`
 - Performance: `skill_group`, `skill_rating`, `counselling_concern`
 - Tasks: `task_priority`, `task_category`
+- Sticky notes: `sticky_note_color` (the `code` column holds the colour hex, e.g. `#fff3b0`)
 - Admissions: `inquiry_source`, `inquiry_status_reason`, `admission_rejection_reason`, `withdrawal_reason`
 - HR: `employment_type`, `contract_type`, `pay_grade`, `job_source`, `interview_round_type`, `loan_type`, `appraisal_rating`, `exit_reason`
 - Assets & stock: `asset_condition`, `maintenance_type`, `unit_of_measure`, `stock_adjustment_reason`, `vehicle_type`, `transport_stop_area`
@@ -1316,6 +1320,8 @@ Every portal screen — web and mobile app — reads the modules above through t
 | **Store / Asset keeper** (role) | Stock levels, GRN, issues & returns, transfers, adjustments, asset register, assignments & returns, maintenance, asset audits |
 | **Public website** | Public announcements (news, holidays, admissions open), careers page from `job_openings`, admission inquiry & online application form, ID-card QR verification page |
 
+Every signed-in dashboard above (admin, accounts, HR, teacher, student, parent, store) opens with the user's own **sticky notes** board at the top (Module 19), on web and in the mobile app.
+
 ---
 
 ## 20. Module 17 — Student performance tracker
@@ -1431,7 +1437,46 @@ Task history (status changes, reassignment, due-date changes) is recorded in `ac
 
 ---
 
-## 22. Printables & cards (generated from the system)
+## 22. Module 19 — Sticky notes (personal reminders on the dashboard)
+
+Every user (admin, teacher, accountant, student, parent, any employee) can keep their own sticky notes — quick reminders like "Call Ali's father about fee", "Submit Grade 5 marks by Friday". Notes are private to their owner. As soon as the user opens their portal (web or mobile app), their notes appear on the dashboard as a board of coloured paper notes, pinned ones first.
+
+**Behaviour**
+- Create from the dashboard with one click ("+ Note"), type, pick a colour — saved instantly (auto-save while typing).
+- Drag to reorder; pin important notes to the top; tick a note done (it fades and moves to "Done"); delete with the eraser action.
+- Optional reminder time: at `remind_at` the user gets an in-app bell + push notification, and the note shakes/glows on the dashboard until opened.
+- Optional checklist inside a note ("Bring: attendance register, chalk, diary").
+- Overdue reminders show a small red tab; done notes auto-archive after 7 days (still searchable).
+- Same notes on web and mobile (one API); the dashboard widget shows up to 8 notes with "View all".
+
+### `sticky_notes`
+| Field | Type | Notes |
+|---|---|---|
+| user_id | → users R, indexed | owner — notes are only ever visible to this user |
+| title | string(120) | optional short heading |
+| body | text | the note text (plain text, no JSON) |
+| color_id | → lookups (`sticky_note_color`) | yellow / pink / mint / sky / lavender / peach (dynamic) |
+| is_pinned | boolean default false | pinned notes first on the dashboard |
+| show_on_dashboard | boolean default true | |
+| sort_order | integer default 0 | drag-and-drop position |
+| remind_at | datetime, indexed | optional reminder time |
+| reminded_at | timestamp | set when the reminder notification was sent (prevents repeats) |
+| is_done | boolean default false | |
+| done_at | timestamp | |
+| archived_at | timestamp | auto-set 7 days after done |
+| related_type / related_id | string / bigint | optional link: Student, Fee invoice, Task, Exam… (opens that record from the note) |
+| **[SD]** | | soft deletes; actions logged in `activity_logs` (module `sticky_notes`) |
+
+### `sticky_note_items` (optional checklist inside a note)
+`sticky_note_id` R, `text` string R, `is_done` boolean default false, `done_at` timestamp, `sort_order` smallInteger.
+
+**Reminder delivery:** a scheduled job runs every minute, finds notes with `remind_at <= now` and `reminded_at` null and not done, sends the in-app/push notification through the queue, then sets `reminded_at`.
+
+**API (same for web and mobile):** `GET /api/erp/sticky-notes` (own notes: pinned first, then `sort_order`), `POST`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/done`, `PATCH /{id}/pin`, `PUT /sticky-notes/reorder` (list of ids in order). Every endpoint checks ownership (`user_id` = current user) and returns 404 for anyone else's note.
+
+---
+
+## 23. Printables & cards (generated from the system)
 
 Every printable is a PDF generated server-side from data already in the database, using the school name, logo, address, and colours from `system_settings`. The same API endpoint returns the PDF for web download, browser print, and the mobile app. Bulk printing (whole class / all defaulters / all staff) is queued and returns one combined PDF.
 
@@ -1507,7 +1552,7 @@ Admit cards (`admit_cards`, Module 5) print with a `card_templates` row of type 
 
 ---
 
-## 23. One API for web + mobile (build once, use everywhere)
+## 24. One API for web + mobile (build once, use everywhere)
 
 Every feature is built **once** as an API. The same endpoints are used by the web admin panel, the web portals (teacher, student, parent, accounts), and the Android and iOS apps. Nothing is built separately for mobile.
 
@@ -1556,13 +1601,13 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 
 ---
 
-## 24. New permissions (seeded per module)
+## 25. New permissions (seeded per module)
 
-`manage-academics`, `manage-timetable`, `manage-inquiries`, `manage-admissions`, `approve-admissions`, `manage-students`, `view-students`, `mark-student-attendance`, `manage-diary`, `acknowledge-diary`, `manage-exams`, `manage-exam-halls`, `issue-admit-cards`, `override-admit-card-eligibility`, `enter-marks`, `publish-results`, `manage-homework`, `view-performance`, `manage-performance-alerts`, `manage-skill-assessments`, `manage-counselling`, `manage-fee-setup`, `generate-invoices`, `collect-fees`, `approve-concessions`, `approve-waivers`, `issue-refunds`, `view-student-ledger`, `manage-chart-of-accounts`, `create-vouchers`, `post-vouchers`, `manage-expenses`, `view-financial-reports`, `close-fiscal-year`, `manage-recruitment`, `manage-employees`, `view-employees`, `mark-staff-attendance`, `approve-leave`, `run-payroll`, `approve-payroll`, `manage-loans`, `manage-appraisals`, `manage-assets`, `assign-assets`, `manage-inventory`, `issue-stock`, `approve-purchases`, `manage-vendors`, `manage-announcements`, `publish-public-announcements`, `use-chat`, `manage-chat-groups`, `manage-tasks`, `manage-task-boards`, `manage-card-templates`, `issue-id-cards`, `print-documents`, `manage-transport`, `manage-lookups`, `view-activity-log`.
+`manage-academics`, `manage-timetable`, `manage-inquiries`, `manage-admissions`, `approve-admissions`, `manage-students`, `view-students`, `mark-student-attendance`, `manage-diary`, `acknowledge-diary`, `manage-exams`, `manage-exam-halls`, `issue-admit-cards`, `override-admit-card-eligibility`, `enter-marks`, `publish-results`, `manage-homework`, `view-performance`, `manage-performance-alerts`, `manage-skill-assessments`, `manage-counselling`, `manage-fee-setup`, `generate-invoices`, `collect-fees`, `approve-concessions`, `approve-waivers`, `issue-refunds`, `view-student-ledger`, `manage-chart-of-accounts`, `create-vouchers`, `post-vouchers`, `manage-expenses`, `view-financial-reports`, `close-fiscal-year`, `manage-recruitment`, `manage-employees`, `view-employees`, `mark-staff-attendance`, `approve-leave`, `run-payroll`, `approve-payroll`, `manage-loans`, `manage-appraisals`, `manage-assets`, `assign-assets`, `manage-inventory`, `issue-stock`, `approve-purchases`, `manage-vendors`, `manage-announcements`, `publish-public-announcements`, `use-chat`, `manage-chat-groups`, `manage-tasks`, `manage-task-boards`, `use-sticky-notes`, `manage-card-templates`, `issue-id-cards`, `print-documents`, `manage-transport`, `manage-lookups`, `view-activity-log`.
 
 ---
 
-## 25. Build phases
+## 26. Build phases
 
 | Phase | Scope | Depends on |
 |---|---|---|
@@ -1578,7 +1623,7 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 | 10 | Exams management: exam fees, halls, seating, admit cards, marks, report cards, tabulation | 5, 7, 8 |
 | 11 | Student performance tracker (snapshots, skills, goals, alerts) | 9, 10 |
 | 12 | Announcements (incl. public website) + notifications & push | 1 |
-| 13 | Real-time employee chat (Reverb) + task management | 6, 12 |
+| 13 | Real-time employee chat (Reverb) + task management + sticky notes on every dashboard | 6, 12 |
 | 14 | HR: leave, payroll, loans, posting to ledger | 3, 6, 8 |
 | 15 | Assets & inventory & procurement | 3, 6 |
 | 16 | Portals & mobile apps completed on the same API | 4–15 |
@@ -1586,7 +1631,7 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 
 ---
 
-## 26. Decisions still open
+## 27. Decisions still open
 
 1. Single campus now, multi-campus later? (Schema already has nullable `campus_id`.)
 2. Fiscal year: July–June or January–December?
