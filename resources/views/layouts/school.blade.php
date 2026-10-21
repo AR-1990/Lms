@@ -9,7 +9,11 @@
     <meta name="description" content="@yield('meta_description', 'Pinnacle International Academy provides world-class education from Early Years to Higher Secondary with STEM labs, sports, and holistic character building.')">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231e3a8a'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3z'/><path d='M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231d2b45'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3z'/><path d='M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z'/></svg>">
+
+    <!-- Serif headings for the Ink & Paper theme -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=fraunces:500,600,700,600i&display=swap">
 
     <!-- External Theme CSS (Separated from Blade) -->
     <link rel="stylesheet" href="{{ asset('css/school-theme.css') }}">

@@ -51,11 +51,11 @@
                         </p>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Jolly Phonics & Dual Fluency:</strong> Systematic phonemic reading and bilingual conversation.
                             </div>
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Sensorial & Practical Life:</strong> Cultivating spatial reasoning, focus, and social independence.
                             </div>
                         </div>
@@ -80,11 +80,11 @@
                         </p>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Singapore Math Conceptual Model:</strong> Focus on problem-solving and mental arithmetic.
                             </div>
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Weekly STEM Studio:</strong> Introductory robotics, Scratch visual coding, and science experiments.
                             </div>
                         </div>
@@ -109,11 +109,11 @@
                         </p>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Dedicated Physics, Chem & Bio Labs:</strong> Hands-on weekly laboratory sessions.
                             </div>
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Model UN & Oratory Society:</strong> Cultivating public speaking and diplomacy.
                             </div>
                         </div>
@@ -138,11 +138,11 @@
                         </p>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>Pre-Medical, Pre-Engineering & Computer Science:</strong> State-of-the-art facilities.
                             </div>
                             <div class="program-feature-item">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <strong>University Placement Counseling:</strong> SAT prep, personal statement workshops & scholarships.
                             </div>
                         </div>

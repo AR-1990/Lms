@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#1d2b45">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Portal Dashboard') | Pinnacle Academy</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ea580c'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3z'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231d2b45'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3z'/></svg>">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap">
+    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|fraunces:500,600,600i&display=swap">
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
     @yield('extra_css')
     <script src="{{ asset('js/dashboard.js') }}" defer></script>
+    <script>
+        window.addEventListener('pagereveal', function (event) {
+            if (event.viewTransition) {
+                document.documentElement.classList.add('is-page-turn');
+            }
+        });
+    </script>
     <script type="speculationrules">
         {"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"selector_matches": "[data-no-prefetch]"}}]}, "eagerness": "moderate"}]}
     </script>
@@ -49,6 +56,7 @@
                     <div class="dash-header-text">
                         <span class="dash-header-crumb">{{ $navigation['role_label'] }}</span>
                         <h2 class="dash-header-title">@yield('page_heading', 'Dashboard')</h2>
+                        <svg class="dash-scribble" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5.5C18 2 30 7 46 4.5S78 2 92 4.8 112 6 118 3"/></svg>
                     </div>
                     <span class="dash-header-meta">
                         @include('partials.dashboard-icon', ['name' => 'calendar'])

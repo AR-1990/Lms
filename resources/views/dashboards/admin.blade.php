@@ -10,7 +10,17 @@
     $signups = $data['monthly_signups'];
     $roles = $data['roles_breakdown'];
     $tones = ['orange', 'blue', 'emerald', 'violet', 'rose', 'sky', 'amber'];
-    $toneColors = ['orange' => '#f97316', 'blue' => '#3b82f6', 'emerald' => '#10b981', 'violet' => '#8b5cf6', 'rose' => '#f43f5e', 'sky' => '#0ea5e9', 'amber' => '#f59e0b'];
+    $toneColors = ['orange' => '#d4962a', 'blue' => '#3d6ea6', 'emerald' => '#5b8f62', 'violet' => '#8466ad', 'rose' => '#b85c46', 'sky' => '#2e7d81', 'amber' => '#c9a227'];
+    $quotes = [
+        ['text' => 'Education is the most powerful weapon which you can use to change the world.', 'by' => 'Nelson Mandela'],
+        ['text' => 'The beautiful thing about learning is that no one can take it away from you.', 'by' => 'B.B. King'],
+        ['text' => 'Tell me and I forget. Teach me and I remember. Involve me and I learn.', 'by' => 'Benjamin Franklin'],
+        ['text' => 'An investment in knowledge pays the best interest.', 'by' => 'Benjamin Franklin'],
+        ['text' => 'The roots of education are bitter, but the fruit is sweet.', 'by' => 'Aristotle'],
+        ['text' => 'Education is not the filling of a pail, but the lighting of a fire.', 'by' => 'W.B. Yeats'],
+        ['text' => 'Seek knowledge from the cradle to the grave.', 'by' => 'Prophetic tradition'],
+    ];
+    $quote = $quotes[now()->dayOfYear % count($quotes)];
     $hour = now()->hour;
     $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
     $userTotal = max($overview['total_users'], 1);
@@ -47,12 +57,19 @@
         <h1 class="dash-welcome-greeting">
             <span class="dash-wave" aria-hidden="true">👋</span>
             <span class="dash-welcome-word">{{ $greeting }},</span>
-            <span class="dash-welcome-word dash-welcome-name">{{ $user->name }}</span>
+            <span class="dash-welcome-word dash-welcome-name">
+                {{ $user->name }}
+                <svg class="dash-scribble" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5.5C18 2 30 7 46 4.5S78 2 92 4.8 112 6 118 3"/></svg>
+            </span>
         </h1>
         <p class="dash-welcome-sub">
             <span class="dash-pulse-dot" aria-hidden="true"></span>
             System {{ strtolower($status['status']) }} · here is what is happening across {{ $status['school_name'] }} today.
         </p>
+        <blockquote class="dash-quote">
+            <p>&ldquo;{{ $quote['text'] }}&rdquo;</p>
+            <cite>{{ $quote['by'] }}</cite>
+        </blockquote>
     </div>
 
     <div class="dash-welcome-side">

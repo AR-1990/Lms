@@ -3554,3 +3554,666 @@ a.dash-page-link:hover {
 .dash-card.is-erasing {
     animation: dash-erase 520ms var(--ease-in) forwards;
 }
+
+/* ==========================================================================
+   Theme v4 — "Ink & Paper"
+   A scholar's notebook: warm low-glare paper, ink-navy sidebar, teal ink
+   accent, marigold highlighter, serif headings, ruled-page background,
+   page-turn transitions, bookmark ribbons, hand-drawn underlines.
+   Last layer in the file: remaps the tokens every earlier rule reads.
+   ========================================================================== */
+
+:root {
+    --paper: #f6f1e6;
+    --paper-card: #fffdf8;
+    --paper-line: rgb(46 125 129 / 0.07);
+    --margin-line: rgb(184 92 70 / 0.14);
+    --ink: #1d2b45;
+    --ink-soft: #2a3b5c;
+    --ink-line: rgb(243 234 216 / 0.045);
+    --cream: #f3ead8;
+    --marigold: #e9a83a;
+    --highlighter: rgb(242 181 68 / 0.45);
+
+    --brand-50: #edf6f5;
+    --brand-100: #d4eae8;
+    --brand-200: #acd4d1;
+    --brand-400: #4f9a9b;
+    --brand-500: #2e7d81;
+    --brand-600: #24676b;
+    --brand-700: #1b5256;
+
+    --gray-50: #fbf8f1;
+    --gray-100: #f3eee3;
+    --gray-200: #e6dece;
+    --gray-300: #d3c8b2;
+    --gray-400: #a69c86;
+    --gray-500: #7a7160;
+    --gray-600: #5c5547;
+    --gray-700: #443e33;
+    --gray-800: #2c3348;
+    --gray-900: #1d2b45;
+
+    --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --shadow: 0 1px 0 rgb(29 43 69 / 0.04), 0 6px 18px -12px rgb(29 43 69 / 0.22);
+    --shadow-md: 0 2px 0 rgb(29 43 69 / 0.04), 0 12px 26px -14px rgb(29 43 69 / 0.3);
+    --shadow-lg: 0 3px 0 rgb(29 43 69 / 0.04), 0 18px 36px -16px rgb(29 43 69 / 0.35);
+    --shadow-xl: 0 3px 0 rgb(29 43 69 / 0.04), 0 22px 44px -18px rgb(29 43 69 / 0.38);
+}
+
+/* Muted, bookish tones for icons, charts and avatars */
+.dash-tone-orange { --tone: #b07a1c; --tone-2: #d4962a; --tone-soft: #fbf0d9; --tone-ring: rgb(212 150 42 / 0.3); }
+.dash-tone-blue { --tone: #34628f; --tone-2: #3d6ea6; --tone-soft: #e7eef7; --tone-ring: rgb(61 110 166 / 0.28); }
+.dash-tone-emerald { --tone: #4a7c51; --tone-2: #5b8f62; --tone-soft: #e8f2e6; --tone-ring: rgb(91 143 98 / 0.28); }
+.dash-tone-violet { --tone: #6d5394; --tone-2: #8466ad; --tone-soft: #efe9f6; --tone-ring: rgb(132 102 173 / 0.28); }
+.dash-tone-rose { --tone: #9e4b37; --tone-2: #b85c46; --tone-soft: #f7e7e1; --tone-ring: rgb(184 92 70 / 0.28); }
+.dash-tone-sky { --tone: #24676b; --tone-2: #2e7d81; --tone-soft: #e3f1f0; --tone-ring: rgb(46 125 129 / 0.28); }
+.dash-tone-amber { --tone: #9a7b14; --tone-2: #c9a227; --tone-soft: #f8f0d6; --tone-ring: rgb(201 162 39 / 0.28); }
+
+/* ---- Paper canvas with ruled lines, margin line and book watermark ---- */
+.dash-body {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.dash-main {
+    background-image:
+        linear-gradient(90deg, transparent 46px, var(--margin-line) 46px, var(--margin-line) 47px, transparent 47px),
+        repeating-linear-gradient(0deg, transparent 0 31px, var(--paper-line) 31px 32px);
+    background-attachment: local;
+}
+
+.dash-column {
+    position: relative;
+}
+
+.dash-column::after {
+    content: "";
+    position: fixed;
+    right: 2.5rem;
+    bottom: 2.5rem;
+    z-index: 0;
+    width: 320px;
+    height: 220px;
+    opacity: 0.05;
+    pointer-events: none;
+    background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 110' fill='none' stroke='%231d2b45' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M80 22C64 12 38 10 10 14v80c28-4 54-2 70 8 16-10 42-12 70-8V14c-28-4-54-2-70 8z'/%3E%3Cpath d='M80 22v80'/%3E%3Cpath d='M22 32c16-2 32 0 46 6M22 46c16-2 32 0 46 6M22 60c16-2 32 0 46 6M92 38c14-6 30-8 46-6M92 52c14-6 30-8 46-6M92 66c14-6 30-8 46-6'/%3E%3C/svg%3E");
+}
+
+.dash-main,
+.dash-footer,
+.dash-header {
+    position: relative;
+    z-index: 1;
+}
+
+.dash-header {
+    position: sticky;
+    z-index: 40;
+}
+
+/* ---- Typography: serif headings like a printed book ---- */
+.dash-header-title,
+.dash-welcome-greeting,
+.dash-panel-head h2,
+.dash-page-intro h1,
+.dash-profile-info h1,
+.settings-section-title h3,
+.dash-modal-body h3,
+.dash-kpi-value,
+.dash-donut-center strong {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.dash-panel-head h2 {
+    font-size: 1.15rem;
+}
+
+/* Hand-drawn underline that draws itself */
+.dash-header-text {
+    position: relative;
+}
+
+.dash-scribble {
+    display: block;
+    width: 96px;
+    height: 8px;
+    margin-top: 2px;
+    overflow: visible;
+}
+
+.dash-scribble path {
+    fill: none;
+    stroke: var(--marigold);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-dasharray: 140;
+    stroke-dashoffset: 140;
+    animation: ink-draw 900ms cubic-bezier(0.65, 0, 0.35, 1) 250ms forwards;
+}
+
+.dash-welcome-name {
+    position: relative;
+    color: var(--brand-600);
+}
+
+.dash-welcome-name .dash-scribble {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    width: 100%;
+}
+
+.dash-welcome-name .dash-scribble path {
+    animation-delay: 650ms;
+}
+
+.dash-header-crumb {
+    color: var(--brand-600);
+}
+
+/* ---- Ink-navy sidebar ---- */
+.dash-sidebar {
+    background:
+        repeating-linear-gradient(0deg, transparent 0 31px, var(--ink-line) 31px 32px),
+        linear-gradient(180deg, var(--ink-soft) 0%, var(--ink) 55%);
+    border-right: 0;
+    color: var(--cream);
+    box-shadow: inset -1px 0 0 rgb(0 0 0 / 0.2);
+}
+
+.dash-sidebar::before {
+    background: radial-gradient(110% 90% at 0% 0%, rgb(233 168 58 / 0.14), transparent 70%);
+}
+
+.dash-sidebar-head,
+.dash-sidebar-foot {
+    border-color: rgb(243 234 216 / 0.12);
+}
+
+.dash-brand-mark {
+    background: var(--marigold);
+    color: var(--ink);
+    box-shadow: 0 6px 16px -8px rgb(233 168 58 / 0.8);
+}
+
+.dash-brand-name {
+    font-family: var(--font-serif);
+    color: var(--cream);
+}
+
+.dash-brand-role {
+    color: var(--marigold);
+}
+
+.dash-nav-heading {
+    color: rgb(243 234 216 / 0.45);
+}
+
+.dash-sidebar .dash-icon-btn {
+    color: rgb(243 234 216 / 0.6);
+}
+
+.dash-sidebar .dash-icon-btn:hover {
+    color: var(--cream);
+    background: rgb(243 234 216 / 0.08);
+}
+
+.dash-sidebar .dash-nav-link {
+    color: rgb(243 234 216 / 0.78);
+}
+
+.dash-sidebar .dash-nav-link:hover {
+    color: #fff;
+    background: rgb(243 234 216 / 0.07);
+}
+
+.dash-sidebar .dash-nav-tile {
+    background: rgb(243 234 216 / 0.08);
+    color: var(--tone-2);
+    filter: brightness(1.35) saturate(0.9);
+}
+
+.dash-sidebar .dash-nav-link.is-active {
+    color: #fff;
+    background: rgb(243 234 216 / 0.1);
+    box-shadow: none;
+    --fx-ripple: rgb(243 234 216 / 0.25);
+    --fx-shine: rgb(243 234 216 / 0.35);
+}
+
+.dash-sidebar .dash-nav-link.is-active::before {
+    display: block;
+    left: 0;
+    width: 4px;
+    height: 26px;
+    border-radius: 0 3px 3px 0;
+    background: var(--marigold);
+}
+
+.dash-sidebar .dash-nav-link.is-active .dash-nav-tile {
+    background: var(--marigold);
+    color: var(--ink);
+    filter: none;
+    box-shadow: none;
+}
+
+/* Highlighter marker sweep behind the active label */
+.dash-sidebar .dash-nav-label {
+    background-image: linear-gradient(transparent 58%, var(--highlighter) 58%, var(--highlighter) 92%, transparent 92%);
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    transition: background-size 500ms cubic-bezier(0.65, 0, 0.35, 1), opacity 150ms var(--ease);
+}
+
+.dash-sidebar .dash-nav-link.is-active .dash-nav-label {
+    background-size: 100% 100%;
+}
+
+.dash-sidebar .dash-nav-link:hover .dash-nav-label {
+    background-size: 100% 100%;
+}
+
+.dash-account {
+    border-color: rgb(243 234 216 / 0.14);
+    background: rgb(243 234 216 / 0.06);
+}
+
+.dash-account:hover,
+[data-dropdown].is-open .dash-account {
+    border-color: rgb(233 168 58 / 0.5);
+    box-shadow: none;
+}
+
+.dash-account-name {
+    color: var(--cream);
+}
+
+.dash-account-email,
+.dash-account-chevron {
+    color: rgb(243 234 216 / 0.55);
+}
+
+.dash-sidebar .dash-avatar {
+    background: var(--marigold);
+    color: var(--ink);
+}
+
+/* ---- Header: paper glass with a ruled edge ---- */
+.dash-header {
+    background: rgb(246 241 230 / 0.86);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.dash-header::after {
+    background: linear-gradient(90deg, var(--marigold), rgb(233 168 58 / 0) 60%);
+    opacity: 0.6;
+}
+
+.dash-header-meta {
+    background: var(--paper-card);
+    border-color: var(--gray-200);
+}
+
+.dash-header-meta .dash-icon {
+    color: var(--brand-500);
+}
+
+/* ---- Paper cards with page curl ---- */
+.dash-panel,
+.dash-card,
+.dash-welcome,
+.dash-kpi,
+.dash-stat,
+.dash-quick-tile,
+.settings-card {
+    background: var(--paper-card);
+    border: 1px solid var(--gray-200);
+}
+
+.dash-panel,
+.dash-kpi,
+.dash-quick-tile,
+.dash-stat {
+    position: relative;
+}
+
+.dash-panel::after,
+.dash-kpi::after,
+.dash-quick-tile::after,
+.dash-stat::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    border-radius: 0 0 inherit 0;
+    background: linear-gradient(315deg, var(--paper) 45%, #e9e1cf 50%, #fffaf0 62%);
+    box-shadow: -2px -2px 5px -2px rgb(29 43 69 / 0.18);
+    transition: width 350ms var(--ease-spring), height 350ms var(--ease-spring);
+    pointer-events: none;
+}
+
+.dash-kpi:hover::after,
+.dash-quick-tile:hover::after,
+.dash-stat:hover::after {
+    width: 26px;
+    height: 26px;
+}
+
+.dash-panel:hover::after {
+    width: 18px;
+    height: 18px;
+}
+
+.dash-panel-head {
+    border-bottom: 1px dashed var(--gray-300);
+}
+
+/* KPI index cards with a bookmark ribbon */
+.dash-kpi::before {
+    left: auto;
+    right: 18px;
+    top: 0;
+    width: 14px;
+    height: 24px;
+    background: var(--tone-2);
+    transform: none;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+    transition: height 350ms var(--ease-spring);
+}
+
+.dash-kpi:hover::before {
+    height: 34px;
+    transform: none;
+}
+
+.dash-kpi-foot {
+    background: var(--tone-soft);
+    color: var(--tone);
+}
+
+/* ---- Welcome page ---- */
+.dash-welcome {
+    position: relative;
+    overflow: hidden;
+    background-image:
+        linear-gradient(90deg, transparent 28px, var(--margin-line) 28px, var(--margin-line) 29px, transparent 29px),
+        repeating-linear-gradient(0deg, transparent 0 27px, var(--paper-line) 27px 28px);
+    background-color: var(--paper-card);
+    padding-left: 2.6rem;
+}
+
+.dash-welcome-greeting {
+    font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+}
+
+.dash-quote {
+    position: relative;
+    margin: 0.9rem 0 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 3px solid var(--marigold);
+    max-width: 640px;
+    animation: dash-fade-up 600ms var(--ease-out) 500ms both;
+}
+
+.dash-quote p {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.02rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+}
+
+.dash-quote cite {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    font-style: normal;
+}
+
+.dash-quote cite::before {
+    content: "— ";
+}
+
+.dash-clock {
+    background: var(--paper);
+    border-color: var(--gray-200);
+}
+
+.dash-clock > .dash-icon {
+    color: var(--brand-500);
+}
+
+.dash-welcome-stat {
+    background: #e8f2e6;
+    color: #3f6b45;
+}
+
+/* ---- Buttons: ink ---- */
+.dash-btn-primary {
+    background: var(--ink);
+    color: var(--cream);
+    box-shadow: 0 6px 14px -8px rgb(29 43 69 / 0.7);
+    --fx-ripple: rgb(243 234 216 / 0.3);
+    --fx-shine: rgb(242 181 68 / 0.45);
+}
+
+.dash-btn-primary:hover {
+    background: var(--brand-600);
+    box-shadow: 0 8px 18px -8px rgb(36 103 107 / 0.7);
+}
+
+.dash-btn-ghost {
+    background: var(--paper-card);
+    border-color: var(--gray-300);
+    color: var(--ink);
+}
+
+/* ---- Tables like ruled ledger pages ---- */
+.dash-table th {
+    background: var(--gray-50);
+    color: var(--gray-500);
+    font-family: var(--font-serif);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+.dash-table td {
+    border-bottom: 1px dashed var(--gray-200);
+}
+
+.dash-table tbody tr:hover {
+    background: linear-gradient(transparent 0, rgb(242 181 68 / 0.12) 0);
+}
+
+.dash-badge-brand {
+    background: var(--brand-50);
+    color: var(--brand-700);
+}
+
+/* ---- Charts ---- */
+.dash-chart-bars {
+    background-image: repeating-linear-gradient(to top, var(--gray-200) 0 1px, transparent 1px 25%);
+}
+
+.dash-chart-bar {
+    background: var(--gray-200);
+}
+
+.dash-chart-col.is-current .dash-chart-bar {
+    background: var(--brand-500);
+}
+
+.dash-chart-col.is-current .dash-chart-value {
+    color: var(--brand-700);
+}
+
+.dash-donut-center {
+    background: var(--paper-card);
+}
+
+/* ---- Forms on paper ---- */
+.settings-input,
+.dash-search input,
+.dash-select select {
+    background: #fff;
+    border-color: var(--gray-300);
+}
+
+.settings-actions {
+    background: var(--gray-50);
+}
+
+.dash-filters {
+    background: var(--gray-50);
+}
+
+/* Footer */
+.dash-footer {
+    background: transparent;
+    border-top: 1px dashed var(--gray-300);
+}
+
+/* ---- Page turn: navigation and pagination flip the page like a book ---- */
+::view-transition-old(dash-main),
+::view-transition-new(dash-main) {
+    mix-blend-mode: normal;
+    transform-origin: left center;
+}
+
+::view-transition-old(dash-main) {
+    animation: ink-page-out 460ms cubic-bezier(0.45, 0, 0.25, 1) both;
+}
+
+::view-transition-new(dash-main) {
+    animation: ink-page-in 520ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+/* First load / reload: the page opens */
+.dash-main {
+    animation: ink-page-open 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: left center;
+}
+
+@keyframes ink-page-out {
+    0% { transform: perspective(1800px) rotateY(0); opacity: 1; filter: brightness(1); }
+    100% { transform: perspective(1800px) rotateY(-82deg); opacity: 0.2; filter: brightness(0.8); }
+}
+
+@keyframes ink-page-in {
+    0% { transform: perspective(1800px) rotateY(14deg) translateX(18px); opacity: 0; }
+    100% { transform: none; opacity: 1; }
+}
+
+@keyframes ink-page-open {
+    0% { transform: perspective(1800px) rotateY(10deg); opacity: 0; }
+    100% { transform: none; opacity: 1; }
+}
+
+@keyframes ink-draw {
+    to { stroke-dashoffset: 0; }
+}
+
+/* Click ink uses the ink colour */
+.dash-ink {
+    background: var(--ink);
+}
+
+.dash-ink::after {
+    border-color: var(--marigold);
+}
+
+.dash-progress {
+    background: linear-gradient(90deg, var(--marigold), var(--brand-500));
+}
+
+@media (max-width: 1023px) {
+    .dash-column::after {
+        display: none;
+    }
+}
+
+@media (max-width: 639px) {
+    .dash-main {
+        background-image: repeating-linear-gradient(0deg, transparent 0 31px, var(--paper-line) 31px 32px);
+    }
+
+    .dash-welcome {
+        padding-left: 1.6rem;
+        background-image:
+            linear-gradient(90deg, transparent 14px, var(--margin-line) 14px, var(--margin-line) 15px, transparent 15px),
+            repeating-linear-gradient(0deg, transparent 0 27px, var(--paper-line) 27px 28px);
+    }
+
+    .dash-quote p {
+        font-size: 0.95rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-main {
+        animation: none;
+    }
+
+    .dash-scribble path {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* During a page-turn transition the transition itself animates the page */
+:root:active-view-transition .dash-main {
+    animation: none;
+}
+
+/* ==========================================================================
+   Smooth page turn (v2): short, transform/opacity only, no filters.
+   After a page turn, in-page entrance animations are skipped so nothing
+   animates twice (html.is-page-turn is set on the pagereveal event).
+   ========================================================================== */
+
+::view-transition-group(dash-main) {
+    animation-duration: 340ms;
+}
+
+::view-transition-old(dash-main) {
+    animation: ink-turn-out 240ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(dash-main) {
+    animation: ink-turn-in 340ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
+}
+
+@keyframes ink-turn-out {
+    to { transform: perspective(2000px) rotateY(-18deg) translateX(-2%); opacity: 0; }
+}
+
+@keyframes ink-turn-in {
+    from { transform: perspective(2000px) rotateY(10deg) translateX(1.5%); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+.is-page-turn .dash-main,
+.is-page-turn .dash-content > *,
+.is-page-turn .dash-stats > *,
+.is-page-turn .dash-quick-tile,
+.is-page-turn .dash-table tbody tr,
+.is-page-turn .dash-list li,
+.is-page-turn .dash-legend li,
+.is-page-turn .dash-status-list li,
+.is-page-turn .dash-kv li,
+.is-page-turn .settings-shell > *,
+.is-page-turn .dash-welcome-word,
+.is-page-turn .dash-welcome-sub,
+.is-page-turn .dash-welcome-side,
+.is-page-turn .dash-quote,
+.is-page-turn .dash-header-title {
+    animation: none;
+}

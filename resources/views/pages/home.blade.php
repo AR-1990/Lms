@@ -93,8 +93,8 @@
             <div class="container">
                 <div class="hero-slide-grid">
                     <div>
-                        <div class="slide-pill" style="border-color: rgba(234, 88, 12, 0.5); color: #fed7aa;">
-                            <span class="slide-pill-dot" style="background-color: #ea580c;"></span>
+                        <div class="slide-pill" style="border-color: rgba(36, 103, 107, 0.5); color: #f3ead8;">
+                            <span class="slide-pill-dot" style="background-color: #24676b;"></span>
                             <span>STEM & Future Technologies Hub</span>
                         </div>
 
@@ -143,8 +143,8 @@
             <div class="container">
                 <div class="hero-slide-grid">
                     <div>
-                        <div class="slide-pill" style="border-color: rgba(245, 158, 11, 0.5); color: #fde68a;">
-                            <span class="slide-pill-dot" style="background-color: #f59e0b;"></span>
+                        <div class="slide-pill" style="border-color: rgba(233, 168, 58, 0.5); color: #f3ead8;">
+                            <span class="slide-pill-dot" style="background-color: #e9a83a;"></span>
                             <span>Holistic Development & Athletics</span>
                         </div>
 
@@ -336,11 +336,11 @@
                 <div class="program-body">
                     <ul class="program-features">
                         <li class="program-feature-item">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             Dedicated Montessori practical life apparatus
                         </li>
                         <li class="program-feature-item">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             Phonetics, motor skills & indoor soft gym
                         </li>
                     </ul>
@@ -364,11 +364,11 @@
                 <div class="program-body">
                     <ul class="program-features">
                         <li class="program-feature-item">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             STEM integration & laboratory research
                         </li>
                         <li class="program-feature-item">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             Public speaking & debate society
                         </li>
                     </ul>
@@ -392,11 +392,11 @@
                 <div class="program-body">
                     <ul class="program-features">
                         <li class="program-feature-item">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             Pre-Medical, Pre-Engineering & Computer Science
                         </li>
                         <li class="program-feature-item">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#24676b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             100% Top grades & university admissions
                         </li>
                     </ul>
