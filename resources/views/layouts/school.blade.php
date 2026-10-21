@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://fonts.bunny.net/css?family=fraunces:500,600,700,600i&display=swap">
 
     <!-- External Theme CSS (Separated from Blade) -->
-    <link rel="stylesheet" href="{{ asset('css/school-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/school-theme.css') }}?v={{ filemtime(public_path('css/school-theme.css')) }}">
 
     <!-- Prefetch pages on hover so navigation feels instant -->
     <script type="speculationrules">
@@ -47,7 +47,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- External App JavaScript (Separated from Blade) -->
-    <script src="{{ asset('js/school-app.js') }}"></script>
+    <script src="{{ asset('js/school-app.js') }}?v={{ filemtime(public_path('js/school-app.js')) }}"></script>
     
     @yield('extra_js')
 </body>

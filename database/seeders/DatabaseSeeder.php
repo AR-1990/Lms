@@ -20,8 +20,11 @@ class DatabaseSeeder extends Seeder
             CountrySeeder::class,
             RegionSeeder::class,
             CurrencySeeder::class,
+            LookupSeeder::class,
             UserSeeder::class,
             SystemSettingSeeder::class,
+            CampusSeeder::class,
+            NumberSequenceSeeder::class,
         ]);
     }
 }

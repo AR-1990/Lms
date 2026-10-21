@@ -7,148 +7,70 @@ use App\Http\Requests\ERP\AssignRoleRequest;
 use App\Http\Requests\ERP\CreateRoleRequest;
 use App\Http\Requests\ERP\SyncUserRolesRequest;
 use App\Http\Requests\ERP\UpdateRoleRequest;
+use App\Http\Resources\RoleResource;
+use App\Http\Resources\UserResource;
 use App\Models\Role;
+use App\Models\User;
 use App\Services\RolePermissionService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
 {
     use ApiResponse;
 
-    protected RolePermissionService $roleService;
+    public function __construct(private RolePermissionService $roleService) {}
 
-    public function __construct(RolePermissionService $roleService)
-    {
-        $this->roleService = $roleService;
-    }
-
-    /**
-     * List all system and custom dynamic roles.
-     */
     public function index(): JsonResponse
     {
-        $roles = $this->roleService->getAllRoles();
-
-        return $this->successResponse($roles, 'Roles retrieved successfully.');
+        return $this->successResponse(RoleResource::collection($this->roleService->roles())->resolve(), 'Roles retrieved.');
     }
 
-    /**
-     * Create a new dynamic role.
-     */
+    public function datatable(): JsonResponse
+    {
+        return $this->successResponse($this->roleService->datatable(), 'Roles retrieved.');
+    }
+
     public function store(CreateRoleRequest $request): JsonResponse
     {
-        try {
-            $role = $this->roleService->createRole($request->validated());
-
-            return $this->successResponse($role, 'Role created successfully.', 201);
-        } catch (ValidationException $e) {
-            return $this->errorResponse('Validation error.', 422, $e->errors());
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 500);
-        }
+        return $this->successResponse(new RoleResource($this->roleService->createRole($request->validated())), 'Role created.', 201);
     }
 
-    /**
-     * Show single role details.
-     */
-    public function show(string|int $id): JsonResponse
+    public function show(Role $role): JsonResponse
     {
-        try {
-            $role = $this->roleService->getRole($id);
-
-            return $this->successResponse($role, 'Role retrieved successfully.');
-        } catch (\Throwable $th) {
-            return $this->errorResponse('Role not found.', 404);
-        }
+        return $this->successResponse(new RoleResource($role->load('permissions')->loadCount('users')), 'Role retrieved.');
     }
 
-    /**
-     * Update an existing role.
-     */
     public function update(UpdateRoleRequest $request, Role $role): JsonResponse
     {
-        try {
-            $updated = $this->roleService->updateRole($role, $request->validated());
-
-            return $this->successResponse($updated, 'Role updated successfully.');
-        } catch (ValidationException $e) {
-            return $this->errorResponse('Validation error.', 422, $e->errors());
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 500);
-        }
+        return $this->successResponse(new RoleResource($this->roleService->updateRole($role, $request->validated())), 'Role updated.');
     }
 
-    /**
-     * Delete a dynamic custom role.
-     */
     public function destroy(Role $role): JsonResponse
     {
-        try {
-            $this->roleService->deleteRole($role);
+        $this->roleService->deleteRole($role);
 
-            return $this->successResponse(null, 'Role deleted successfully.');
-        } catch (ValidationException $e) {
-            return $this->errorResponse('Operation not permitted.', 422, $e->errors());
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 500);
-        }
+        return $this->successResponse(null, 'Role deleted.');
     }
 
-    /**
-     * Assign a role to a user.
-     */
     public function assignUserRole(AssignRoleRequest $request): JsonResponse
     {
-        try {
-            $user = $this->roleService->assignRoleToUser($request->user_id, $request->role);
+        $user = $this->roleService->assignRoleToUser(User::findOrFail($request->validated('user_id')), $request->validated('role'));
 
-            return $this->successResponse([
-                'user_id' => $user->id,
-                'name' => $user->name,
-                'roles' => $user->roles->pluck('name', 'slug'),
-            ], 'Role assigned to user successfully.');
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 400);
-        }
+        return $this->successResponse(new UserResource($user), 'Role assigned.');
     }
 
-    /**
-     * Revoke a role from a user.
-     */
     public function revokeUserRole(AssignRoleRequest $request): JsonResponse
     {
-        try {
-            $user = $this->roleService->revokeRoleFromUser($request->user_id, $request->role);
+        $user = $this->roleService->revokeRoleFromUser(User::findOrFail($request->validated('user_id')), $request->validated('role'));
 
-            return $this->successResponse([
-                'user_id' => $user->id,
-                'name' => $user->name,
-                'roles' => $user->roles->pluck('name', 'slug'),
-            ], 'Role revoked from user successfully.');
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 400);
-        }
+        return $this->successResponse(new UserResource($user), 'Role removed.');
     }
 
-    /**
-     * Sync multiple roles for a user.
-     */
     public function syncUserRoles(SyncUserRolesRequest $request): JsonResponse
     {
-        $validated = $request->validated();
+        $user = $this->roleService->syncUserRoles(User::findOrFail($request->validated('user_id')), $request->validated('roles'));
 
-        try {
-            $user = $this->roleService->syncUserRoles($validated['user_id'], $validated['roles']);
-
-            return $this->successResponse([
-                'user_id' => $user->id,
-                'name' => $user->name,
-                'roles' => $user->roles->pluck('name', 'slug'),
-            ], 'User roles synchronized successfully.');
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 400);
-        }
+        return $this->successResponse(new UserResource($user), 'User roles updated.');
     }
 }

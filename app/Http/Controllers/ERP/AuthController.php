@@ -27,16 +27,19 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        try {
-            $deviceName = $request->input('device_name', $request->header('User-Agent', 'client-app'));
-            $result = $this->authService->login($request->only('email', 'password'), $deviceName);
+        $deviceName = $request->input('device_name', $request->header('User-Agent', 'client-app'));
 
-            return $this->successResponse($result, 'Login successful.');
+        try {
+            $result = $this->authService->login(
+                $request->only('email', 'password'),
+                $deviceName,
+                $request->only('device_id', 'platform', 'app_version', 'push_token'),
+            );
         } catch (ValidationException $e) {
             return $this->errorResponse('Authentication failed.', 422, $e->errors());
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 500);
         }
+
+        return $this->successResponse($result, 'Login successful.');
     }
 
     /**
@@ -44,18 +47,16 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
+        $roleSlug = $request->input('role', 'student');
+        $deviceName = $request->input('device_name', $request->header('User-Agent', 'client-app'));
+
         try {
-            $roleSlug = $request->input('role', 'student');
-            $deviceName = $request->input('device_name', $request->header('User-Agent', 'client-app'));
-
             $result = $this->authService->register($request->validated(), $roleSlug, $deviceName);
-
-            return $this->successResponse($result, 'User registered successfully.', 201);
         } catch (ValidationException $e) {
             return $this->errorResponse('Registration failed.', 422, $e->errors());
-        } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 500);
         }
+
+        return $this->successResponse($result, 'User registered successfully.', 201);
     }
 
     /**

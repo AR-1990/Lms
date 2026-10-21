@@ -5,158 +5,211 @@ namespace App\Services;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
-use App\Support\ValidationHelper;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Str;
+use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Yajra\DataTables\Facades\DataTables;
 
 class RolePermissionService
 {
     /**
-     * Get all roles with their permissions count and user counts.
+     * The Administrator role passes every permission check, so its permission list is never edited.
      */
-    public function getAllRoles(): Collection
+    public const ADMIN_ROLE = 'admin';
+
+    public function __construct(
+        private UserService $userService,
+        private ActivityLogger $activityLogger,
+    ) {}
+
+    /**
+     * @return Collection<int, Role>
+     */
+    public function roles(): Collection
     {
-        return Role::with(['permissions'])->withCount('users')->get();
+        return Role::with('permissions:id,name,slug,group')->withCount('users')->orderBy('name')->get();
     }
 
     /**
-     * Get role by ID or slug.
+     * Server-side grid for the roles screen.
+     *
+     * @return array<string, mixed>
      */
-    public function getRole(int|string $idOrSlug): Role
+    public function datatable(): array
     {
-        if (is_numeric($idOrSlug)) {
-            return Role::with(['permissions', 'users'])->findOrFail($idOrSlug);
-        }
+        $query = Role::query()
+            ->select(['id', 'name', 'slug', 'description', 'is_system', 'created_at'])
+            ->with('permissions:id,slug')
+            ->withCount(['users', 'permissions']);
 
-        return Role::with(['permissions', 'users'])->where('slug', $idOrSlug)->firstOrFail();
+        return DataTables::eloquent($query)
+            ->escapeColumns([])
+            ->addColumn('permission_slugs', fn (Role $role): array => $role->permissions->pluck('slug')->all())
+            ->addColumn('is_admin', fn (Role $role): bool => $role->slug === self::ADMIN_ROLE)
+            ->removeColumn('permissions')
+            ->toArray();
     }
 
     /**
-     * Create a new dynamic role.
+     * @return Collection<int, Permission>
+     */
+    public function permissions(): Collection
+    {
+        return Permission::query()->orderBy('group')->orderBy('name')->get(['id', 'name', 'slug', 'group', 'description']);
+    }
+
+    /**
+     * Permissions grouped by module, for the permission matrix.
+     *
+     * @return SupportCollection<string, Collection<int, Permission>>
+     */
+    public function permissionGroups(): SupportCollection
+    {
+        return $this->permissions()->groupBy('group');
+    }
+
+    /**
+     * @param  array{name: string, slug: string, description?: string|null, permissions?: array<int, string>}  $data
      */
     public function createRole(array $data): Role
     {
-        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
-
-        if (Role::where('slug', $slug)->exists()) {
-            throw ValidationHelper::exception([
-                'slug' => ['A role with this slug already exists.'],
+        return DB::transaction(function () use ($data): Role {
+            $role = Role::create([
+                'name' => $data['name'],
+                'slug' => $data['slug'],
+                'description' => $data['description'] ?? null,
+                'is_system' => false,
             ]);
-        }
 
-        $role = Role::create([
-            'name' => $data['name'],
-            'slug' => $slug,
-            'description' => $data['description'] ?? null,
-            'is_system' => $data['is_system'] ?? false,
-        ]);
+            $this->syncPermissions($role, $data['permissions'] ?? []);
 
-        if (! empty($data['permissions'])) {
-            $role->syncPermissions($data['permissions']);
-        }
-
-        return $role->load('permissions');
+            return $role->load('permissions')->loadCount('users');
+        });
     }
 
     /**
-     * Update an existing role.
+     * @param  array{name?: string, slug?: string, description?: string|null, permissions?: array<int, string>}  $data
+     *
+     * @throws ValidationException
      */
     public function updateRole(Role $role, array $data): Role
     {
         if ($role->is_system && isset($data['slug']) && $data['slug'] !== $role->slug) {
-            throw ValidationHelper::exception([
-                'slug' => ['System roles cannot change their unique slug.'],
+            throw ValidationException::withMessages(['slug' => ['Built-in roles keep their slug.']]);
+        }
+
+        return DB::transaction(function () use ($role, $data): Role {
+            $role->update(collect($data)->only(['name', 'slug', 'description'])->all());
+
+            if (array_key_exists('permissions', $data)) {
+                $this->syncPermissions($role, $data['permissions'] ?? []);
+            }
+
+            return $role->load('permissions')->loadCount('users');
+        });
+    }
+
+    /**
+     * @throws ValidationException for built-in roles and roles still assigned to users
+     */
+    public function deleteRole(Role $role): void
+    {
+        if ($role->is_system) {
+            throw ValidationException::withMessages(['role' => ['System roles cannot be deleted.']]);
+        }
+
+        $usersCount = $role->users()->count();
+
+        if ($usersCount > 0) {
+            throw ValidationException::withMessages([
+                'role' => ["Remove this role from its {$usersCount} ".str('user')->plural($usersCount).' before deleting it.'],
             ]);
         }
 
-        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : $role->slug;
+        DB::transaction(function () use ($role): void {
+            $role->permissions()->detach();
+            $role->delete();
+        });
+    }
 
-        $role->update([
-            'name' => $data['name'] ?? $role->name,
-            'slug' => $slug,
-            'description' => array_key_exists('description', $data) ? $data['description'] : $role->description,
-        ]);
+    /**
+     * Replace a role's permissions (ids or slugs) and log what was granted and revoked.
+     *
+     * @param  array<int, string|int>  $permissions
+     *
+     * @throws ValidationException for the Administrator role
+     */
+    public function syncPermissions(Role $role, array $permissions): Role
+    {
+        if ($role->slug === self::ADMIN_ROLE) {
+            throw ValidationException::withMessages(['permissions' => ['The Administrator role always has full access.']]);
+        }
 
-        if (isset($data['permissions'])) {
-            $role->syncPermissions($data['permissions']);
+        $before = $role->permissions()->pluck('slug');
+        $role->syncPermissions($permissions);
+        $after = $role->permissions()->pluck('slug');
+
+        $granted = $after->diff($before)->sort()->values();
+        $revoked = $before->diff($after)->sort()->values();
+
+        if ($granted->isNotEmpty() || $revoked->isNotEmpty()) {
+            $this->activityLogger->record(
+                'roles',
+                'permissions_changed',
+                (request()->user()?->name ?? 'System')." changed the permissions of {$role->name}",
+                $role,
+                [
+                    'granted' => ['old' => null, 'new' => $granted->implode(', ') ?: null],
+                    'revoked' => ['old' => $revoked->implode(', ') ?: null, 'new' => null],
+                ],
+            );
         }
 
         return $role->load('permissions');
     }
 
-    /**
-     * Delete a role (unless it is a protected system role).
-     */
-    public function deleteRole(Role $role): bool
+    public function assignRoleToUser(User $user, string|int $role): User
     {
-        if ($role->is_system) {
-            throw ValidationHelper::exception([
-                'role' => ['System roles cannot be deleted.'],
-            ]);
-        }
+        $slug = $this->resolveRole($role)->slug;
+        $this->userService->syncRoles($user, $user->roles()->pluck('slug')->push($slug)->unique()->all());
 
-        return (bool) $role->delete();
+        return $user->load('roles');
     }
 
-    /**
-     * Assign a role to a user.
-     */
-    public function assignRoleToUser(int $userId, string|int $role): User
+    public function revokeRoleFromUser(User $user, string|int $role): User
     {
-        $user = User::findOrFail($userId);
-        $user->assignRole($role);
+        $slug = $this->resolveRole($role)->slug;
+        $this->userService->syncRoles($user, $user->roles()->pluck('slug')->reject(fn (string $current): bool => $current === $slug)->all());
 
         return $user->load('roles');
     }
 
     /**
-     * Revoke a role from a user.
+     * @param  array<int, string|int>  $roles
      */
-    public function revokeRoleFromUser(int $userId, string|int $role): User
+    public function syncUserRoles(User $user, array $roles): User
     {
-        $user = User::findOrFail($userId);
-        $user->removeRole($role);
+        $this->userService->syncRoles($user, $roles);
 
         return $user->load('roles');
     }
 
     /**
-     * Sync multiple roles for a user.
-     */
-    public function syncUserRoles(int $userId, array $roles): User
-    {
-        $user = User::findOrFail($userId);
-        $user->syncRoles($roles);
-
-        return $user->load('roles');
-    }
-
-    /**
-     * List all permissions grouped by category.
-     */
-    public function getAllPermissions(): Collection
-    {
-        return Permission::all();
-    }
-
-    /**
-     * Create a new permission.
+     * @param  array{name: string, slug: string, group?: string|null, description?: string|null}  $data
      */
     public function createPermission(array $data): Permission
     {
-        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
-
-        if (Permission::where('slug', $slug)->exists()) {
-            throw ValidationHelper::exception([
-                'slug' => ['A permission with this slug already exists.'],
-            ]);
-        }
-
         return Permission::create([
             'name' => $data['name'],
-            'slug' => $slug,
+            'slug' => $data['slug'],
             'group' => $data['group'] ?? 'general',
             'description' => $data['description'] ?? null,
         ]);
+    }
+
+    private function resolveRole(string|int $role): Role
+    {
+        return Role::where('slug', (string) $role)->orWhere('id', (int) $role)->firstOrFail();
     }
 }

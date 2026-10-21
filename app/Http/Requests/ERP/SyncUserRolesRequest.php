@@ -2,21 +2,25 @@
 
 namespace App\Http\Requests\ERP;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SyncUserRolesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user() !== null && $this->user()->hasPermission('manage-roles');
     }
 
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'exists:users,id'],
-            'roles' => ['required', 'array'],
-            'roles.*' => ['required'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'roles' => ['present', 'array'],
+            'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
         ];
     }
 }

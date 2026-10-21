@@ -223,3 +223,9 @@ These rules are decided by the project owner and override any generic guidance a
 - Every create, update, delete, restore, status change, approve/reject, post/reverse, assign/return, print, export/import, login/logout, and failed login is written to `activity_logs` (one row: user, module, action, record, readable description, platform, IP, time), with changed fields in `activity_log_changes` (old/new value per field, no JSON).
 - Logging happens automatically in the same transaction: a shared model trait/observer for CRUD events, plus one call in Services for business actions. Never skip it for a new model or action.
 - Secrets (passwords, tokens) are never logged; activity logs are append-only.
+
+## 12. No static data — everything comes from the database
+- Never hard-code business data in controllers, services, views, or JavaScript (no arrays of news, events, quotes, options, stats, etc.). All data is read from the database through Services.
+- Master data the system needs (lookups, permissions, roles, reference lists) is created by seeders. Dummy / demo data for development is also created only by seeders (using factories), never typed into code or views.
+- Every new module ships with: migration(s), model + factory, a seeder for its master data, and a seeder for demo data when demo records are useful.
+- Follow the code structure described in these rules for every module: routes in `routes/erp-*.php` → Form Request → Controller (thin) → Service → Model, API Resource for output, standard envelope response, Yajra grid for lists, activity log on every action.

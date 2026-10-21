@@ -2,13 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 
 class AdminService
 {
-    public function __construct(private SystemSettingsService $systemSettingsService) {}
+    public function __construct(
+        private SystemSettingsService $systemSettingsService,
+        private LookupService $lookupService,
+    ) {}
 
     /**
      * Get system-wide dashboard overview and statistics directly via Eloquent SQL.
@@ -29,6 +31,7 @@ class AdminService
                 'total_roles' => $rolesBreakdown->count(),
                 'new_this_month' => User::where('created_at', '>=', now()->startOfMonth())->count(),
             ],
+            'daily_quote' => $this->lookupService->dailyQuote(),
             'monthly_signups' => $this->getMonthlySignups(6),
             'recent_users' => $recentUsers,
             'roles_breakdown' => $rolesBreakdown,
@@ -67,30 +70,6 @@ class AdminService
                 ];
             })
             ->all();
-    }
-
-    /**
-     * Roles and permission matrix for the admin portal.
-     */
-    public function getRolesDirectory(): array
-    {
-        $roles = Role::with(['permissions' => fn ($q) => $q->orderBy('group')->orderBy('name')])
-            ->withCount('users')
-            ->orderBy('name')
-            ->get();
-
-        return [
-            'roles' => $roles,
-            'permission_groups' => Permission::query()
-                ->orderBy('group')
-                ->orderBy('name')
-                ->get()
-                ->groupBy('group'),
-            'counts' => [
-                'roles' => $roles->count(),
-                'permissions' => Permission::count(),
-            ],
-        ];
     }
 
     /**

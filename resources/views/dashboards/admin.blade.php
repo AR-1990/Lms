@@ -11,16 +11,7 @@
     $roles = $data['roles_breakdown'];
     $tones = ['orange', 'blue', 'emerald', 'violet', 'rose', 'sky', 'amber'];
     $toneColors = ['orange' => '#d4962a', 'blue' => '#3d6ea6', 'emerald' => '#5b8f62', 'violet' => '#8466ad', 'rose' => '#b85c46', 'sky' => '#2e7d81', 'amber' => '#c9a227'];
-    $quotes = [
-        ['text' => 'Education is the most powerful weapon which you can use to change the world.', 'by' => 'Nelson Mandela'],
-        ['text' => 'The beautiful thing about learning is that no one can take it away from you.', 'by' => 'B.B. King'],
-        ['text' => 'Tell me and I forget. Teach me and I remember. Involve me and I learn.', 'by' => 'Benjamin Franklin'],
-        ['text' => 'An investment in knowledge pays the best interest.', 'by' => 'Benjamin Franklin'],
-        ['text' => 'The roots of education are bitter, but the fruit is sweet.', 'by' => 'Aristotle'],
-        ['text' => 'Education is not the filling of a pail, but the lighting of a fire.', 'by' => 'W.B. Yeats'],
-        ['text' => 'Seek knowledge from the cradle to the grave.', 'by' => 'Prophetic tradition'],
-    ];
-    $quote = $quotes[now()->dayOfYear % count($quotes)];
+    $quote = $data['daily_quote'] ?? null;
     $hour = now()->hour;
     $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
     $userTotal = max($overview['total_users'], 1);
@@ -66,10 +57,14 @@
             <span class="dash-pulse-dot" aria-hidden="true"></span>
             System {{ strtolower($status['status']) }} · here is what is happening across {{ $status['school_name'] }} today.
         </p>
-        <blockquote class="dash-quote">
-            <p>&ldquo;{{ $quote['text'] }}&rdquo;</p>
-            <cite>{{ $quote['by'] }}</cite>
-        </blockquote>
+        @if ($quote)
+            <blockquote class="dash-quote">
+                <p>&ldquo;{{ $quote['text'] }}&rdquo;</p>
+                @if ($quote['by'])
+                    <cite>{{ $quote['by'] }}</cite>
+                @endif
+            </blockquote>
+        @endif
     </div>
 
     <div class="dash-welcome-side">

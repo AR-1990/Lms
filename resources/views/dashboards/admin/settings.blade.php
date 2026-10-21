@@ -4,7 +4,7 @@
 @section('page_heading', 'System Settings')
 
 @section('extra_css')
-<link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}">
+<link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}?v={{ filemtime(public_path('css/admin-settings.css')) }}">
 @endsection
 
 @section('content')

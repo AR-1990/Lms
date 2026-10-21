@@ -4,7 +4,7 @@
 @section('page_heading', 'Add User')
 
 @section('extra_css')
-<link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}">
+<link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}?v={{ filemtime(public_path('css/admin-settings.css')) }}">
 @endsection
 
 @section('content')
@@ -13,5 +13,5 @@
     Back to users
 </a>
 
-@include('dashboards.admin.users.form', ['roles' => $data['roles']])
+@include('dashboards.admin.users.form', ['roles' => $data['roles'], 'campuses' => $data['campuses']])
 @endsection

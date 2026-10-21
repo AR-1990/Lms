@@ -3,7 +3,9 @@
 namespace App\Traits;
 
 use App\Support\ApiResponseHelper;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\MessageBag;
 
 trait ApiResponse
@@ -16,6 +18,24 @@ trait ApiResponse
     protected function successResponse($data = null, string $message = 'Success', int $code = 200): JsonResponse
     {
         return ApiResponseHelper::success($data, $message, $code);
+    }
+
+    /**
+     * Return a paginated list in the standard envelope: data = { items, meta }.
+     *
+     * @param  class-string<JsonResource>  $resourceClass
+     */
+    protected function paginatedResponse(LengthAwarePaginator $paginator, string $resourceClass, string $message = 'Success'): JsonResponse
+    {
+        return ApiResponseHelper::success([
+            'items' => $resourceClass::collection($paginator->getCollection())->resolve(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ], $message);
     }
 
     /**

@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Requests\StorePortalUserRequest;
 use App\Http\Requests\UpdatePortalUserRequest;
+use App\Models\Campus;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\LookupService;
 use App\Services\UserService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminUserController extends PortalController
@@ -17,21 +18,13 @@ class AdminUserController extends PortalController
     public function __construct(private UserService $userService) {}
 
     /**
-     * Searchable, filterable user directory.
+     * User directory: the grid loads from /api/erp/users/datatable.
      */
-    public function index(Request $request): View
+    public function index(): View
     {
-        $search = $request->string('search')->trim()->value() ?: null;
-        $role = $request->string('role')->trim()->value() ?: null;
-
         return $this->page('dashboards.admin.users', 'admin', 'users', [
-            'users' => $this->userService->listUsers($role, $search)->withQueryString(),
             'roles' => $this->roleOptions(),
-            'filters' => ['search' => $search, 'role' => $role],
-            'counts' => [
-                'total' => User::count(),
-                'active_roles' => Role::count(),
-            ],
+            'counts' => [...$this->userService->summary(), 'roles' => Role::count()],
         ]);
     }
 
@@ -39,6 +32,7 @@ class AdminUserController extends PortalController
     {
         return $this->page('dashboards.admin.users.create', 'admin', 'users', [
             'roles' => $this->roleOptions(),
+            'campuses' => $this->campusOptions(),
         ]);
     }
 
@@ -51,10 +45,14 @@ class AdminUserController extends PortalController
             ->with('status', "{$user->name} has been added.");
     }
 
-    public function show(User $user): View
+    /**
+     * Profile with access summary; the documents panel uses /api/erp/attachments.
+     */
+    public function show(User $user, LookupService $lookupService): View
     {
         return $this->page('dashboards.admin.users.show', 'admin', 'users', [
-            'account' => $user->load('roles.permissions'),
+            'account' => $user->load(['roles.permissions', 'campus']),
+            'documentTypes' => $lookupService->options('document_type'),
         ]);
     }
 
@@ -63,6 +61,7 @@ class AdminUserController extends PortalController
         return $this->page('dashboards.admin.users.edit', 'admin', 'users', [
             'account' => $user->load('roles'),
             'roles' => $this->roleOptions(),
+            'campuses' => $this->campusOptions($user->campus_id),
         ]);
     }
 
@@ -75,26 +74,24 @@ class AdminUserController extends PortalController
             ->with('status', "{$user->name} has been updated.");
     }
 
-    public function destroy(Request $request, User $user): RedirectResponse
-    {
-        if ($user->is($request->user())) {
-            return redirect()
-                ->route('admin.users')
-                ->with('error', 'You cannot delete your own account.');
-        }
-
-        $this->userService->deleteUser($user);
-
-        return redirect()
-            ->route('admin.users')
-            ->with('status', "{$user->name} has been deleted.");
-    }
-
     /**
      * @return Collection<int, Role>
      */
     private function roleOptions(): Collection
     {
         return Role::query()->orderBy('name')->get(['id', 'name', 'slug', 'description']);
+    }
+
+    /**
+     * Active campuses, plus the account's current one even if it was deactivated.
+     *
+     * @return Collection<int, Campus>
+     */
+    private function campusOptions(?int $currentCampusId = null): Collection
+    {
+        return Campus::query()
+            ->where(fn ($query) => $query->where('is_active', true)->orWhere('id', $currentCampusId))
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
     }
 }

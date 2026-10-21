@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ERP\AttachmentController;
 use App\Http\Controllers\Portal\AccountsPortalController;
 use App\Http\Controllers\Portal\AdminPortalController;
 use App\Http\Controllers\Portal\AdminSettingsController;
@@ -30,6 +31,11 @@ Route::get('/login', [SchoolController::class, 'login'])->name('login');
 Route::post('/login', [SchoolController::class, 'handleLogin'])->name('login.submit');
 Route::post('/inquiry', [SchoolController::class, 'submitInquiry'])->name('inquiry.submit');
 
+// Short-lived signed links to private files (web and mobile app); the signature is the permission.
+Route::get('/files/{attachment}', [AttachmentController::class, 'download'])
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('attachments.download');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [SchoolController::class, 'logout'])->name('logout');
@@ -42,8 +48,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
             Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
             Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
-            Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
         });
+        Route::get('/lookups', [AdminPortalController::class, 'lookups'])->middleware('permission:manage-lookups')->name('lookups');
+        Route::get('/activity-log', [AdminPortalController::class, 'activityLog'])->middleware('permission:view-activity-log')->name('activity-log');
+        Route::get('/campuses', [AdminPortalController::class, 'campuses'])->middleware('permission:manage-campuses')->name('campuses');
+        Route::get('/numbering', [AdminPortalController::class, 'numbering'])->middleware('permission:manage-numbering')->name('numbering');
         Route::get('/roles', [AdminPortalController::class, 'roles'])->middleware('permission:manage-roles')->name('roles');
         Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats')->name('reports');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:manage-settings')->name('settings');

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Country;
 use App\Models\Currency;
+use App\Models\Lookup;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
@@ -91,6 +92,21 @@ class PortalAccessTest extends TestCase
             && $data['overview']['total_students'] === 1
             && $data['overview']['total_roles'] === 5);
         $response->assertSeeInOrder(['Total Users', 'data-count-up="5"'], false);
+    }
+
+    public function test_admin_dashboard_quote_comes_from_active_daily_quote_options(): void
+    {
+        $admin = User::where('email', 'admin@lms.test')->first();
+        Lookup::where('type', 'daily_quote')->update(['is_active' => false]);
+
+        $this->actingAs($admin)->get('/dashboard')->assertOk()->assertDontSee('dash-quote', false);
+
+        Lookup::create(['type' => 'daily_quote', 'name' => 'Read a page every day.', 'description' => 'School motto', 'is_active' => true]);
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertSee('Read a page every day.')
+            ->assertSee('School motto');
     }
 
     public function test_admin_dashboard_charts_show_signups_for_the_last_six_months(): void

@@ -5,16 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#1d2b45">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Portal Dashboard') | Pinnacle Academy</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231d2b45'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3z'/></svg>">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|fraunces:500,600,600i&display=swap">
-    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v={{ filemtime(public_path('css/dashboard.css')) }}">
     @yield('extra_css')
-    <script src="{{ asset('js/dashboard.js') }}" defer></script>
+    <script src="{{ asset('js/dashboard.js') }}?v={{ filemtime(public_path('js/dashboard.js')) }}" defer></script>
     <script>
+        // A skipped page turn (fast clicks, back button) is harmless; keep it out of the console.
+        function quietTransition(transition) {
+            transition.ready.catch(function () {});
+            transition.updateCallbackDone.catch(function () {});
+        }
+
+        window.addEventListener('pageswap', function (event) {
+            if (event.viewTransition) {
+                quietTransition(event.viewTransition);
+            }
+        });
+
         window.addEventListener('pagereveal', function (event) {
             if (event.viewTransition) {
+                quietTransition(event.viewTransition);
                 document.documentElement.classList.add('is-page-turn');
             }
         });
@@ -92,8 +106,8 @@
         <div class="dash-modal-body">
             <span class="dash-modal-icon">@include('partials.dashboard-icon', ['name' => 'eraser'])</span>
             <div>
-                <h3 id="dashConfirmTitle">Erase this user?</h3>
-                <p id="dashConfirmMessage" data-confirm-message>This account will be permanently deleted. This cannot be undone.</p>
+                <h3 id="dashConfirmTitle">Erase this record?</h3>
+                <p id="dashConfirmMessage" data-confirm-message>This record will be erased.</p>
             </div>
         </div>
         <div class="dash-modal-actions">

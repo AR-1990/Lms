@@ -56,16 +56,11 @@
      * Forms marked data-confirm-delete open the eraser modal first; once confirmed,
      * the row (or data-erase-target) is wiped away before the form is submitted.
      */
+    /**
+     * Forms marked data-confirm-delete ask first; once confirmed, the row (or data-erase-target)
+     * is wiped away before the form is submitted.
+     */
     function initDeleteConfirmation() {
-        const modal = document.getElementById('dashConfirmModal');
-
-        if (!modal || typeof modal.showModal !== 'function') {
-            return;
-        }
-
-        const message = modal.querySelector('[data-confirm-message]');
-        let pendingForm = null;
-
         document.addEventListener('submit', function (event) {
             const form = event.target.closest('form[data-confirm-delete]');
 
@@ -75,46 +70,112 @@
 
             event.preventDefault();
             event.stopImmediatePropagation();
-            pendingForm = form;
-            message.textContent = '"' + (form.dataset.confirmName || 'This record') + '" will be permanently erased. This cannot be undone.';
-            modal.showModal();
-            modal.querySelector('[data-confirm-cancel]').focus();
+
+            confirmErase(form.dataset.confirmName || 'This record').then(function (accepted) {
+                if (!accepted) {
+                    return;
+                }
+
+                form.dataset.confirmed = 'true';
+                const target = form.dataset.eraseTarget ? document.querySelector(form.dataset.eraseTarget) : form.closest('tr');
+
+                eraseElement(target).then(function () {
+                    form.requestSubmit();
+                });
+            });
         }, true);
+    }
 
-        modal.querySelector('[data-confirm-cancel]').addEventListener('click', function () {
-            pendingForm = null;
-            modal.close();
-        });
+    /**
+     * Opens the eraser modal; resolves true when the user confirms.
+     */
+    function confirmErase(recordName) {
+        const modal = document.getElementById('dashConfirmModal');
 
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) {
-                pendingForm = null;
+        if (!modal || typeof modal.showModal !== 'function') {
+            return Promise.resolve(window.confirm('Delete "' + recordName + '"?'));
+        }
+
+        modal.querySelector('[data-confirm-message]').textContent = '"' + recordName + '" will be erased from the list.';
+
+        return new Promise(function (resolve) {
+            const accept = modal.querySelector('[data-confirm-accept]');
+            const cancel = modal.querySelector('[data-confirm-cancel]');
+
+            const finish = function (result) {
+                accept.removeEventListener('click', onAccept);
+                cancel.removeEventListener('click', onCancel);
+                modal.removeEventListener('click', onBackdrop);
+                modal.removeEventListener('cancel', onCancel);
                 modal.close();
-            }
+                resolve(result);
+            };
+            const onAccept = function () { finish(true); };
+            const onCancel = function () { finish(false); };
+            const onBackdrop = function (event) {
+                if (event.target === modal) {
+                    finish(false);
+                }
+            };
+
+            accept.addEventListener('click', onAccept);
+            cancel.addEventListener('click', onCancel);
+            modal.addEventListener('click', onBackdrop);
+            modal.addEventListener('cancel', onCancel);
+            modal.showModal();
+            cancel.focus();
         });
+    }
 
-        modal.querySelector('[data-confirm-accept]').addEventListener('click', function () {
-            const form = pendingForm;
+    /**
+     * Plays the eraser wipe on an element; resolves when it is done (or at once if motion is reduced).
+     */
+    function eraseElement(element) {
+        if (!element || REDUCED_MOTION.matches) {
+            return Promise.resolve();
+        }
 
-            if (!form) {
-                return;
+        element.classList.add('is-erasing');
+
+        return new Promise(function (resolve) {
+            window.setTimeout(resolve, ERASE_DURATION);
+        });
+    }
+
+    /**
+     * Calls the ERP API with the session cookie + CSRF token and returns the standard envelope.
+     * Rejects with the envelope when success is false (validation errors are in envelope.errors.fields).
+     */
+    function api(method, url, body) {
+        const token = document.querySelector('meta[name="csrf-token"]');
+        const isUpload = body instanceof window.FormData;
+        const headers = {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': token ? token.content : '',
+            'X-Platform': 'web'
+        };
+
+        // File uploads let the browser set the multipart boundary itself.
+        if (!isUpload) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        return window.fetch(url, {
+            method: method,
+            credentials: 'same-origin',
+            headers: headers,
+            body: body === undefined ? undefined : (isUpload ? body : JSON.stringify(body))
+        }).then(function (response) {
+            return response.json().catch(function () {
+                return { success: false, message: 'Unexpected server response (' + response.status + ').', errors: null };
+            });
+        }).then(function (envelope) {
+            if (!envelope.success) {
+                return Promise.reject(envelope);
             }
 
-            modal.close();
-            form.dataset.confirmed = 'true';
-
-            const target = form.dataset.eraseTarget ? document.querySelector(form.dataset.eraseTarget) : form.closest('tr');
-
-            if (!target || REDUCED_MOTION.matches) {
-                form.requestSubmit();
-
-                return;
-            }
-
-            target.classList.add('is-erasing');
-            window.setTimeout(function () {
-                form.requestSubmit();
-            }, ERASE_DURATION);
+            return envelope;
         });
     }
 
@@ -443,5 +504,5 @@
         }, TOAST_LIFETIME);
     }
 
-    window.PinnacleDashboard = { toast: showToast };
+    window.PinnacleDashboard = { toast: showToast, confirm: confirmErase, erase: eraseElement, api: api };
 })();

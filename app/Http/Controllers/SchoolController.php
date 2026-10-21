@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Services\ActivityLogger;
 use App\Services\PortalAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +13,10 @@ use Illuminate\View\View;
 
 class SchoolController extends Controller
 {
-    public function __construct(private PortalAccessService $portalAccessService) {}
+    public function __construct(
+        private PortalAccessService $portalAccessService,
+        private ActivityLogger $activityLogger,
+    ) {}
 
     /**
      * Homepage with Hero, Wings, Metrics, Testimonials, and Announcements
@@ -209,14 +214,28 @@ class SchoolController extends Controller
             'password' => 'required|string|min:4',
         ]);
 
-        $email = $this->resolveLoginEmail($validated['username']);
+        $account = User::findForLogin($validated['username']);
 
-        if (! Auth::attempt(
-            ['email' => $email, 'password' => $validated['password']],
+        if (! $account || ! Auth::attempt(
+            ['email' => $account->email, 'password' => $validated['password']],
             $request->boolean('remember')
         )) {
+            $this->activityLogger->record('auth', 'login_failed', "Failed sign-in attempt for \"{$validated['username']}\"");
+
             return back()
                 ->withErrors(['username' => 'These credentials do not match our records.'])
+                ->onlyInput('username', 'role');
+        }
+
+        if (! $account->is_active) {
+            $this->activityLogger->record('auth', 'login_failed', "{$account->name} tried to sign in to a disabled account", $account, actor: $account);
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()
+                ->withErrors(['username' => 'This account has been disabled. Please contact the school office.'])
                 ->onlyInput('username', 'role');
         }
 
@@ -226,6 +245,8 @@ class SchoolController extends Controller
         $user = Auth::user()->load('roles');
 
         if (! $this->portalAccessService->canAccessPortal($user, $validated['role'])) {
+            $this->activityLogger->record('auth', 'login_failed', "{$user->name} was refused the {$validated['role']} portal", $user, actor: $user);
+
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -235,6 +256,9 @@ class SchoolController extends Controller
                 ->onlyInput('username', 'role');
         }
 
+        $user->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->saveQuietly();
+        $this->activityLogger->record('auth', 'login', "{$user->name} signed in to the {$validated['role']} portal", $user);
+
         return redirect()->intended(route('dashboard'));
     }
 
@@ -243,34 +267,16 @@ class SchoolController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        if ($request->user()) {
+            $this->activityLogger->record('auth', 'logout', "{$request->user()->name} signed out", $request->user());
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
-    }
-
-    /**
-     * Map demo IDs / phones to seeded emails so the login UI stays familiar.
-     */
-    private function resolveLoginEmail(string $username): string
-    {
-        $aliases = [
-            'PIA-2026-8812' => 'student@lms.test',
-            'student@lms.test' => 'student@lms.test',
-            '03001234567' => 'parent@lms.test',
-            '0300-1234567' => 'parent@lms.test',
-            'parent@lms.test' => 'parent@lms.test',
-            'FAC-BIO-441' => 'teacher@lms.test',
-            'teacher@lms.test' => 'teacher@lms.test',
-            'accounts@pinnacle.edu.pk' => 'accounts@lms.test',
-            'accounts@lms.test' => 'accounts@lms.test',
-            'admin@lms.test' => 'admin@lms.test',
-            'bursar@pinnacle.edu.pk' => 'accounts@lms.test',
-        ];
-
-        return $aliases[$username] ?? $username;
     }
 
     /**

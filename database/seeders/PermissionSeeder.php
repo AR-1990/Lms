@@ -28,6 +28,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'View Notices', 'slug' => 'view-notices', 'group' => 'parent', 'description' => 'View school notices.'],
             ['name' => 'Manage Fee Collections', 'slug' => 'manage-fees', 'group' => 'accounts', 'description' => 'Manage fee collection workflows.'],
             ['name' => 'View Payroll', 'slug' => 'view-payroll', 'group' => 'accounts', 'description' => 'View payroll information.'],
+            ['name' => 'Manage Lookups', 'slug' => 'manage-lookups', 'group' => 'admin', 'description' => 'Maintain dropdown master data (lookups).'],
+            ['name' => 'View Activity Log', 'slug' => 'view-activity-log', 'group' => 'admin', 'description' => 'See who did what, on which module.'],
+            ['name' => 'Manage Campuses', 'slug' => 'manage-campuses', 'group' => 'admin', 'description' => 'Create and maintain campuses / branches.'],
+            ['name' => 'Manage Numbering', 'slug' => 'manage-numbering', 'group' => 'admin', 'description' => 'Configure document number formats (admission no, receipts…).'],
         ], ['slug'], ['name', 'group', 'description']);
     }
 }

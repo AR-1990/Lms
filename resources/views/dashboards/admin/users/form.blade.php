@@ -36,6 +36,51 @@
 
     <div class="settings-section">
         <div class="settings-section-title">
+            <h3>Sign-in &amp; Campus</h3>
+            <p>Users can sign in with their email, username or phone number. A disabled account cannot sign in anywhere.</p>
+        </div>
+        <div class="settings-section-body">
+            <div class="settings-card">
+                <div class="settings-fields">
+                    <div class="settings-field">
+                        <label for="username">Username <span class="dash-optional">optional</span></label>
+                        <input id="username" name="username" type="text" maxlength="50" @class(['settings-input', 'is-invalid' => $errors->has('username')]) value="{{ old('username', $account->username ?? '') }}" autocomplete="off" placeholder="e.g. PIA-2026-0012">
+                        @error('username') <p class="settings-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="settings-field">
+                        <label for="phone">Phone <span class="dash-optional">optional</span></label>
+                        <input id="phone" name="phone" type="tel" maxlength="30" @class(['settings-input', 'is-invalid' => $errors->has('phone')]) value="{{ old('phone', $account->phone ?? '') }}" autocomplete="off" placeholder="03XX XXXXXXX">
+                        @error('phone') <p class="settings-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="settings-field">
+                        <label for="campus_id">Campus <span class="dash-optional">optional</span></label>
+                        <select id="campus_id" name="campus_id" @class(['settings-input', 'is-invalid' => $errors->has('campus_id')])>
+                            <option value="">No campus</option>
+                            @foreach ($campuses as $campus)
+                                <option value="{{ $campus->id }}" @selected((string) old('campus_id', $account->campus_id ?? '') === (string) $campus->id)>{{ $campus->name }} ({{ $campus->code }})</option>
+                            @endforeach
+                        </select>
+                        @error('campus_id') <p class="settings-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="settings-field">
+                        <span class="settings-label">Account status</span>
+                        <input type="hidden" name="is_active" value="0">
+                        <label class="dash-switch">
+                            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $account->is_active ?? true))>
+                            <span class="dash-switch-track" aria-hidden="true"><span class="dash-switch-thumb"></span></span>
+                            <span>Active — can sign in</span>
+                        </label>
+                        @error('is_active') <p class="settings-error">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-divider" aria-hidden="true"></div>
+
+    <div class="settings-section">
+        <div class="settings-section-title">
             <h3>{{ $isEditing ? 'Change Password' : 'Password' }}</h3>
             <p>{{ $isEditing ? 'Leave both fields blank to keep the current password.' : 'At least 8 characters. Share it with the user securely.' }}</p>
         </div>

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('permission:manage-roles')->group(function () {
     Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::get('roles/datatable', [RoleController::class, 'datatable'])->name('roles.datatable');
     Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
     Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
     Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
@@ -19,4 +20,7 @@ Route::middleware('permission:manage-roles')->group(function () {
     Route::post('roles/{role}/permissions', [PermissionController::class, 'assignRolePermissions'])->name('roles.permissions');
 });
 
-Route::middleware('permission:manage-users')->apiResource('users', UserController::class);
+Route::middleware('permission:manage-users')->group(function () {
+    Route::get('users/datatable', [UserController::class, 'datatable'])->name('users.datatable');
+    Route::apiResource('users', UserController::class);
+});

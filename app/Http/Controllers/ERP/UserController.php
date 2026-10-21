@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ERP;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ERP\CreateUserRequest;
 use App\Http\Requests\ERP\UpdateUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
 use App\Traits\ApiResponse;
@@ -15,69 +16,55 @@ class UserController extends Controller
 {
     use ApiResponse;
 
-    protected UserService $userService;
+    public function __construct(private UserService $userService) {}
 
-    public function __construct(UserService $userService)
-    {
-        $this->userService = $userService;
-    }
-
-    /**
-     * List users with optional role filter, search, and pagination.
-     */
     public function index(Request $request): JsonResponse
     {
-        $role = $request->query('role');
-        $search = $request->query('search');
-        $perPage = (int) $request->query('per_page', 15);
+        $users = $this->userService->paginate($this->filters($request), $request->integer('per_page', 15));
 
-        $users = $this->userService->listUsers($role, $search, $perPage);
-
-        return $this->successResponse($users, 'Users retrieved successfully.');
+        return $this->paginatedResponse($users, UserResource::class, 'Users retrieved.');
     }
 
-    /**
-     * Create a new user with role.
-     */
+    public function datatable(Request $request): JsonResponse
+    {
+        return $this->successResponse($this->userService->datatable($this->filters($request)), 'Users retrieved.');
+    }
+
     public function store(CreateUserRequest $request): JsonResponse
     {
-        $roles = $request->input('roles');
-        $user = $this->userService->createUser($request->validated(), $roles);
+        $user = $this->userService->createUser($request->validated(), $request->validated('roles'));
 
-        return $this->successResponse($user, 'User created successfully.', 201);
+        return $this->successResponse(new UserResource($user->load('campus')), 'User created.', 201);
     }
 
-    /**
-     * Show single user details.
-     */
-    public function show(int $id): JsonResponse
+    public function show(User $user): JsonResponse
     {
-        try {
-            $user = $this->userService->getUser($id);
-
-            return $this->successResponse($user, 'User retrieved successfully.');
-        } catch (\Throwable $th) {
-            return $this->errorResponse('User not found.', 404);
-        }
+        return $this->successResponse(new UserResource($user->load(['roles', 'campus'])), 'User retrieved.');
     }
 
-    /**
-     * Update user details and roles.
-     */
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
-        $updated = $this->userService->updateUser($user, $request->validated());
-
-        return $this->successResponse($updated, 'User updated successfully.');
+        return $this->successResponse(new UserResource($this->userService->updateUser($user, $request->validated())->load('campus')), 'User updated.');
     }
 
-    /**
-     * Delete a user.
-     */
     public function destroy(User $user): JsonResponse
     {
         $this->userService->deleteUser($user);
 
-        return $this->successResponse(null, 'User deleted successfully.');
+        return $this->successResponse(null, 'User deleted.');
+    }
+
+    /**
+     * @return array{role: string|null, is_active: string|null, search: string|null}
+     */
+    private function filters(Request $request): array
+    {
+        $search = $request->input('search');
+
+        return [
+            'role' => is_string($request->input('role')) ? ($request->input('role') ?: null) : null,
+            'is_active' => is_scalar($request->input('is_active')) ? (string) $request->input('is_active') : null,
+            'search' => is_string($search) ? (trim($search) ?: null) : null,
+        ];
     }
 }
