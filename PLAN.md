@@ -1522,6 +1522,8 @@ Every printable is a PDF generated server-side from data already in the database
 | width_mm / height_mm | decimal(5,1) R | default CR80 54 × 85.6 |
 | front_background_path | string | uploaded design image |
 | back_background_path | string | |
+| size_key | string(20) R | fixed size list per card type (ID cards: vertical CR80) |
+| theme | string(20) default `classic` | card look drawn behind the fields: `classic`, `wave`, `elegant` |
 | primary_color / text_color | string(7) | |
 | show_qr | boolean default true | |
 | show_barcode | boolean default false | |

@@ -14,7 +14,7 @@ class IssueCardsRequest extends FormRequest
     }
 
     /**
-     * Without holder_ids: every active student of the current session (or one section), or every current employee.
+     * Without holder_ids: every active student of the current session (or one section), or every current employee (or one department).
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -27,6 +27,7 @@ class IssueCardsRequest extends FormRequest
             'holder_ids' => ['nullable', 'array', 'max:500'],
             'holder_ids.*' => ['integer', 'distinct', Rule::exists($holderTable, 'id')->whereNull('deleted_at')],
             'section_id' => ['nullable', 'integer', Rule::exists('sections', 'id')->whereNull('deleted_at')],
+            'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')->whereNull('deleted_at')],
             'card_template_id' => ['nullable', 'integer', Rule::exists('card_templates', 'id')->where('card_type', $this->input('holder_type'))->where('is_active', 1)->whereNull('deleted_at')],
             'valid_until' => ['nullable', 'date_format:Y-m-d', 'after:today'],
         ];

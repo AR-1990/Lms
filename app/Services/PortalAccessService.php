@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 class PortalAccessService
@@ -39,6 +40,7 @@ class PortalAccessService
         ],
         'teacher' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
             ['key' => 'attendance', 'label' => 'Attendance', 'route' => 'admin.attendance.register', 'icon' => 'check', 'tone' => 'emerald'],
             ['key' => 'diary', 'label' => 'Diary', 'route' => 'admin.diary', 'icon' => 'book', 'tone' => 'violet'],
             ['key' => 'homework', 'label' => 'Homework', 'route' => 'admin.homework', 'icon' => 'pen', 'tone' => 'amber'],
@@ -47,12 +49,15 @@ class PortalAccessService
         ],
         'student' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
         ],
         'parent' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
         ],
         'accounts' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
             ['key' => 'fees', 'label' => 'Fees', 'route' => 'accounts.fees.challans', 'icon' => 'hash', 'tone' => 'amber'],
             ['key' => 'accounting', 'label' => 'Accounts', 'route' => 'accounts.chart', 'icon' => 'book', 'tone' => 'emerald'],
         ],
@@ -113,7 +118,7 @@ class PortalAccessService
         return [
             'role_slug' => $roleSlug,
             'role_label' => $this->getNavigationRoleLabel($roleSlug),
-            'links' => $this->getNavigationLinks($roleSlug, $active),
+            'links' => $this->getNavigationLinks($user, $roleSlug, $active),
         ];
     }
 
@@ -272,11 +277,22 @@ class PortalAccessService
     /**
      * @return array<int, array{key: string, label: string, url: string, icon: string, tone: string, active: bool}>
      */
-    private function getNavigationLinks(string $roleSlug, string $active): array
+    private function getNavigationLinks(User $user, string $roleSlug, string $active): array
     {
         $navigationLinks = self::NAVIGATION_LINKS[$roleSlug] ?? [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
         ];
+
+        // A role given an extra permission (e.g. accounts + manage-cards) also gets that admin screen's link.
+        if ($roleSlug !== 'admin') {
+            $ownKeys = array_column($navigationLinks, 'key');
+            $navigationLinks = array_merge($navigationLinks, array_values(array_filter(self::NAVIGATION_LINKS['admin'], function (array $link) use ($user, $ownKeys): bool {
+                $permission = collect(Route::getRoutes()->getByName($link['route'])?->gatherMiddleware() ?? [])
+                    ->first(fn (mixed $middleware): bool => is_string($middleware) && str_starts_with($middleware, 'permission:'));
+
+                return ! in_array($link['key'], $ownKeys, true) && $permission !== null && $user->hasPermission(Str::after($permission, 'permission:'));
+            })));
+        }
 
         return collect($navigationLinks)
             ->map(fn (array $link): array => [

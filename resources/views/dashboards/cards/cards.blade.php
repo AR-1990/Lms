@@ -11,7 +11,7 @@
 <section class="dash-page-head">
     <div class="dash-page-intro">
         <h1>ID Cards</h1>
-        <p>Issue cards to a section or to all staff, then tick and print. Each card's QR opens a public check page.</p>
+        <p>Issue cards to the whole school, a section, a department or particular people, then print. Each person sees their card under "My ID Card". Each card's QR opens a public check page.</p>
     </div>
     <div class="dash-head-actions">
         <button type="button" class="dash-btn dash-btn-ghost" data-print-selected disabled>
@@ -60,7 +60,7 @@
                 <tr>
                     <th class="dash-col-check"><input type="checkbox" data-check-all aria-label="Select all on this page"></th>
                     <th>Holder</th>
-                    <th class="dash-hide-md">Template</th>
+                    <th class="dash-hide-md">Issued</th>
                     <th class="dash-hide-md">Valid until</th>
                     <th>Status</th>
                     <th class="dash-col-actions"><span class="dash-visually-hidden">Actions</span></th>
@@ -85,12 +85,12 @@
                 <label for="issueHolder">For</label>
                 <select id="issueHolder" name="holder_type">
                     <option value="student">Students</option>
-                    <option value="employee">All current staff</option>
+                    <option value="employee">Staff</option>
                 </select>
                 <p class="dash-field-error" data-error-for="holder_type" hidden></p>
             </div>
-            <div class="dash-field" data-student-only>
-                <label for="issueSection">Section <span class="dash-optional">empty = whole school</span></label>
+            <div class="dash-field" data-scope-section>
+                <label for="issueSection">Section <span class="dash-optional">optional</span></label>
                 <select id="issueSection" name="section_id">
                     <option value="">All sections</option>
                     @foreach ($data['sections'] as $section)
@@ -98,6 +98,30 @@
                     @endforeach
                 </select>
                 <p class="dash-field-error" data-error-for="section_id" hidden></p>
+            </div>
+            <div class="dash-field" data-scope-department hidden>
+                <label for="issueDepartment">Department <span class="dash-optional">optional</span></label>
+                <select id="issueDepartment" name="department_id">
+                    <option value="">All departments</option>
+                    @foreach ($data['departments'] as $department)
+                        <option value="{{ $department->id }}">{{ $department->name }}</option>
+                    @endforeach
+                </select>
+                <p class="dash-field-error" data-error-for="department_id" hidden></p>
+            </div>
+            <div class="dash-field">
+                <label for="issueScope">Who</label>
+                <select id="issueScope" name="scope">
+                    <option value="all" data-student="Everyone in the selection" data-employee="Everyone in the selection">Everyone in the selection</option>
+                    <option value="people" data-student="Particular students only" data-employee="Particular staff only">Particular students only</option>
+                </select>
+            </div>
+            <div class="dash-field dash-field-wide" data-scope-people hidden>
+                <label for="issuePersonSearch">Find by name or code</label>
+                <input type="search" id="issuePersonSearch" autocomplete="off" placeholder="Type at least 2 letters (searches the section / department above)" data-person-search>
+                <ul class="dash-person-results" data-person-results hidden></ul>
+                <div class="dash-person-chips" data-person-chips></div>
+                <p class="dash-field-error" data-error-for="holder_ids" hidden></p>
             </div>
             <div class="dash-field">
                 <label for="issueTemplate">Template <span class="dash-optional">default if empty</span></label>
@@ -111,10 +135,18 @@
             </div>
             @include('dashboards.partials.field', ['name' => 'valid_until', 'label' => 'Valid until', 'type' => 'date', 'hint' => 'students: end of session'])
         </div>
+        <div class="dash-issue-result" data-issue-result hidden>
+            <p class="dash-register-note" data-issue-summary></p>
+            <div class="dash-issue-columns">
+                <section><h4>New cards</h4><ul class="dash-kv" data-issued-list></ul></section>
+                <section><h4>Already had a card</h4><ul class="dash-kv" data-skipped-list></ul></section>
+            </div>
+        </div>
         <p class="dash-form-error" data-form-error hidden></p>
         <div class="dash-modal-actions">
             <button type="button" class="dash-btn dash-btn-ghost" data-modal-close>Cancel</button>
-            <button type="submit" class="dash-btn dash-btn-primary">@include('partials.dashboard-icon', ['name' => 'check']) Issue</button>
+            <button type="submit" class="dash-btn dash-btn-primary" data-issue-submit>@include('partials.dashboard-icon', ['name' => 'check']) Issue</button>
+            <button type="button" class="dash-btn dash-btn-primary" data-issue-print hidden>@include('partials.dashboard-icon', ['name' => 'check']) Print New Cards</button>
         </div>
     </form>
 </dialog>

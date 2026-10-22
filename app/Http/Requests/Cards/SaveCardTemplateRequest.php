@@ -28,6 +28,7 @@ class SaveCardTemplateRequest extends FormRequest
             'name' => ['required', 'string', 'max:150'],
             'card_type' => ['required', 'string', Rule::in(CardTemplate::TYPES), Rule::when($this->route('card_template')?->is_system, ['in:'.$type])],
             'size_key' => ['required', 'string', Rule::in(CardTemplate::SIZES_FOR_TYPE[$type] ?? [])],
+            'theme' => ['sometimes', 'string', Rule::in(array_keys(CardTemplate::THEMES))],
             'primary_color' => $hex,
             'text_color' => $hex,
             'show_qr' => ['sometimes', 'boolean'],

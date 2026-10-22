@@ -9,11 +9,11 @@
         .sheet { position: relative; width: 210mm; height: 297mm; page-break-after: always; overflow: hidden; }
         .sheet:last-child { page-break-after: auto; }
         .face { position: absolute; overflow: hidden; background: #ffffff; border: 0.2mm dashed #9ca3af; }
-        .band { position: absolute; left: 0; right: 0; }
-        .accent { position: absolute; left: 0; right: 0; height: 0.9mm; background: #c9a227; }
+        .decor { position: absolute; left: 0; top: 0; }
         .item { position: absolute; line-height: 1.2; }
         .item img { width: 100%; height: 100%; }
-        .photo { border: 0.5mm solid #ffffff; outline: 0.3mm solid #c9a227; background: #e5e7eb; }
+        .photo { border: 0.6mm solid #ffffff; background: #e5e7eb; }
+        .photo-frame { position: absolute; border: 0.35mm solid #c9a227; }
         .signature { border-top: 0.25mm solid #374151; padding-top: 0.6mm; text-align: center; }
         .sheet-table { width: 100%; border-collapse: collapse; }
         .sheet-table th { text-align: left; font-weight: bold; border-bottom: 0.3mm solid #9ca3af; padding: 0.4mm 0.8mm; }
@@ -28,18 +28,16 @@
             @php($template = $face['template'])
             @php($w = $template->width_mm)
             @php($h = $template->height_mm)
-            @php($band = round($h * ($face['side'] === 'front' ? 0.18 : 0.08), 1))
             @php($foot = round($h * ($face['side'] === 'front' ? 0.07 : 0.045), 1))
             <div class="face" style="left: {{ $face['x'] }}mm; top: {{ $face['y'] }}mm; width: {{ $w }}mm; height: {{ $h }}mm; color: {{ $template->text_color }};">
-                <div class="band" style="top: 0; height: {{ $band }}mm; background: {{ $template->primary_color }};"></div>
-                <div class="accent" style="top: {{ $band }}mm;"></div>
-                <div class="band" style="bottom: 0; height: {{ $foot }}mm; background: {{ $template->primary_color }};"></div>
+                <img class="decor" src="{{ $face['decor'] }}" style="width: {{ $w }}mm; height: {{ $h }}mm;" alt="">
 
                 @foreach ($template->fields->where('side', $face['side']) as $field)
                     @php($value = $field->field_key === 'custom_text' ? $field->custom_text : ($face['values'][$field->field_key] ?? null))
                     @php($box = 'left: '.$field->x_mm.'mm; top: '.$field->y_mm.'mm;'.($field->width_mm ? ' width: '.$field->width_mm.'mm;' : '').($field->height_mm ? ' height: '.$field->height_mm.'mm;' : ''))
                     @php($text = 'font-size: '.$field->font_size.'pt; font-weight: '.$field->font_weight.'; text-align: '.$field->align.';'.($field->color ? ' color: '.$field->color.';' : ''))
                     @if ($field->field_key === 'photo')
+                        <div class="photo-frame" style="left: {{ $field->x_mm - 0.9 }}mm; top: {{ $field->y_mm - 0.9 }}mm; width: {{ $field->width_mm + 1.1 }}mm; height: {{ $field->height_mm + 1.1 }}mm;"></div>
                         <div class="item photo" style="{{ $box }}">@if ($value)<img src="{{ $value }}" alt="">@endif</div>
                     @elseif ($field->field_key === 'qr_code')
                         @if ($value)<div class="item" style="{{ $box }}"><img src="{{ $value }}" alt=""></div>@endif
@@ -62,7 +60,7 @@
                 @endforeach
 
                 @if ($face['side'] === 'back' && $template->back_text)
-                    <div class="back-text" style="bottom: {{ $foot + 1.5 }}mm; font-size: {{ $h > 100 ? 7.5 : 5.5 }}pt;">{{ $template->back_text }}</div>
+                    <div class="back-text" style="bottom: {{ round($foot * 1.7 + 1.2, 1) }}mm; font-size: {{ $h > 100 ? 7.5 : 5.5 }}pt;">{{ $template->back_text }}</div>
                 @endif
             </div>
         @endforeach

@@ -67,6 +67,15 @@
                 </select>
                 <p class="dash-field-error" data-error-for="size_key" hidden></p>
             </div>
+            <div class="dash-field">
+                <label for="tplTheme">Style</label>
+                <select id="tplTheme" name="theme">
+                    @foreach ($data['themes'] as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="dash-field-error" data-error-for="theme" hidden></p>
+            </div>
             @include('dashboards.partials.field', ['name' => 'primary_color', 'label' => 'Band colour', 'type' => 'color'])
             @include('dashboards.partials.field', ['name' => 'text_color', 'label' => 'Text colour', 'type' => 'color'])
             @include('dashboards.partials.field', ['name' => 'back_text', 'label' => 'Back text', 'wide' => true])

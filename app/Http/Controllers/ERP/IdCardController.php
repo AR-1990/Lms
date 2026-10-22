@@ -12,6 +12,7 @@ use App\Models\IdCard;
 use App\Services\CardService;
 use App\Traits\ApiResponse;
 use App\Traits\DeletesWithApproval;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -88,6 +89,34 @@ class IdCardController extends Controller
         return $this->paginatedResponse($cards, IdCardResource::class, 'ID cards retrieved.');
     }
 
+    public function holders(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'holder_type' => ['required', Rule::in(['student', 'employee'])],
+            'q' => ['required', 'string', 'min:2', 'max:60'],
+            'section_id' => ['nullable', 'integer'],
+            'department_id' => ['nullable', 'integer'],
+        ]);
+        $groupId = $validated['holder_type'] === 'student' ? ($validated['section_id'] ?? null) : ($validated['department_id'] ?? null);
+
+        return $this->successResponse($this->cardService->searchHolders($validated['holder_type'], $validated['q'], $groupId), 'Matching people.');
+    }
+
+    /**
+     * The signed-in student / parent / staff member's own active cards (web portal and mobile app).
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        return $this->successResponse(IdCardResource::collection($this->cardService->ownCards($request->user())->latest('id')->get())->resolve(), 'Your ID cards.');
+    }
+
+    public function downloadMine(Request $request, int $idCard): Response
+    {
+        $card = $this->cardService->ownCards($request->user())->findOrFail($idCard);
+
+        return $this->cardService->pdf(new Collection([$card]), true);
+    }
+
     public function datatable(Request $request): JsonResponse
     {
         return $this->successResponse($this->cardService->cardsDatatable($this->filters($request)), 'ID cards retrieved.');
@@ -97,7 +126,11 @@ class IdCardController extends Controller
     {
         $result = $this->cardService->issue($request->validated());
 
-        return $this->successResponse($result, "{$result['issued']} card(s) issued".($result['skipped'] ? ", {$result['skipped']} already had one." : '.'), 201);
+        $message = $result['issued'] === 0 && $result['skipped'] > 0
+            ? "No new cards: all {$result['skipped']} already have an active card. Print them from the list, or mark a card lost to reissue it."
+            : "{$result['issued']} card(s) issued".($result['skipped'] ? "; {$result['skipped']} already had one." : '.');
+
+        return $this->successResponse($result, $message, 201);
     }
 
     public function changeStatus(Request $request, IdCard $idCard): JsonResponse

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Country;
 use App\Models\Currency;
 use App\Models\Lookup;
+use App\Models\Permission;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
@@ -140,6 +141,21 @@ class PortalAccessTest extends TestCase
         $response->assertViewIs('dashboards.portal');
         $response->assertDontSee(route('admin.users'));
         $response->assertDontSee(route('admin.settings'));
+    }
+
+    public function test_a_role_given_an_extra_permission_gets_that_screens_link(): void
+    {
+        $accountant = User::where('email', 'accounts@lms.test')->first();
+
+        $this->actingAs($accountant)->get('/dashboard')->assertDontSee(route('admin.cards.index'));
+
+        $role = Role::where('slug', 'accounts')->first();
+        $role->permissions()->attach(Permission::where('slug', 'manage-cards')->value('id'));
+
+        $this->actingAs($accountant->fresh())->get('/dashboard')
+            ->assertSee(route('admin.cards.index'))
+            ->assertDontSee(route('admin.users'));
+        $this->get(route('admin.cards.index'))->assertOk();
     }
 
     public function test_navigation_marks_the_current_page_link_as_active(): void

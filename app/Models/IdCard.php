@@ -67,6 +67,11 @@ class IdCard extends Model
         return $this->belongsTo(CardTemplate::class, 'card_template_id');
     }
 
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function academicSession(): BelongsTo
     {
         return $this->belongsTo(AcademicSession::class);

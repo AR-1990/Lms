@@ -9,6 +9,7 @@ use App\Models\IdCard;
 use App\Models\PrintLog;
 use App\Models\Student;
 use App\Models\SystemSetting;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use chillerlan\QRCode\Output\QRGdImagePNG;
 use chillerlan\QRCode\QRCode;
@@ -120,7 +121,7 @@ class CardService
     public function cardsQuery(array $filters = []): Builder
     {
         return IdCard::query()
-            ->with(['template:id,name,card_type', 'student:id,first_name,last_name,admission_no', 'employee:id,first_name,last_name,employee_code'])
+            ->with(['template:id,name,card_type', 'student:id,first_name,last_name,admission_no', 'employee:id,first_name,last_name,employee_code', 'creator:id,name'])
             ->when($filters['holder_type'] ?? null, fn (Builder $query, string $type) => $query->where('holder_type', $type))
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($filters['card_template_id'] ?? null, fn (Builder $query, int $id) => $query->where('card_template_id', $id));
@@ -136,13 +137,14 @@ class CardService
             ->addColumn('holder_name', fn (IdCard $card): ?string => $card->holder()?->fullName())
             ->addColumn('holder_code', fn (IdCard $card): ?string => $card->holder_type === 'employee' ? $card->employee?->employee_code : $card->student?->admission_no)
             ->addColumn('template_name', fn (IdCard $card): ?string => $card->template?->name)
+            ->addColumn('issued_by_name', fn (IdCard $card): ?string => $card->creator?->name)
             ->editColumn('issued_on', fn (IdCard $card): string => $card->issued_on->toDateString())
             ->editColumn('valid_until', fn (IdCard $card): ?string => $card->valid_until?->toDateString())
             ->filterColumn('card_no', fn (Builder $query, string $keyword) => $query->where(fn (Builder $inner) => $inner
                 ->where('card_no', 'like', "%{$keyword}%")
                 ->orWhere(fn (Builder $students) => $students->where('holder_type', 'student')->whereHas('student', fn (Builder $student) => $student->whereAny(['first_name', 'last_name', 'admission_no'], 'like', "%{$keyword}%")))
                 ->orWhere(fn (Builder $employees) => $employees->where('holder_type', 'employee')->whereHas('employee', fn (Builder $employee) => $employee->whereAny(['first_name', 'last_name', 'employee_code'], 'like', "%{$keyword}%")))))
-            ->removeColumn('template', 'student', 'employee', 'qr_token')
+            ->removeColumn('template', 'student', 'employee', 'creator', 'qr_token')
             ->toArray();
     }
 
@@ -169,24 +171,65 @@ class CardService
         $session = AcademicSession::where('is_current', true)->first();
         $holderIds = $this->holderIds($type, $data, $session);
 
-        return DB::transaction(function () use ($type, $template, $session, $holderIds, $data): array {
-            $alreadyCarded = IdCard::where('holder_type', $type)
+        $names = IdCard::HOLDERS[$type]::whereIn('id', $holderIds)->get(['id', 'first_name', 'middle_name', 'last_name'])->mapWithKeys(fn ($holder): array => [$holder->id => $holder->fullName()]);
+
+        return DB::transaction(function () use ($type, $template, $session, $holderIds, $data, $names): array {
+            $existing = IdCard::where('holder_type', $type)
                 ->whereIn('holder_id', $holderIds)
                 ->where('status', 'active')
                 ->when($type === 'student', fn (Builder $query) => $query->where('academic_session_id', $session?->id))
-                ->pluck('holder_id')
-                ->all();
+                ->pluck('card_no', 'holder_id');
 
-            $toIssue = array_values(array_diff($holderIds, $alreadyCarded));
+            $issued = collect(array_diff($holderIds, $existing->keys()->all()))
+                ->map(fn (int $holderId): array => ['name' => $names->get($holderId)] + $this->createCard($type, $holderId, $template, $session, $data['valid_until'] ?? null)->only('id', 'card_no'))
+                ->values();
 
-            foreach ($toIssue as $holderId) {
-                $this->createCard($type, $holderId, $template, $session, $data['valid_until'] ?? null);
-            }
+            $this->activityLogger->record('id_cards', 'issued', (auth()->user()?->name ?? 'System').' issued '.$issued->count()." {$type} ID card(s) on {$template->name}"
+                .($issued->isEmpty() ? '' : ': '.$issued->map(fn (array $card): string => "{$card['name']} ({$card['card_no']})")->implode(', ')));
 
-            $this->activityLogger->record('id_cards', 'issued', (auth()->user()?->name ?? 'System').' issued '.count($toIssue)." {$type} ID card(s) on {$template->name}");
-
-            return ['issued' => count($toIssue), 'skipped' => count($alreadyCarded)];
+            return [
+                'issued' => $issued->count(),
+                'skipped' => $existing->count(),
+                'issued_cards' => $issued->all(),
+                'skipped_holders' => $existing->map(fn (string $cardNo, int $holderId): array => ['name' => $names->get($holderId), 'card_no' => $cardNo])->values()->all(),
+            ];
         });
+    }
+
+    /**
+     * Name / code search for the "particular person" picker of the issue popup, optionally inside one section / department (max 20 rows).
+     *
+     * @return array<int, array{id: int, name: string, code: string|null}>
+     */
+    public function searchHolders(string $type, string $term, ?int $groupId = null): array
+    {
+        $session = AcademicSession::where('is_current', true)->first();
+
+        $codeColumn = $type === 'employee' ? 'employee_code' : 'admission_no';
+
+        return IdCard::HOLDERS[$type]::query()
+            ->when($type === 'employee', fn (Builder $query) => $query->whereIn('status', Employee::CURRENT_STATUSES), fn (Builder $query) => $query->where('current_status', 'active'))
+            ->when($groupId && $type === 'employee', fn (Builder $query) => $query->where('department_id', $groupId))
+            ->when($groupId && $type === 'student', fn (Builder $query) => $query->whereHas('enrollments', fn (Builder $inner) => $inner->where('academic_session_id', $session?->id)->where('section_id', $groupId)))
+            ->where(fn (Builder $query) => $query->where('first_name', 'like', "%{$term}%")->orWhere('last_name', 'like', "%{$term}%")->orWhere($codeColumn, 'like', "%{$term}%"))
+            ->orderBy('first_name')
+            ->limit(20)
+            ->get(['id', 'first_name', 'middle_name', 'last_name', $codeColumn])
+            ->map(fn ($holder): array => ['id' => $holder->id, 'name' => $holder->fullName(), 'code' => $holder->{$codeColumn}])
+            ->all();
+    }
+
+    /**
+     * Active cards a student, parent (their children) or staff member may see and download.
+     */
+    public function ownCards(User $user): Builder
+    {
+        $employeeIds = Employee::where('user_id', $user->id)->pluck('id')->all();
+
+        return $this->cardsQuery(['status' => 'active'])
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $inner) => $inner->where('holder_type', 'student')->whereIn('holder_id', Student::ownIdsFor($user)))
+                ->orWhere(fn (Builder $inner) => $inner->where('holder_type', 'employee')->whereIn('holder_id', $employeeIds)));
     }
 
     /**
@@ -207,7 +250,10 @@ class CardService
                 return $card;
             }
 
-            return $this->createCard($card->holder_type, $card->holder_id, $card->template, $card->academicSession, $card->valid_until?->toDateString(), $card->id);
+            // An expired card is renewed for the current session with a fresh validity; a lost one keeps the old dates.
+            return $status === 'expired'
+                ? $this->createCard($card->holder_type, $card->holder_id, $card->template, AcademicSession::where('is_current', true)->first(), null, $card->id)
+                : $this->createCard($card->holder_type, $card->holder_id, $card->template, $card->academicSession, $card->valid_until?->toDateString(), $card->id);
         });
     }
 
@@ -216,7 +262,7 @@ class CardService
      *
      * @param  Collection<int, IdCard>  $cards
      */
-    public function pdf(Collection $cards): Response
+    public function pdf(Collection $cards, bool $isOwnCopy = false): Response
     {
         $cards->load(['template.fields', 'academicSession:id,name']);
         $cards->where('holder_type', 'student')->load(['student.bloodGroup:id,name', 'student.guardians', 'student.enrollments.schoolClass:id,name', 'student.enrollments.section:id,name']);
@@ -224,6 +270,13 @@ class CardService
 
         $schoolName = SystemSetting::query()->value('school_name');
         $pages = $cards->map(fn (IdCard $card): array => ['template' => $card->template, 'values' => $this->values($card, $schoolName)]);
+
+        // A holder viewing their own card is logged as a download, not counted as an office print.
+        if ($isOwnCopy) {
+            $this->activityLogger->record('id_cards', 'downloaded', (auth()->user()?->name ?? 'System').' downloaded ID card '.$cards->pluck('card_no')->implode(', '));
+
+            return $this->renderSheet($pages, 'id-card.pdf');
+        }
 
         DB::transaction(function () use ($cards): void {
             foreach ($cards as $card) {
@@ -310,10 +363,32 @@ class CardService
         $y = $margin;
         $rowHeight = 0;
 
+        $decor = [];
+
         foreach ($pages as $page) {
             $template = $page['template'];
+            $decor[$template->id] ??= ['front' => $template->decorSvg('front'), 'back' => $template->decorSvg('back')];
             $sides = $template->fields->contains('side', 'back') || filled($template->back_text) ? ['front', 'back'] : ['front'];
-            $unitWidth = count($sides) * $template->width_mm + (count($sides) - 1) * 3;
+            // Front and back sit side by side, or one above the other when the pair is too wide (A6 landscape).
+            $stacked = count($sides) * $template->width_mm + (count($sides) - 1) * 3 > 210 - 2 * $margin;
+            $unitWidth = $stacked ? $template->width_mm : count($sides) * $template->width_mm + (count($sides) - 1) * 3;
+            $unitHeight = $stacked ? count($sides) * $template->height_mm + (count($sides) - 1) * 3 : $template->height_mm;
+
+            // A5 is as wide as the A4 sheet: each side gets its own page, front then back.
+            if ($template->width_mm > 210 - 2 * $margin) {
+                foreach ($sides as $side) {
+                    $sheets[] = $current;
+                    $current = [['template' => $template, 'values' => $page['values'], 'side' => $side, 'decor' => $decor[$template->id][$side], 'x' => 0, 'y' => $margin]];
+                }
+
+                $sheets[] = $current;
+                $current = [];
+                $x = $margin;
+                $y = $margin;
+                $rowHeight = 0;
+
+                continue;
+            }
 
             if ($x + $unitWidth > 210 - $margin + 0.01) {
                 $x = $margin;
@@ -321,7 +396,7 @@ class CardService
                 $rowHeight = 0;
             }
 
-            if ($y + $template->height_mm > 297 - $margin + 0.01) {
+            if ($y + $unitHeight > 297 - $margin + 0.01) {
                 $sheets[] = $current;
                 $current = [];
                 $x = $margin;
@@ -329,16 +404,16 @@ class CardService
             }
 
             foreach ($sides as $index => $side) {
-                $current[] = ['template' => $template, 'values' => $page['values'], 'side' => $side, 'x' => round($x + $index * ($template->width_mm + 3), 1), 'y' => $y];
+                $current[] = ['template' => $template, 'values' => $page['values'], 'side' => $side, 'decor' => $decor[$template->id][$side], 'x' => round($stacked ? $x : $x + $index * ($template->width_mm + 3), 1), 'y' => round($stacked ? $y + $index * ($template->height_mm + 3) : $y, 1)];
             }
 
             $x += $unitWidth + $gap;
-            $rowHeight = max($rowHeight, $template->height_mm);
+            $rowHeight = max($rowHeight, $unitHeight);
         }
 
         $sheets[] = $current;
 
-        return Pdf::loadView('pdf.card-sheet', ['sheets' => $sheets])->setPaper('a4')->stream($filename);
+        return Pdf::loadView('pdf.card-sheet', ['sheets' => array_values(array_filter($sheets))])->setPaper('a4')->stream($filename);
     }
 
     /**
@@ -383,7 +458,10 @@ class CardService
                 ->all();
         }
 
-        return Employee::whereIn('status', Employee::CURRENT_STATUSES)->pluck('id')->all();
+        return Employee::whereIn('status', Employee::CURRENT_STATUSES)
+            ->when($data['department_id'] ?? null, fn (Builder $query, int $departmentId) => $query->where('department_id', $departmentId))
+            ->pluck('id')
+            ->all();
     }
 
     private function createCard(string $type, int $holderId, CardTemplate $template, ?AcademicSession $session, ?string $validUntil, ?int $replacementOf = null): IdCard

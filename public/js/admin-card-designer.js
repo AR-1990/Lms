@@ -53,16 +53,13 @@
 
     function drawFrame() {
         const front = side === 'front';
-        const band = template.height_mm * (front ? 0.18 : 0.08);
         const foot = template.height_mm * (front ? 0.07 : 0.045);
 
         canvas.style.width = template.width_mm * scale + 'px';
         canvas.style.height = template.height_mm * scale + 'px';
         canvas.style.color = template.text_color;
-        canvas.innerHTML = '<div class="dash-designer-band" style="height:' + band * scale + 'px;background:' + template.primary_color + '"></div>'
-            + '<div class="dash-designer-accent" style="top:' + band * scale + 'px"></div>'
-            + '<div class="dash-designer-band dash-designer-foot" style="height:' + foot * scale + 'px;background:' + template.primary_color + '"></div>'
-            + (!front && template.back_text ? '<div class="dash-designer-backtext" style="bottom:' + (foot + 1.5) * scale + 'px">' + escapeHtml(template.back_text) + '</div>' : '');
+        canvas.innerHTML = '<img class="dash-designer-decor" src="' + (front ? template.decor_front : template.decor_back) + '" alt="">'
+            + (!front && template.back_text ? '<div class="dash-designer-backtext" style="bottom:' + (foot * 1.7 + 1.2) * scale + 'px">' + escapeHtml(template.back_text) + '</div>' : '');
     }
 
     function escapeHtml(value) {
@@ -291,6 +288,7 @@
             name: template.name,
             card_type: template.card_type,
             size_key: template.size_key,
+            theme: template.theme,
             primary_color: template.primary_color,
             text_color: template.text_color,
             show_qr: template.show_qr,
