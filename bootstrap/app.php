@@ -40,6 +40,8 @@ return Application::configure(basePath: dirname(__DIR__))
             $registerErpPublicRoutes('api', 'api.', 'routes/auth.php');
             $registerErpProtectedRoutes('routes/erp-access.php');
             $registerErpProtectedRoutes('routes/erp-core.php');
+            $registerErpProtectedRoutes('routes/erp-academics.php');
+            $registerErpProtectedRoutes('routes/erp-ledger.php');
             $registerErpProtectedRoutes('routes/erp-admin.php');
             $registerErpProtectedRoutes('routes/erp-teacher.php');
             $registerErpProtectedRoutes('routes/erp-student.php');

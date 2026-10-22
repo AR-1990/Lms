@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             SystemSettingSeeder::class,
             CampusSeeder::class,
             NumberSequenceSeeder::class,
+            AcademicSeeder::class,
+            AccountsSeeder::class,
         ]);
     }
 }

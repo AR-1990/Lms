@@ -67,6 +67,6 @@ class RoleSeeder extends Seeder
         $teacherRole->syncPermissions(['manage-classes', 'record-attendance', 'submit-grades', 'view-courses', 'view-attendance']);
         $studentRole->syncPermissions(['view-courses', 'view-attendance', 'view-grades']);
         $parentRole->syncPermissions(['view-children', 'view-fees', 'view-attendance', 'view-grades', 'view-notices']);
-        $accountsRole->syncPermissions(['manage-fees', 'view-payroll', 'view-fees']);
+        $accountsRole->syncPermissions(['manage-fees', 'view-payroll', 'view-fees', 'manage-accounts', 'manage-vouchers', 'post-vouchers', 'view-ledger']);
     }
 }

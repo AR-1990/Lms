@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ERP\AttachmentController;
+use App\Http\Controllers\Portal\AcademicsPortalController;
+use App\Http\Controllers\Portal\AccountingPortalController;
 use App\Http\Controllers\Portal\AccountsPortalController;
 use App\Http\Controllers\Portal\AdminPortalController;
 use App\Http\Controllers\Portal\AdminSettingsController;
@@ -53,6 +55,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/activity-log', [AdminPortalController::class, 'activityLog'])->middleware('permission:view-activity-log')->name('activity-log');
         Route::get('/campuses', [AdminPortalController::class, 'campuses'])->middleware('permission:manage-campuses')->name('campuses');
         Route::get('/numbering', [AdminPortalController::class, 'numbering'])->middleware('permission:manage-numbering')->name('numbering');
+        Route::prefix('academics')->name('academics.')->middleware('permission:manage-academics')->group(function () {
+            Route::get('/sessions', [AcademicsPortalController::class, 'sessions'])->name('sessions');
+            Route::get('/classes', [AcademicsPortalController::class, 'classes'])->name('classes');
+            Route::get('/sections', [AcademicsPortalController::class, 'sections'])->name('sections');
+            Route::get('/subjects', [AcademicsPortalController::class, 'subjects'])->name('subjects');
+            Route::get('/curriculum', [AcademicsPortalController::class, 'curriculum'])->name('curriculum');
+            Route::get('/periods', [AcademicsPortalController::class, 'periods'])->name('periods');
+        });
         Route::get('/roles', [AdminPortalController::class, 'roles'])->middleware('permission:manage-roles')->name('roles');
         Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats')->name('reports');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:manage-settings')->name('settings');
@@ -81,5 +91,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/collections', [AccountsPortalController::class, 'collections'])->middleware('permission:manage-fees')->name('collections');
         Route::get('/challans', [AccountsPortalController::class, 'challans'])->middleware('permission:view-fees')->name('challans');
         Route::get('/payroll', [AccountsPortalController::class, 'payroll'])->middleware('permission:view-payroll')->name('payroll');
+
+        Route::get('/chart', [AccountingPortalController::class, 'chart'])->middleware('permission:view-ledger,manage-accounts')->name('chart');
+        Route::get('/chart/{account}/ledger', [AccountingPortalController::class, 'ledger'])->middleware('permission:view-ledger')->name('ledger');
+        Route::get('/vouchers', [AccountingPortalController::class, 'vouchers'])->middleware('permission:view-ledger,manage-vouchers,post-vouchers')->name('vouchers');
+        Route::get('/trial-balance', [AccountingPortalController::class, 'trialBalance'])->middleware('permission:view-ledger')->name('trial-balance');
+        Route::middleware('permission:manage-accounts')->group(function () {
+            Route::get('/fiscal-years', [AccountingPortalController::class, 'fiscalYears'])->name('fiscal-years');
+            Route::get('/voucher-types', [AccountingPortalController::class, 'voucherTypes'])->name('voucher-types');
+            Route::get('/payment-methods', [AccountingPortalController::class, 'paymentMethods'])->name('payment-methods');
+            Route::get('/bank-accounts', [AccountingPortalController::class, 'bankAccounts'])->name('bank-accounts');
+            Route::get('/vendors', [AccountingPortalController::class, 'vendors'])->name('vendors');
+        });
     });
 });

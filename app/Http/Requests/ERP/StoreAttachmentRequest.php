@@ -30,7 +30,7 @@ class StoreAttachmentRequest extends FormRequest
             'file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx'],
             'document_type_id' => [
                 'nullable', 'integer',
-                Rule::exists('lookups', 'id')->where('type', 'document_type')->where('is_active', true)->whereNull('deleted_at'),
+                Rule::exists('lookups', 'id')->where('type', 'document_type')->where('is_active', 1)->whereNull('deleted_at'),
             ],
             'title' => ['nullable', 'string', 'max:255'],
             'document_number' => ['nullable', 'string', 'max:100'],

@@ -65,7 +65,11 @@
                 let html = '<div class="dash-actions">';
 
                 if (config.viewUrl) {
-                    html += '<a href="' + esc(config.viewUrl(row)) + '" class="dash-action dash-action-view" data-tooltip="View" aria-label="View ' + name + '">' + icon('book') + '</a>';
+                    const viewHref = config.viewUrl(row);
+
+                    html += viewHref
+                        ? '<a href="' + esc(viewHref) + '" class="dash-action dash-action-view" data-tooltip="View" aria-label="View ' + name + '">' + icon('book') + '</a>'
+                        : '<span class="dash-action dash-action-view is-disabled" data-tooltip="Nothing to open">' + icon('book') + '</span>';
                 }
 
                 if (canEdit !== true) {

@@ -32,6 +32,11 @@ class PermissionSeeder extends Seeder
             ['name' => 'View Activity Log', 'slug' => 'view-activity-log', 'group' => 'admin', 'description' => 'See who did what, on which module.'],
             ['name' => 'Manage Campuses', 'slug' => 'manage-campuses', 'group' => 'admin', 'description' => 'Create and maintain campuses / branches.'],
             ['name' => 'Manage Numbering', 'slug' => 'manage-numbering', 'group' => 'admin', 'description' => 'Configure document number formats (admission no, receipts…).'],
+            ['name' => 'Manage Academics', 'slug' => 'manage-academics', 'group' => 'academics', 'description' => 'Sessions, classes, sections, subjects, curriculum and bell schedule.'],
+            ['name' => 'Manage Chart of Accounts', 'slug' => 'manage-accounts', 'group' => 'accounts', 'description' => 'Accounts, fiscal years, voucher types, payment methods, bank accounts and vendors.'],
+            ['name' => 'Manage Vouchers', 'slug' => 'manage-vouchers', 'group' => 'accounts', 'description' => 'Create and edit draft journal vouchers.'],
+            ['name' => 'Post Vouchers', 'slug' => 'post-vouchers', 'group' => 'accounts', 'description' => 'Post vouchers to the ledger and reverse posted vouchers.'],
+            ['name' => 'View Ledger', 'slug' => 'view-ledger', 'group' => 'accounts', 'description' => 'View vouchers, account ledgers and the trial balance.'],
         ], ['slug'], ['name', 'group', 'description']);
     }
 }

@@ -78,5 +78,14 @@
         return grid;
     }
 
-    window.PinnacleGrid = { create: create, escape: escapeHtml };
+    const rupees = new Intl.NumberFormat('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    /**
+     * Amounts travel in paisa (integers); show them as "Rs 1,500.50".
+     */
+    function money(paisa) {
+        return 'Rs ' + rupees.format((Number(paisa) || 0) / 100);
+    }
+
+    window.PinnacleGrid = { create: create, escape: escapeHtml, money: money };
 })();

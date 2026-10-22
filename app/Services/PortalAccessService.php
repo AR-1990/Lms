@@ -16,6 +16,8 @@ class PortalAccessService
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
             ['key' => 'users', 'label' => 'Users', 'route' => 'admin.users', 'icon' => 'users', 'tone' => 'blue'],
             ['key' => 'roles', 'label' => 'Roles', 'route' => 'admin.roles', 'icon' => 'shield', 'tone' => 'violet'],
+            ['key' => 'academics', 'label' => 'Academics', 'route' => 'admin.academics.classes', 'icon' => 'student', 'tone' => 'sky'],
+            ['key' => 'accounting', 'label' => 'Accounts', 'route' => 'accounts.chart', 'icon' => 'book', 'tone' => 'emerald'],
             ['key' => 'lookups', 'label' => 'Lookups', 'route' => 'admin.lookups', 'icon' => 'layers', 'tone' => 'amber'],
             ['key' => 'campuses', 'label' => 'Campuses', 'route' => 'admin.campuses', 'icon' => 'building', 'tone' => 'emerald'],
             ['key' => 'numbering', 'label' => 'Numbering', 'route' => 'admin.numbering', 'icon' => 'hash', 'tone' => 'blue'],
@@ -34,6 +36,7 @@ class PortalAccessService
         ],
         'accounts' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'accounting', 'label' => 'Accounts', 'route' => 'accounts.chart', 'icon' => 'book', 'tone' => 'emerald'],
         ],
     ];
 

@@ -256,7 +256,7 @@ Passwords, tokens, and other secrets are never written to `old_value` / `new_val
 | room | string(50) | |
 | capacity | smallInteger | |
 | class_teacher_id | → employees | |
-| **[SD] [AU]** | | unique (class, session, name) |
+| **[SD] [AU]** | | unique (class, session, name) among non-deleted rows — checked in validation, so a deleted section name can be reused |
 
 ### `subjects`
 | Field | Type | Notes |
@@ -817,7 +817,7 @@ One payment can settle many invoices; one invoice can be paid in parts.
 |---|---|---|
 | account_type_id | → account_types R | |
 | parent_id | → accounts | tree |
-| code | string(20) unique R | `1101` |
+| code | string(20) R | `1101`; unique among non-deleted accounts (validated) |
 | name | string R | Cash in Hand, HBL Main, Tuition Income… |
 | is_group | boolean default false | group = header, cannot take entries |
 | is_bank_account | boolean default false | |
@@ -850,11 +850,13 @@ One payment can settle many invoices; one invoice can be paid in parts.
 | total_debit / total_credit | bigInteger R | must be equal |
 | status | string(20) R | `draft`, `posted`, `reversed` |
 | posted_by / posted_at | → users / timestamp | |
-| reversed_by_entry_id | → journal_entries | reversal link |
+| reversed_by_entry_id | → journal_entries | on the original: the voucher that reversed it |
+| reverses_entry_id | → journal_entries | on the reversal: the voucher it cancels |
+| reversal_reason | string | why the original was reversed |
 | **[C] [AU]** | | posted entries are immutable |
 
 ### `journal_lines`
-`journal_entry_id` R, `account_id` R (non-group only), `debit` bigInteger default 0, `credit` bigInteger default 0, `description` string, `party_type` / `party_id` (polymorphic: Student, Employee, Vendor — for sub-ledgers), `cost_center_id` → cost_centers.
+`journal_entry_id` R, `account_id` R (non-group only), `debit` bigInteger default 0, `credit` bigInteger default 0 (exactly one of the two is non-zero), `description` string, `party_type` / `party_id` (polymorphic: Student, Employee, Vendor — for sub-ledgers), `cost_center_id` → cost_centers, `line_no` smallInteger (display order).
 
 ### `cost_centers` (optional)
 `name` R, `code`, `is_active` — e.g. Junior Wing, Senior Wing, Transport.
@@ -1612,8 +1614,8 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 | Phase | Scope | Depends on |
 |---|---|---|
 | 1 | Core additions: `campuses`, `lookups` + admin CRUD, `attachments`, `activity_logs` + `activity_log_changes`, `number_sequences`, `user_devices` + mobile login, Yajra DataTables install, PDF engine | — |
-| 2 | Academic foundation | 1 |
-| 3 | Chart of accounts, fiscal years, voucher types, journal engine, payment methods, vendors | 1 |
+| 2 ✅ | Academic foundation: sessions, classes, sections, subjects, curriculum (with copy to a new session), bell schedule. Timetable slots and calendar events come with phase 8 | 1 |
+| 3 ✅ | Chart of accounts, fiscal years (open / close), voucher types, journal engine (draft → post → reverse), payment methods, bank accounts, vendors, account ledger, trial balance | 1 |
 | 4 | Admissions pipeline (with registration & admission fee) → students, guardians, enrolments, portal accounts | 2, 3 |
 | 5 | Fee management + receipts + challan prints, posting to ledger | 3, 4 |
 | 6 | Recruitment → employees, departments, designations, teacher assignments | 1, 2 |
@@ -1634,7 +1636,7 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 ## 27. Decisions still open
 
 1. Single campus now, multi-campus later? (Schema already has nullable `campus_id`.)
-2. Fiscal year: July–June or January–December?
+2. Fiscal year: July–June or January–December? (Seeded as July–June, FY 2026-27; editable under Accounts → Fiscal Years.)
 3. Fee billing frequency default: monthly, quarterly, or both per head?
 4. Payroll statutory items: income tax slabs, EOBI, provident fund — which apply?
 5. Grading scale(s) for Matric and O-Level.
