@@ -37,6 +37,21 @@ class PermissionSeeder extends Seeder
             ['name' => 'Manage Vouchers', 'slug' => 'manage-vouchers', 'group' => 'accounts', 'description' => 'Create and edit draft journal vouchers.'],
             ['name' => 'Post Vouchers', 'slug' => 'post-vouchers', 'group' => 'accounts', 'description' => 'Post vouchers to the ledger and reverse posted vouchers.'],
             ['name' => 'View Ledger', 'slug' => 'view-ledger', 'group' => 'accounts', 'description' => 'View vouchers, account ledgers and the trial balance.'],
+            ['name' => 'Manage HR', 'slug' => 'manage-hr', 'group' => 'hr', 'description' => 'Departments, designations, employees and teacher assignments.'],
+            ['name' => 'Manage Recruitment', 'slug' => 'manage-recruitment', 'group' => 'hr', 'description' => 'Job openings, candidates, interviews and hiring.'],
+            ['name' => 'Manage Admissions', 'slug' => 'manage-admissions', 'group' => 'admissions', 'description' => 'Inquiries, applications, tests, interviews and enrolment.'],
+            ['name' => 'Manage Students', 'slug' => 'manage-students', 'group' => 'students', 'description' => 'Student records, guardians, sections and status changes.'],
+            ['name' => 'Approve Requests', 'slug' => 'approve-requests', 'group' => 'administration', 'description' => 'Approve or reject deletions and purchase requests. Deletions by these users need no approval.'],
+            ['name' => 'Manage Purchase Requests', 'slug' => 'manage-purchases', 'group' => 'hr', 'description' => 'Raise purchase requests that go to an administrator for approval.'],
+            ['name' => 'View Performance', 'slug' => 'view-performance', 'group' => 'academics', 'description' => 'Student performance tracker: snapshots, skills, goals and at-risk alerts.'],
+            ['name' => 'Manage Exams', 'slug' => 'manage-exams', 'group' => 'academics', 'description' => 'Exam setup, date sheets, admit cards, seating, approving marks and publishing results.'],
+            ['name' => 'Manage Diary & Homework', 'slug' => 'manage-diary', 'group' => 'academics', 'description' => 'Write the daily diary and homework for sections the teacher teaches, grade submissions.'],
+            ['name' => 'Manage Timetable', 'slug' => 'manage-timetable', 'group' => 'academics', 'description' => 'Weekly class timetables (teacher clash checks).'],
+            ['name' => 'Manage Calendar', 'slug' => 'manage-calendar', 'group' => 'academics', 'description' => 'Holidays, exams, meetings and public events.'],
+            ['name' => 'Manage Staff Attendance', 'slug' => 'manage-staff-attendance', 'group' => 'hr', 'description' => 'Mark daily staff attendance.'],
+            ['name' => 'Manage ID Cards', 'slug' => 'manage-cards', 'group' => 'students', 'description' => 'Card templates, issuing and printing student and employee ID cards.'],
+            ['name' => 'Manage Website', 'slug' => 'manage-website', 'group' => 'administration', 'description' => 'Public website stats, testimonials, news & notices and FAQs.'],
+            ['name' => 'Manage Fee Setup', 'slug' => 'manage-fee-setup', 'group' => 'accounts', 'description' => 'Fee heads, class fee structures, concession types and student concessions.'],
         ], ['slug'], ['name', 'group', 'description']);
     }
 }

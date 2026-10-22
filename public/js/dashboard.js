@@ -13,7 +13,7 @@
     const BANNER_LIFETIME = 6000;
     const TOAST_LIFETIME = 4500;
     const FX_HOSTS = '.dash-btn, .dash-nav-link, .dash-account, .dash-dropdown-link, .dash-icon-btn, .dash-stat, .dash-kpi, .dash-quick-tile, .dash-feature, .dash-banner-close, .dash-action, .dash-page-link, .dash-role-option';
-    const ERASE_DURATION = 520;
+    const ERASE_DURATION = 950;
     const NO_INK_TARGETS = 'input, textarea, select, [contenteditable="true"]';
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -96,7 +96,10 @@
             return Promise.resolve(window.confirm('Delete "' + recordName + '"?'));
         }
 
-        modal.querySelector('[data-confirm-message]').textContent = '"' + recordName + '" will be erased from the list.';
+        const reason = modal.querySelector('[data-confirm-reason]');
+
+        modal.querySelector('[data-confirm-message]').textContent = '"' + recordName + '" will be erased from the list. It is kept in the deleted-records register.';
+        reason.value = '';
 
         return new Promise(function (resolve) {
             const accept = modal.querySelector('[data-confirm-accept]');
@@ -110,7 +113,7 @@
                 modal.close();
                 resolve(result);
             };
-            const onAccept = function () { finish(true); };
+            const onAccept = function () { finish({ reason: reason.value.trim() }); };
             const onCancel = function () { finish(false); };
             const onBackdrop = function (event) {
                 if (event.target === modal) {
@@ -123,22 +126,197 @@
             modal.addEventListener('click', onBackdrop);
             modal.addEventListener('cancel', onCancel);
             modal.showModal();
-            cancel.focus();
+            reason.focus();
         });
     }
 
     /**
-     * Plays the eraser wipe on an element; resolves when it is done (or at once if motion is reduced).
+     * A small eraser rubs across the element from left to right; the element is wiped
+     * away behind it and a few eraser crumbs fall. Resolves when the wipe is done.
      */
     function eraseElement(element) {
         if (!element || REDUCED_MOTION.matches) {
             return Promise.resolve();
         }
 
+        const rect = element.getBoundingClientRect();
+        const eraser = document.createElement('span');
+        const travel = Math.max(rect.width - 18, 0);
+        const strokes = 11;
+        const reach = Math.max(Math.min(rect.height / 2 - 9, 14), 4);
+        const frames = [];
+
+        eraser.className = 'dash-eraser-sweep';
+        eraser.setAttribute('aria-hidden', 'true');
+        eraser.innerHTML = '<svg viewBox="0 0 30 18" width="30" height="18"><rect x="1" y="2" width="28" height="14" rx="3" class="dash-eraser-body"/><rect x="1" y="2" width="11" height="14" rx="3" class="dash-eraser-sleeve"/><path d="M12 2v14" class="dash-eraser-seam"/></svg>';
+        eraser.style.left = rect.left + 'px';
+        eraser.style.top = (rect.top + rect.height / 2 - 9) + 'px';
+        document.body.appendChild(eraser);
+
+        // Hand-like scrubbing: each stroke pushes forward, rubs up or down across the row's
+        // height with a tilt, then slides back a little before the next stroke.
+        frames.push({ transform: 'translate(0, 0) rotate(0deg)', offset: 0 });
+
+        for (let stroke = 1; stroke <= strokes; stroke += 1) {
+            const ahead = travel * stroke / strokes;
+            const lift = stroke % 2 === 0 ? reach : -reach;
+            const progress = stroke / strokes;
+
+            frames.push({ transform: 'translate(' + ahead + 'px, ' + lift + 'px) rotate(' + (lift > 0 ? 14 : -14) + 'deg)', offset: progress - 0.5 / strokes });
+            frames.push({ transform: 'translate(' + Math.max(ahead - travel * 0.035, 0) + 'px, ' + (lift * 0.35) + 'px) rotate(' + (lift > 0 ? -4 : 4) + 'deg)', offset: progress });
+        }
+
         element.classList.add('is-erasing');
 
-        return new Promise(function (resolve) {
-            window.setTimeout(resolve, ERASE_DURATION);
+        const sweep = eraser.animate(frames, { duration: ERASE_DURATION, easing: 'ease-in-out', fill: 'forwards' });
+
+        for (let crumb = 0; crumb < 7; crumb += 1) {
+            window.setTimeout(function () {
+                dropCrumb(rect.left + travel * (crumb + 0.5) / 7 + 12, rect.top + rect.height / 2 + (crumb % 2 === 0 ? reach : -reach / 2));
+            }, ERASE_DURATION * (crumb + 0.5) / 7);
+        }
+
+        return sweep.finished.catch(function () {}).then(function () {
+            eraser.animate([{ opacity: 1 }, { opacity: 0, transform: frames[frames.length - 1].transform + ' translateY(-6px)' }], { duration: 160, fill: 'forwards' })
+                .finished.catch(function () {}).then(function () {
+                    eraser.remove();
+                });
+        });
+    }
+
+    /**
+     * Confirm (with a reason), send the DELETE, then erase the element only when the record was
+     * really deleted. Non-approvers get "sent for approval" and the row stays.
+     * Resolves 'deleted', 'pending' or null (cancelled / failed).
+     */
+    function eraseRecord(recordName, element, url) {
+        return confirmErase(recordName).then(function (answer) {
+            if (!answer) {
+                return null;
+            }
+
+            return api('DELETE', url, { reason: answer.reason || null })
+                .then(function (envelope) {
+                    if (envelope.data && envelope.data.status === 'pending') {
+                        showToast(envelope.message);
+
+                        return 'pending';
+                    }
+
+                    return eraseElement(element).then(function () {
+                        showToast(envelope.message);
+
+                        return 'deleted';
+                    });
+                })
+                .catch(function (envelope) {
+                    const fields = envelope && envelope.errors && envelope.errors.fields;
+                    const firstField = fields ? fields[Object.keys(fields)[0]][0] : null;
+
+                    element.classList.remove('is-erasing');
+                    showToast(firstField || (envelope && envelope.message) || 'Could not delete.', 'error');
+
+                    return null;
+                });
+        });
+    }
+
+    /**
+     * "Please wait" paper card with a gently swinging clock, for slow work (generating cards,
+     * challans, PDFs). Returns a function that hides it. Shown only if the work takes > 250 ms.
+     */
+    function showBusy(message) {
+        const overlay = document.createElement('div');
+        let shown = false;
+
+        overlay.className = 'dash-busy';
+        overlay.setAttribute('role', 'status');
+        overlay.setAttribute('aria-live', 'polite');
+        overlay.innerHTML = '<div class="dash-busy-card">'
+            + '<svg class="dash-busy-clock" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">'
+            + '<path class="dash-busy-bell" d="M14 14 8 8M50 14l6-6"/>'
+            + '<circle class="dash-busy-face" cx="32" cy="34" r="22"/>'
+            + '<path class="dash-busy-tick" d="M32 15v3M32 50v3M13 34h3M48 34h3"/>'
+            + '<line class="dash-busy-hour" x1="32" y1="34" x2="32" y2="24"/>'
+            + '<line class="dash-busy-minute" x1="32" y1="34" x2="32" y2="18"/>'
+            + '<circle class="dash-busy-pin" cx="32" cy="34" r="2.2"/>'
+            + '</svg>'
+            + '<p class="dash-busy-text"></p><p class="dash-busy-sub">This can take a few seconds…</p></div>';
+        overlay.querySelector('.dash-busy-text').textContent = message || 'Working…';
+
+        const timer = window.setTimeout(function () {
+            shown = true;
+            document.body.appendChild(overlay);
+        }, 250);
+
+        return function hide() {
+            window.clearTimeout(timer);
+
+            if (shown) {
+                overlay.classList.add('is-leaving');
+                window.setTimeout(function () { overlay.remove(); }, 180);
+            }
+        };
+    }
+
+    /**
+     * Fetch a file (PDF) with the busy card showing, then open it in a new tab.
+     */
+    function openFile(url, message) {
+        const hide = showBusy(message);
+        // Open the tab now, while the click still counts as a user action, so popup blockers allow it.
+        const tab = window.open('', '_blank');
+
+        if (tab) {
+            tab.document.title = message || 'Preparing…';
+            tab.document.body.innerHTML = '<p style="font-family: system-ui, sans-serif; padding: 2rem; color: #374151;">' + (message || 'Preparing…') + '</p>';
+        }
+
+        return window.fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/pdf, application/json', 'X-Platform': 'web' } })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().catch(function () { return {}; }).then(function (body) {
+                        return Promise.reject(body);
+                    });
+                }
+
+                return response.blob();
+            })
+            .then(function (blob) {
+                const link = URL.createObjectURL(blob);
+
+                if (tab) {
+                    tab.location.href = link;
+                } else {
+                    window.location.href = link;
+                }
+
+                window.setTimeout(function () { URL.revokeObjectURL(link); }, 60000);
+            })
+            .catch(function (body) {
+                if (tab) {
+                    tab.close();
+                }
+
+                showToast((body && body.message) || 'Could not prepare the file.', 'error');
+
+                return Promise.reject(body);
+            })
+            .finally(hide);
+    }
+
+    function dropCrumb(x, y) {
+        const crumb = document.createElement('span');
+
+        crumb.className = 'dash-eraser-crumb';
+        crumb.style.left = x + 'px';
+        crumb.style.top = y + 'px';
+        document.body.appendChild(crumb);
+        crumb.animate([
+            { transform: 'translate(0, 0) scale(1)', opacity: 0.9 },
+            { transform: 'translate(' + (Math.random() * 10 - 5) + 'px, 14px) scale(0.6)', opacity: 0 }
+        ], { duration: 420, easing: 'ease-in', fill: 'forwards' }).finished.catch(function () {}).then(function () {
+            crumb.remove();
         });
     }
 
@@ -504,5 +682,5 @@
         }, TOAST_LIFETIME);
     }
 
-    window.PinnacleDashboard = { toast: showToast, confirm: confirmErase, erase: eraseElement, api: api };
+    window.PinnacleDashboard = { toast: showToast, confirm: confirmErase, erase: eraseElement, eraseRecord: eraseRecord, busy: showBusy, openFile: openFile, api: api };
 })();

@@ -8,11 +8,12 @@ use App\Http\Resources\VoucherTypeResource;
 use App\Models\VoucherType;
 use App\Services\VoucherTypeService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 
 class VoucherTypeController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private VoucherTypeService $voucherTypeService) {}
 
@@ -43,8 +44,6 @@ class VoucherTypeController extends Controller
 
     public function destroy(VoucherType $voucherType): JsonResponse
     {
-        $this->voucherTypeService->delete($voucherType);
-
-        return $this->successResponse(null, 'Voucher type deleted.');
+        return $this->deleteWithApproval($voucherType, 'Voucher type deleted.');
     }
 }

@@ -419,32 +419,34 @@
                 <span class="section-subtitle">Instant Fee Calculator</span>
                 <h2 class="section-title">Transparent Tuition Estimator</h2>
                 <p class="section-desc" style="margin-bottom: 1.5rem;">
-                    Drag the range slider to see instant fee estimates for each academic wing with sibling concessions and transport add-on.
+                    Pick a class to see this session's fee, with concessions and optional services such as transport.
                 </p>
 
                 <div class="fee-calc-box">
                     <div class="range-slider-group">
-                        <label style="display: block; font-weight: 800; font-size: 1rem; color: var(--midnight); margin-bottom: 0.5rem;">
-                            Selected Level: <span id="calcSelectedGradeName" style="color: var(--primary); font-weight: 800;">Primary Wing (Grades 1 to 5)</span>
+                        <label for="calcGrade" style="display: block; font-weight: 800; font-size: 1rem; color: var(--midnight); margin-bottom: 0.5rem;">
+                            Selected Class: <span id="calcSelectedGradeName" style="color: var(--primary); font-weight: 800;">{{ $feeEstimates->first()?->class_name }}</span>
                         </label>
-                        <input type="range" id="calcGradeRange" class="fee-range-input" min="0" max="4" value="1" step="1">
-                        <div class="range-slider-labels">
-                            <span>Montessori</span>
-                            <span>Primary</span>
-                            <span>Middle</span>
-                            <span>Matric/O-Lvl</span>
-                            <span>College</span>
-                        </div>
+                        <select id="calcGrade" class="form-control">
+                            @foreach ($feeEstimates as $estimate)
+                                <option value="{{ $estimate->class_id }}" data-monthly="{{ (int) $estimate->monthly_total }}" data-one-time="{{ (int) $estimate->one_time_total }}" data-optional="{{ (int) $estimate->optional_total }}">{{ $estimate->class_name }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" id="calcSibling" style="accent-color: var(--primary); width: 18px; height: 18px;">
-                            <span>15% Sibling Concession</span>
+                        <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600;">
+                            <span>Concession</span>
+                            <select id="calcConcession" class="form-control" style="width: auto;">
+                                <option value="" data-percent="0">None</option>
+                                @foreach ($estimatorConcessions as $concession)
+                                    <option value="{{ $concession->id }}" data-percent="{{ $concession->default_value }}">{{ $concession->name }} ({{ $concession->default_value / 100 }}%)</option>
+                                @endforeach
+                            </select>
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600; cursor: pointer;">
                             <input type="checkbox" id="calcTransport" style="accent-color: var(--primary); width: 18px; height: 18px;">
-                            <span>AC Bus Route (+ Rs. 3,500)</span>
+                            <span>Optional services (transport, lab)</span>
                         </label>
                     </div>
 
@@ -577,7 +579,7 @@
         </div>
 
         <div class="grid-3">
-            @foreach($upcomingEvents as $event)
+            @forelse($upcomingEvents as $event)
                 <div class="event-card" data-reveal="fade-up">
                     <div class="event-date">
                         <span class="event-day">{{ $event['day'] }}</span>
@@ -593,7 +595,9 @@
                         </div>
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <p style="grid-column: 1 / -1; text-align: center; color: #57534e;">New events will be announced soon.</p>
+            @endforelse
         </div>
     </div>
 </section>

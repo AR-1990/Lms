@@ -207,7 +207,9 @@ class LedgerTest extends TestCase
 
         $other = app(JournalService::class)->createDraft($this->voucher([['1100', 100, 0], ['3100', 0, 100]]));
         $this->actingAs($this->admin, 'sanctum')->deleteJson('/api/erp/ledger/vouchers/'.$other->id)->assertOk();
-        $this->assertDatabaseMissing('journal_lines', ['journal_entry_id' => $other->id]);
+        $this->assertSoftDeleted($other);
+        $this->assertSame(0, $other->lines()->count());
+        $this->assertSame(2, $other->lines()->withTrashed()->count());
     }
 
     public function test_reversal_creates_an_opposite_posted_voucher_and_zeroes_the_balance(): void
@@ -226,9 +228,18 @@ class LedgerTest extends TestCase
 
         $this->assertSame(JournalEntry::STATUS_REVERSED, $posted->refresh()->status);
         $this->assertSame($response->json('data.id'), $posted->reversed_by_entry_id);
+        $this->assertSame($this->admin->id, $posted->reversed_by_user_id);
+        $this->assertNotNull($posted->reversed_at);
+        $this->assertSame('Reversal of '.$posted->voucher_no.': Entered twice', $response->json('data.narration'));
+        $this->assertStringStartsWith('Reversal: ', $response->json('data.lines.0.description'));
 
         $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/erp/ledger/vouchers/'.$posted->id.'/reverse', ['reason' => 'Again'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.fields.reason.0', 'The narration field must be at least 10 characters.');
+
+        $this->actingAs($this->admin, 'sanctum')
+            ->postJson('/api/erp/ledger/vouchers/'.$posted->id.'/reverse', ['reason' => 'Reversing once more'])
             ->assertUnprocessable()
             ->assertJsonPath('errors.fields.voucher.0', 'This voucher has already been reversed.');
 

@@ -8,12 +8,13 @@ use App\Http\Resources\AccountResource;
 use App\Models\Account;
 use App\Services\AccountService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AccountController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private AccountService $accountService) {}
 
@@ -51,9 +52,7 @@ class AccountController extends Controller
 
     public function destroy(Account $account): JsonResponse
     {
-        $this->accountService->delete($account);
-
-        return $this->successResponse(null, 'Account deleted.');
+        return $this->deleteWithApproval($account, 'Account deleted.');
     }
 
     /**

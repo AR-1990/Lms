@@ -61,6 +61,7 @@ class JournalService
             'fiscalYear:id,name',
             'postedBy:id,name',
             'reversedBy:id,voucher_no',
+            'reverser:id,name',
             'reverses:id,voucher_no',
         ]);
     }
@@ -199,7 +200,7 @@ class JournalService
                 'account_id' => $line->account_id,
                 'debit' => $line->credit,
                 'credit' => $line->debit,
-                'description' => $line->description,
+                'description' => 'Reversal: '.($line->description ?? $entry->narration),
                 'party_type' => $line->party_type,
                 'party_id' => $line->party_id,
                 'cost_center_id' => $line->cost_center_id,
@@ -210,6 +211,8 @@ class JournalService
                 'status' => JournalEntry::STATUS_REVERSED,
                 'reversed_by_entry_id' => $reversal->id,
                 'reversal_reason' => $reason,
+                'reversed_by_user_id' => auth()->id(),
+                'reversed_at' => now(),
             ])->saveQuietly();
 
             $this->activityLogger->record(

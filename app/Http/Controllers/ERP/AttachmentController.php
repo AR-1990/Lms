@@ -8,6 +8,7 @@ use App\Http\Resources\AttachmentResource;
 use App\Models\Attachment;
 use App\Services\AttachmentService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private AttachmentService $attachmentService) {}
 
@@ -73,9 +74,7 @@ class AttachmentController extends Controller
     {
         $this->authorizeAttachment($request, $attachment);
 
-        $this->attachmentService->delete($attachment);
-
-        return $this->successResponse(null, 'File deleted.');
+        return $this->deleteWithApproval($attachment, 'File deleted.');
     }
 
     /**

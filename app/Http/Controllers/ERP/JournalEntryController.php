@@ -9,13 +9,14 @@ use App\Http\Resources\JournalEntryResource;
 use App\Models\JournalEntry;
 use App\Services\JournalService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class JournalEntryController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private JournalService $journalService) {}
 
@@ -48,9 +49,7 @@ class JournalEntryController extends Controller
 
     public function destroy(JournalEntry $voucher): JsonResponse
     {
-        $this->journalService->deleteDraft($voucher);
-
-        return $this->successResponse(null, 'Draft deleted.');
+        return $this->deleteWithApproval($voucher, 'Draft deleted.');
     }
 
     public function post(JournalEntry $voucher): JsonResponse

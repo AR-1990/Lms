@@ -39,7 +39,7 @@ Plus: Printables & cards (section 23) and the one API for web + mobile (section 
 |---|---|
 | Primary key | `id` bigint auto-increment on every table |
 | Timestamps | `created_at`, `updated_at` on every table |
-| Soft deletes **[SD]** | `deleted_at` on people and master-data tables |
+| Soft deletes **[SD]** | `deleted_at` on **every** table whose rows can be deleted (people, masters, settings rows, child/line rows, pivots). Nothing is ever permanently deleted; only Sanctum tokens / sessions / cache are hard deleted. Tables built before this rule that still lack `deleted_at` are converted in one migration (see section 26) |
 | Audit columns **[AU]** | `created_by`, `updated_by` → `users.id`, nullable |
 | Relations (no FK constraints) | Every `→ table` column is a plain `unsignedBigInteger` with an **index**, never a database foreign-key constraint, so data can be exported, imported, and moved between databases/campuses freely. Integrity is enforced in the application: `exists:` validation, soft deletes instead of hard deletes, and Services that refuse to delete a record still in use |
 | Activity log | Every create / update / delete / status change / approve / post / print / export / login is written to `activity_logs` (+ field changes in `activity_log_changes`) in the same transaction. One screen shows who did what, on which module, when |
@@ -361,7 +361,7 @@ Passwords, tokens, and other secrets are never written to `old_value` / `new_val
 | special_needs | text | |
 | medical_notes | text | |
 | transport_required | boolean default false | |
-| registration_fee_invoice_id | → fee_invoices | |
+| inquiry_id | → admission_inquiries | set when the application came from an inquiry |
 | status | string(30) R | `submitted`, `documents_pending`, `documents_verified`, `test_scheduled`, `test_done`, `interview_scheduled`, `interviewed`, `offered`, `waitlisted`, `rejected`, `accepted`, `enrolled`, `withdrawn` |
 | decision_on | date | |
 | decision_by | → users | |
@@ -369,7 +369,7 @@ Passwords, tokens, and other secrets are never written to `old_value` / `new_val
 | offer_expires_on | date | |
 | student_id | → students | set on enrolment |
 | remarks | text | |
-| **[C] [SD] [AU]** | | documents via `attachments` |
+| **[C] [SD] [AU]** | | documents via `attachments`. Its registration and admission challans are found through `fee_invoices.admission_application_id` |
 
 ### `admission_application_guardians`
 Guardian data captured before a student exists (copied into `guardians` on enrolment).
@@ -741,16 +741,18 @@ One-off waivers that are not a standing concession: `fee_invoice_id` R, `fee_inv
 | due_date | date R | |
 | subtotal | bigInteger R | sum of items |
 | concession_total | bigInteger R default 0 | |
+| waived_total | bigInteger R default 0 | sum of `fee_waivers` on this challan |
 | fine_total | bigInteger R default 0 | |
 | previous_balance | bigInteger default 0 | carried arrears (info only) |
 | total | bigInteger R | payable for this invoice |
 | paid_total | bigInteger R default 0 | |
-| balance | bigInteger R | total − paid |
+| balance | bigInteger R | total − waived − paid |
 | status | string(20) R | `draft`, `posted`, `partially_paid`, `paid`, `cancelled` |
 | posted_at | timestamp | ledger posted |
 | journal_entry_id | → journal_entries | |
 | cancelled_reason | string | |
 | bank_challan_no | string | 1-Bill / bank reference |
+| fee_invoice_batch_id | → fee_invoice_batches | set for challans from a monthly run |
 | notes | text | |
 | **[C] [AU]** | | posted invoices are never edited |
 
@@ -758,7 +760,7 @@ One-off waivers that are not a standing concession: `fee_invoice_id` R, `fee_inv
 `fee_invoice_id` R, `fee_head_id` R, `description` string, `amount` bigInteger R, `concession_amount` bigInteger default 0, `student_concession_id` → student_concessions, `net_amount` bigInteger R.
 
 ### `fee_invoice_batches` (bulk monthly generation)
-`academic_session_id` R, `billing_month` date R, `class_id` (null = all), `generated_count` int, `total_amount` bigInteger, `status` (`processing`/`done`/`failed`), `generated_by` → users.
+`academic_session_id` R, `billing_month` date R, `class_id` (null = all), `generated_count` int, `skipped_count` int (students already billed for the month), `total_amount` bigInteger, `status` (`processing`/`done`/`failed`), `generated_by` → users.
 
 ### `fee_refunds`
 `student_id` R, `fee_payment_id` → fee_payments, `amount` bigInteger R, `reason` text R, `payment_method_id` R, `refunded_on` date R, `journal_entry_id`, `status`, `approved_by`. **[AU]**
@@ -785,10 +787,12 @@ One-off waivers that are not a standing concession: `fee_invoice_id` R, `fee_inv
 | Field | Type | Notes |
 |---|---|---|
 | receipt_no | string unique R | |
-| student_id | → students R | |
+| student_id | → students | null only for an applicant's registration / admission payment |
+| admission_application_id | → admission_applications | payer before enrolment; moved to the student on enrolment |
 | paid_by_guardian_id | → guardians | |
 | payment_method_id | → payment_methods R | |
 | amount | bigInteger R | |
+| advance_amount | bigInteger default 0 | part not allocated to challans (students only) |
 | received_on | date R | |
 | reference_no | string | transaction / cheque no |
 | cheque_bank_id | → lookups (`bank`) | |
@@ -998,7 +1002,7 @@ One payment can settle many invoices; one invoice can be paid in parts.
 `employee_id` R, `contract_type_id` → lookups, `start_date` R, `end_date`, `basic_salary` bigInteger, `terms` text, `status` (`active`/`expired`/`terminated`). Signed copy via `attachments`. **[AU]**
 
 ### `teacher_assignments`
-`employee_id` R, `academic_session_id` R, `section_id` R, `subject_id` R, `is_class_teacher` boolean, `periods_per_week` tinyInteger. Unique (session, section, subject).
+`employee_id` R, `academic_session_id` R, `section_id` R, `subject_id` R, `is_class_teacher` boolean, `periods_per_week` tinyInteger. Unique (session, section, subject), index named `teacher_assignments_session_section_subject_unique` (MySQL 64-char limit).
 
 ### `employee_status_histories`
 `employee_id` R, `field` string (`designation`, `department`, `status`), `old_value`, `new_value`, `effective_on` date R, `remarks`, `changed_by`.
@@ -1616,20 +1620,32 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 | 1 | Core additions: `campuses`, `lookups` + admin CRUD, `attachments`, `activity_logs` + `activity_log_changes`, `number_sequences`, `user_devices` + mobile login, Yajra DataTables install, PDF engine | — |
 | 2 ✅ | Academic foundation: sessions, classes, sections, subjects, curriculum (with copy to a new session), bell schedule. Timetable slots and calendar events come with phase 8 | 1 |
 | 3 ✅ | Chart of accounts, fiscal years (open / close), voucher types, journal engine (draft → post → reverse), payment methods, bank accounts, vendors, account ledger, trial balance | 1 |
-| 4 | Admissions pipeline (with registration & admission fee) → students, guardians, enrolments, portal accounts | 2, 3 |
-| 5 | Fee management + receipts + challan prints, posting to ledger | 3, 4 |
-| 6 | Recruitment → employees, departments, designations, teacher assignments | 1, 2 |
-| 7 | Card templates + student & employee ID cards, QR verification | 4, 6 |
-| 8 | Student & staff attendance, timetable, calendar | 4, 6 |
-| 9 | Daily diary & homework | 8 |
-| 10 | Exams management: exam fees, halls, seating, admit cards, marks, report cards, tabulation | 5, 7, 8 |
-| 11 | Student performance tracker (snapshots, skills, goals, alerts) | 9, 10 |
+| 4 ✅ | Admissions pipeline (with registration & admission fee) → students, guardians, enrolments, portal accounts. Later: admission interview panel, student medical / discipline / achievements / emergency contacts, electives | 2, 3 |
+| 5 ✅ | Fee management + receipts, posting to ledger. Later: challan PDF print, late-fee rules automation, refunds, using a student's advance on later challans | 3, 4 |
+| 6 ✅ | Recruitment → employees, departments, designations, teacher assignments. Later: job offers, interview panels, employee qualifications / experience / contracts / dependents | 1, 2 |
+| 7 ✅ | Card templates (system templates + drag-and-drop designer, fixed sizes per card type) + student & employee ID cards printed on A4 sheets, QR verification | 4, 6 |
+| 8 ✅ | Student & staff attendance (incl. QR gate scan), student leave, timetable, calendar (public events feed the website) | 4, 6 |
+| 9 ✅ | Daily diary & homework | 8 |
+| 10 ✅ | Exams management: exam fees, halls, seating, admit cards, marks, report cards, tabulation. Later: exam attendance register, invigilation duty screen | 5, 7, 8 |
+| 11 ✅ | Student performance tracker (term snapshots, subject trends, skills, goals, alerts). Later: monthly snapshots, notifying teachers/parents (with phase 12), counselling notes | 9, 10 |
 | 12 | Announcements (incl. public website) + notifications & push | 1 |
 | 13 | Real-time employee chat (Reverb) + task management + sticky notes on every dashboard | 6, 12 |
 | 14 | HR: leave, payroll, loans, posting to ledger | 3, 6, 8 |
 | 15 | Assets & inventory & procurement | 3, 6 |
 | 16 | Portals & mobile apps completed on the same API | 4–15 |
 | 17 | Expenses & bank reconciliation, transport, appraisals, counselling, advanced reports | all |
+| SD ✅ | Soft-delete everywhere: add `deleted_at` + `SoftDeletes` to the tables that still hard delete (fee structure items / months, enrollments, teacher assignments, class_subject, periods, fiscal years, roles, admission tests / interviews / guardians, student concessions, journal lines of drafts, and the `guardian_student` / `permission_role` / `role_user` pivots) and change their Services to soft delete | before next module |
+
+
+### Built alongside the phases (cross-cutting)
+- **Admin approval for deletions** — `approval_requests` (`request_type` delete/purchase, `module`, `subject_type` / `subject_id`, `subject_label`, `reason`, `amount`, `status` pending/approved/rejected, `requested_by` / `requested_at`, `decided_by` / `decided_at`, `decision_note`, [C] [SD]). Users with `approve-requests` delete at once (recorded as approved by themselves); everyone else sends a request with a reason and the record is soft deleted only on approval. The approvals screen doubles as the deleted-records register.
+- **HR purchase requests** — `purchase_requests` (`request_no`, `department_id`, `request_date`, `needed_by`, `purpose`, `estimated_total` paisa, `status` pending/approved/rejected, `approval_request_id`, [C] [SD] [AU]) and `purchase_request_items` (`item_name`, `category_id` → lookups `purchase_category`, `quantity` decimal(12,3), `unit_id` → lookups `unit_of_measure`, `estimated_unit_price`, `line_total`, `remarks`, `sort_order`, [SD]). Every purchase goes to an administrator.
+- **Reversal audit** — `journal_entries.reversed_by_user_id` / `reversed_at`, `fee_invoices.cancelled_by` / `cancelled_at`, `fee_payments.reversed_by` / `reversed_at`. Cancelling or reversing needs a narration of at least 10 characters; it becomes the reversal voucher's narration, and each reversed line is described "Reversal: …".
+- **Public website content** (no hard-coded data) — `website_stats` (label, value, suffix, icon, order, active), `website_testimonials` (name, role_title, quote, photo_path, order, active), `website_posts` (news & notices: `category_id` → lookups `news_category`, title, slug, excerpt, body, image_path, published_on, read_minutes, is_featured, show_in_ticker, is_published), `website_faqs` (question, answer, order, active); all [SD] [AU]. The contact / admission forms create `admission_inquiries` (source Website, topic from lookups `contact_topic`). The home-page fee estimator reads the class fee structures and percent concession types. Home and news events come from public `calendar_events`.
+- **Fee head frequency** is a lookup (`fee_heads.frequency_id` → lookups `fee_frequency`) instead of a fixed list.
+- **Card templates** gained `size_key` (fixed sizes per card type: student/employee = vertical CR80 only; admit card A6; invitation A6/A5; event pass and visitor CR80/A6) and `is_system` (built-in templates cannot be deleted). Card types: student, employee, admit_card, invitation, event_pass, visitor. Field keys added: `date_sheet`, `instructions`, `signature_line`.
+- **Columns added beyond the original design**: `calendar_events.start_time` / `end_time` / `venue` / `is_public`; `student_attendances.student_id`; `staff_attendances.source` includes `qr`; `homework_submissions.graded_at` (`graded_by` → users); `admit_cards.student_id`; `marks.section_id`; `mark_change_logs.old_absent` / `new_absent`; `report_cards.student_id` / `section_id`; `performance_snapshots.student_id` / `section_id`; `performance_alerts.student_id` / `exam_term_id`; `id_cards.status_reason`. Unique rules on soft-deleted tables are checked in Form Requests, with plain indexes in the database.
+- **Diary remark types** carry a code (`positive` / `negative` / `neutral`) that the performance tracker counts.
 
 ---
 

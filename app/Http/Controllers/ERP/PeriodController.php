@@ -8,11 +8,12 @@ use App\Http\Resources\PeriodResource;
 use App\Models\Period;
 use App\Services\PeriodService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 
 class PeriodController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private PeriodService $periodService) {}
 
@@ -43,8 +44,6 @@ class PeriodController extends Controller
 
     public function destroy(Period $period): JsonResponse
     {
-        $this->periodService->delete($period);
-
-        return $this->successResponse(null, 'Period deleted.');
+        return $this->deleteWithApproval($period, 'Period deleted.');
     }
 }

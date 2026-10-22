@@ -108,9 +108,15 @@
 
                     <form data-ajax-inquiry action="{{ route('inquiry.submit') }}" method="POST">
                         @csrf
-                        <div class="form-group">
-                            <label class="form-label" for="admStudentName">Student's Full Name</label>
-                            <input type="text" id="admStudentName" name="name" class="form-control" placeholder="e.g. Daniyal Khan" required>
+                        <div class="grid-2" style="gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="admStudentName">Student's Full Name</label>
+                                <input type="text" id="admStudentName" name="child_name" class="form-control" placeholder="e.g. Daniyal Khan" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="admParentName">Parent / Guardian Name</label>
+                                <input type="text" id="admParentName" name="parent_name" class="form-control" placeholder="e.g. Imran Khan" required>
+                            </div>
                         </div>
 
                         <div class="grid-2" style="gap: 1rem;">
@@ -120,19 +126,16 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="admEmail">Parent Email Address</label>
-                                <input type="email" id="admEmail" name="email" class="form-control" placeholder="parent@email.com" required>
+                                <input type="email" id="admEmail" name="email" class="form-control" placeholder="parent@email.com">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="admGrade">Select Grade Level</label>
-                            <select id="admGrade" name="grade" class="form-control">
-                                <option value="Early Years / Montessori">Playgroup / Nursery / Prep</option>
-                                <option value="Primary (1-5)">Primary Wing (Grades 1-5)</option>
-                                <option value="Middle (6-8)">Middle Wing (Grades 6-8)</option>
-                                <option value="Cambridge O-Levels">Cambridge O-Levels (Grades 9-10)</option>
-                                <option value="Federal Board Matric">Federal Board Matric (Grades 9-10)</option>
-                                <option value="College HSSC">Intermediate / HSSC (Grades 11-12)</option>
+                            <label class="form-label" for="admGrade">Class Applying For</label>
+                            <select id="admGrade" name="class_sought_id" class="form-control">
+                                @foreach ($classes as $class)
+                                    <option value="{{ $class->id }}">{{ $class->name }}</option>
+                                @endforeach
                             </select>
                         </div>
 

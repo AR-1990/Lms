@@ -8,12 +8,13 @@ use App\Http\Resources\AcademicSessionResource;
 use App\Models\AcademicSession;
 use App\Services\AcademicSessionService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AcademicSessionController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private AcademicSessionService $sessionService) {}
 
@@ -52,8 +53,6 @@ class AcademicSessionController extends Controller
 
     public function destroy(AcademicSession $academicSession): JsonResponse
     {
-        $this->sessionService->delete($academicSession);
-
-        return $this->successResponse(null, 'Session deleted.');
+        return $this->deleteWithApproval($academicSession, 'Session deleted.');
     }
 }

@@ -13,11 +13,12 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\RolePermissionService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 
 class RoleController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private RolePermissionService $roleService) {}
 
@@ -48,9 +49,7 @@ class RoleController extends Controller
 
     public function destroy(Role $role): JsonResponse
     {
-        $this->roleService->deleteRole($role);
-
-        return $this->successResponse(null, 'Role deleted.');
+        return $this->deleteWithApproval($role, 'Role deleted.');
     }
 
     public function assignUserRole(AssignRoleRequest $request): JsonResponse

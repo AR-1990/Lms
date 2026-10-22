@@ -5,6 +5,7 @@ namespace App\Http\Requests\ERP;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CreateRoleRequest extends FormRequest
 {
@@ -28,7 +29,7 @@ class CreateRoleRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:100'],
-            'slug' => ['required', 'string', 'max:100', 'unique:roles,slug'],
+            'slug' => ['required', 'string', 'max:100', Rule::unique('roles', 'slug')->whereNull('deleted_at')],
             'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'distinct', 'exists:permissions,slug'],

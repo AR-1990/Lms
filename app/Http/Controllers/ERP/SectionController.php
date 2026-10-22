@@ -8,12 +8,13 @@ use App\Http\Resources\SectionResource;
 use App\Models\Section;
 use App\Services\SectionService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SectionController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private SectionService $sectionService) {}
 
@@ -44,9 +45,7 @@ class SectionController extends Controller
 
     public function destroy(Section $section): JsonResponse
     {
-        $this->sectionService->delete($section);
-
-        return $this->successResponse(null, 'Section deleted.');
+        return $this->deleteWithApproval($section, 'Section deleted.');
     }
 
     /**

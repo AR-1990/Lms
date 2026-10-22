@@ -28,6 +28,7 @@ class SaveCurriculumRequest extends FormRequest
                 Rule::unique('class_subject', 'subject_id')
                     ->where('academic_session_id', $this->input('academic_session_id'))
                     ->where('class_id', $this->input('class_id'))
+                    ->whereNull('deleted_at')
                     ->ignore($this->route('curriculum')),
             ],
             'is_optional' => ['sometimes', 'boolean'],

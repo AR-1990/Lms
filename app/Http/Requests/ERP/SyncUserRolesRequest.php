@@ -20,7 +20,7 @@ class SyncUserRolesRequest extends FormRequest
         return [
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'roles' => ['present', 'array'],
-            'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
+            'roles.*' => ['string', 'distinct', 'exists:roles,slug,deleted_at,NULL'],
         ];
     }
 }

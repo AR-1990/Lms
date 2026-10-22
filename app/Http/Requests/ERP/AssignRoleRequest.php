@@ -19,7 +19,7 @@ class AssignRoleRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'role' => ['required', 'string', 'exists:roles,slug'],
+            'role' => ['required', 'string', 'exists:roles,slug,deleted_at,NULL'],
         ];
     }
 }

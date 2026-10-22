@@ -26,6 +26,7 @@ class NumberSequenceSeeder extends Seeder
         ['voucher_cv', 'Contra voucher', 'CV-', true, 5, true],
         ['expense_no', 'Expense', 'EXP-', true, 5, true],
         ['asset_tag', 'Asset tag', 'AST-', false, 5, false],
+        ['purchase_request_no', 'Purchase request', 'PR-', true, 5, true],
         ['po_no', 'Purchase order', 'PO-', true, 5, true],
         ['grn_no', 'Goods receipt (GRN)', 'GRN-', true, 5, true],
         ['issue_no', 'Stock issue', 'ISS-', true, 5, true],

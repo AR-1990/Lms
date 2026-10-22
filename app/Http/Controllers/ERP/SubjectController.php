@@ -8,12 +8,13 @@ use App\Http\Resources\SubjectResource;
 use App\Models\Subject;
 use App\Services\SubjectService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SubjectController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private SubjectService $subjectService) {}
 
@@ -44,9 +45,7 @@ class SubjectController extends Controller
 
     public function destroy(Subject $subject): JsonResponse
     {
-        $this->subjectService->delete($subject);
-
-        return $this->successResponse(null, 'Subject deleted.');
+        return $this->deleteWithApproval($subject, 'Subject deleted.');
     }
 
     /**

@@ -9,12 +9,13 @@ use App\Http\Resources\LookupResource;
 use App\Models\Lookup;
 use App\Services\LookupService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LookupController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private LookupService $lookupService) {}
 
@@ -70,9 +71,7 @@ class LookupController extends Controller
 
     public function destroy(Lookup $lookup): JsonResponse
     {
-        $this->lookupService->delete($lookup);
-
-        return $this->successResponse(null, 'Option deleted.');
+        return $this->deleteWithApproval($lookup, 'Option deleted.');
     }
 
     /**

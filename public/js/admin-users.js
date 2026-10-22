@@ -129,24 +129,10 @@
 
     function mountProfileDelete(button) {
         button.addEventListener('click', function () {
-            ui.confirm(button.dataset.name).then(function (accepted) {
-                if (!accepted) {
-                    return;
+            ui.eraseRecord(button.dataset.name, document.querySelector('.dash-profile'), button.dataset.deleteUrl).then(function (result) {
+                if (result === 'deleted') {
+                    window.location.assign(button.dataset.redirect);
                 }
-
-                const card = document.querySelector('.dash-profile');
-
-                ui.erase(card)
-                    .then(function () {
-                        return ui.api('DELETE', button.dataset.deleteUrl);
-                    })
-                    .then(function () {
-                        window.location.assign(button.dataset.redirect);
-                    })
-                    .catch(function (envelope) {
-                        card.classList.remove('is-erasing');
-                        ui.toast(messageOf(envelope, 'Could not delete.'), 'error');
-                    });
             });
         });
     }
@@ -334,26 +320,13 @@
                 const doc = find(deleteButton);
                 const item = deleteButton.closest('.dash-doc');
 
-                ui.confirm(doc.title || doc.original_name).then(function (accepted) {
-                    if (!accepted) {
-                        return;
-                    }
-
-                    ui.erase(item)
-                        .then(function () {
-                            return ui.api('DELETE', baseUrl + '/' + doc.id);
-                        })
-                        .then(function (envelope) {
-                            documents = documents.filter(function (other) {
-                                return other.id !== doc.id;
-                            });
-                            ui.toast(envelope.message);
-                            render();
-                        })
-                        .catch(function (envelope) {
-                            item.classList.remove('is-erasing');
-                            ui.toast(messageOf(envelope, 'Could not delete.'), 'error');
+                ui.eraseRecord(doc.title || doc.original_name, item, baseUrl + '/' + doc.id).then(function (result) {
+                    if (result === 'deleted') {
+                        documents = documents.filter(function (other) {
+                            return other.id !== doc.id;
                         });
+                        render();
+                    }
                 });
             }
         });

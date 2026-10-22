@@ -2,11 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CalendarEvent;
+use App\Models\Lookup;
+use App\Models\SchoolClass;
 use App\Models\User;
+use App\Models\WebsitePost;
 use App\Services\ActivityLogger;
+use App\Services\AdmissionService;
+use App\Services\CalendarService;
+use App\Services\CardService;
+use App\Services\LookupService;
 use App\Services\PortalAccessService;
+use App\Services\WebsiteContentService;
+use App\Support\ApiResponseHelper;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -16,54 +28,29 @@ class SchoolController extends Controller
     public function __construct(
         private PortalAccessService $portalAccessService,
         private ActivityLogger $activityLogger,
+        private WebsiteContentService $websiteService,
+        private CalendarService $calendarService,
     ) {}
 
     /**
      * Homepage with Hero, Wings, Metrics, Testimonials, and Announcements
      */
-    public function home()
+    public function home(): View
     {
-        $stats = [
-            ['icon' => 'graduation-cap', 'target' => 2500, 'suffix' => '+', 'label' => 'Enrolled Students'],
-            ['icon' => 'award', 'target' => 100, 'suffix' => '%', 'label' => 'Matric / O-Level Pass Rate'],
-            ['icon' => 'users', 'target' => 120, 'suffix' => '+', 'label' => 'Certified Educators'],
-            ['icon' => 'building', 'target' => 28, 'suffix' => '+', 'label' => 'Years of Academic Legacy'],
-        ];
+        $stats = $this->websiteService->stats()->map(fn ($stat): array => ['icon' => $stat->icon, 'target' => $stat->value, 'suffix' => $stat->suffix, 'label' => $stat->label]);
+        $announcements = $this->websiteService->ticker()->map(fn (WebsitePost $post): array => ['tag' => $post->category?->name ?? 'Notice', 'text' => $post->title]);
+        $testimonials = $this->websiteService->testimonials()->map(fn ($item): array => ['name' => $item->name, 'role' => $item->role_title, 'quote' => $item->quote, 'initials' => $item->initials()]);
+        $upcomingEvents = $this->calendarService->upcomingPublic()->map(fn (CalendarEvent $event): array => [
+            'day' => $event->starts_on->format('d'),
+            'month' => $event->starts_on->format('M'),
+            'title' => $event->title,
+            'time' => $event->start_time ? Carbon::parse($event->start_time)->format('h:i A').($event->end_time ? ' - '.Carbon::parse($event->end_time)->format('h:i A') : '') : 'All day',
+            'venue' => $event->venue,
+        ]);
+        $feeEstimates = $this->websiteService->feeEstimates();
+        $estimatorConcessions = $this->websiteService->estimatorConcessions();
 
-        $announcements = [
-            ['tag' => 'Admissions', 'text' => 'Spring 2026 Admissions Open for Pre-School to Grade 10 - Early bird fee discounts apply.'],
-            ['tag' => 'Achievement', 'text' => 'Pinnacle Robotics Team secured 1st place in National STEM Championship 2026.'],
-            ['tag' => 'Notice', 'text' => 'Parent-Teacher Meeting (PTM) for Mid-Term assessments scheduled for next Saturday.'],
-        ];
-
-        $upcomingEvents = [
-            ['day' => '15', 'month' => 'Sep', 'title' => 'Annual Science & Tech Fair 2026', 'time' => '09:00 AM - 02:00 PM', 'venue' => 'Main Auditorium', 'image' => 'facility-science-lab.jpg'],
-            ['day' => '22', 'month' => 'Sep', 'title' => 'Inter-School Sports Gala & Track Events', 'time' => '08:30 AM - 01:30 PM', 'venue' => 'Sports Complex', 'image' => 'sports-gala.jpg'],
-            ['day' => '05', 'month' => 'Oct', 'title' => 'Parent-Teacher Review Conference', 'time' => '10:00 AM - 03:00 PM', 'venue' => 'Campus Auditorium', 'image' => 'admissions-meeting.jpg'],
-        ];
-
-        $testimonials = [
-            [
-                'name' => 'Dr. Farhan Qureshi',
-                'role' => 'Parent of Grade 8 & 10 Students',
-                'quote' => 'Pinnacle Academy has provided the best academic balance for both of my children. Their STEM program and focus on ethical character building have truly helped them thrive.',
-                'initials' => 'FQ',
-            ],
-            [
-                'name' => 'Ayesha Mansoor',
-                'role' => 'Parent of Montessori Student',
-                'quote' => 'The warmth of the early years teachers and the safe, caring environment gave our daughter the smoothest start to school life. Highly recommend to every parent!',
-                'initials' => 'AM',
-            ],
-            [
-                'name' => 'Bilal Tariq',
-                'role' => 'Alumni (Class of 2023 - Now at LUMS)',
-                'quote' => 'The conceptual foundation in sciences and public speaking mentorship at Pinnacle prepared me exceptionally well for university life and competitive exams.',
-                'initials' => 'BT',
-            ],
-        ];
-
-        return view('pages.home', compact('stats', 'announcements', 'upcomingEvents', 'testimonials'));
+        return view('pages.home', compact('stats', 'announcements', 'upcomingEvents', 'testimonials', 'feeEstimates', 'estimatorConcessions'));
     }
 
     /**
@@ -85,9 +72,9 @@ class SchoolController extends Controller
     /**
      * Admissions Page: Process, Fee Calculator, Requirements
      */
-    public function admissions()
+    public function admissions(): View
     {
-        return view('pages.admissions');
+        return view('pages.admissions', ['classes' => SchoolClass::where('is_active', true)->orderBy('level_order')->get(['id', 'name'])]);
     }
 
     /**
@@ -101,80 +88,30 @@ class SchoolController extends Controller
     /**
      * News & Events Page: Announcements, Sports Gala, STEM Competitions
      */
-    public function news()
+    public function news(): View
     {
-        $articles = [
-            [
-                'id' => 1,
-                'category' => 'Achievements',
-                'title' => 'Pinnacle Robotics Team Triumphs at National STEM Olympiad 2026',
-                'excerpt' => 'Our student engineering squad secured first place with their autonomous smart agricultural rover prototype among 60 participating institutions.',
-                'date' => 'August 24, 2026',
-                'read_time' => '3 min read',
-                'image' => 'hero-robotics.jpg',
-                'featured' => true,
-            ],
-            [
-                'id' => 2,
-                'category' => 'Sports',
-                'title' => 'Annual Inter-School Athletics Championship & Sports Gala 2026',
-                'excerpt' => 'Over 400 student athletes competed across track, football, and basketball tournaments in our 5-acre sports complex.',
-                'date' => 'August 18, 2026',
-                'read_time' => '4 min read',
-                'image' => 'sports-gala.jpg',
-                'featured' => false,
-            ],
-            [
-                'id' => 3,
-                'category' => 'Academics',
-                'title' => '100% A+ & A Grades Secured in Cambridge & Federal Board Examinations',
-                'excerpt' => 'Pinnacle students once again proved their academic brilliance with historic merit positions across science and computer streams.',
-                'date' => 'August 10, 2026',
-                'read_time' => '2 min read',
-                'image' => 'hero-leadership.jpg',
-                'featured' => false,
-            ],
-            [
-                'id' => 4,
-                'category' => 'Campus Life',
-                'title' => 'Expansion of The Learning Commons & 4K Smart Classroom Suites',
-                'excerpt' => 'Academy inaugurates new interactive digital touchscreens and over 5,000 international scientific literature additions to the central library.',
-                'date' => 'July 28, 2026',
-                'read_time' => '3 min read',
-                'image' => 'facility-library.jpg',
-                'featured' => false,
-            ],
-            [
-                'id' => 5,
-                'category' => 'Early Years',
-                'title' => 'Montessori Sensorial Discovery Week & Creative Exhibition',
-                'excerpt' => 'Early years children showcased practical life experiments, phonics spelling bees, and colorful artistic models for visiting parents.',
-                'date' => 'July 15, 2026',
-                'read_time' => '2 min read',
-                'image' => 'montessori-kids.jpg',
-                'featured' => false,
-            ],
-            [
-                'id' => 6,
-                'category' => 'Admissions',
-                'title' => 'Admissions Open for Session 2026-27 & Merit Scholarship Tests',
-                'excerpt' => 'Online registration is now active for Playgroup through Grade 11 with up to 100% merit scholarship slots available.',
-                'date' => 'July 01, 2026',
-                'read_time' => '3 min read',
-                'image' => 'admissions-meeting.jpg',
-                'featured' => false,
-            ],
-        ];
+        $articles = $this->websiteService->publishedPosts()->get()->map(fn (WebsitePost $post): array => [
+            'id' => $post->id,
+            'category' => $post->category?->name,
+            'title' => $post->title,
+            'excerpt' => $post->excerpt,
+            'date' => $post->published_on?->format('F d, Y'),
+            'read_time' => $post->read_minutes ? $post->read_minutes.' min read' : null,
+            'image' => $post->imageUrl() ?? asset('images/hero-campus.jpg'),
+            'featured' => $post->is_featured,
+        ])->all();
 
-        return view('pages.news', compact('articles'));
+        $calendar = $this->calendarService->upcomingPublic();
+
+        return view('pages.news', compact('articles', 'calendar'));
     }
 
     /**
      * Contact Us & Inquiry Page
      */
-    public function contact()
+    public function contact(LookupService $lookupService): View
     {
-        return view('pages.contact');
+        return view('pages.contact', ['faqs' => $this->websiteService->faqs(), 'topics' => $lookupService->options('contact_topic')]);
     }
 
     /**
@@ -282,16 +219,41 @@ class SchoolController extends Controller
     /**
      * Handle Inquiry Submissions
      */
-    public function submitInquiry(Request $request)
+    /**
+     * Public page opened by an ID card's QR code.
+     */
+    public function verifyCard(string $token, CardService $cardService): View
+    {
+        return view('pages.verify-card', ['card' => $cardService->verify($token)]);
+    }
+
+    /**
+     * Website contact / admission forms create a real admission inquiry (source: Website).
+     */
+    public function submitInquiry(Request $request, AdmissionService $admissionService): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|max:100',
-            'phone' => 'required|string|max:25',
-            'grade' => 'nullable|string|max:50',
-            'message' => 'required|string|max:1000',
+            'parent_name' => ['required', 'string', 'max:255'],
+            'child_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:30', 'regex:/^\+?[0-9][0-9 -]{6,28}$/'],
+            'class_sought_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->whereNull('deleted_at')],
+            'topic_id' => ['nullable', 'integer', Rule::exists('lookups', 'id')->where('type', 'contact_topic')->whereNull('deleted_at')],
+            'message' => ['required', 'string', 'max:2000'],
+        ], ['phone.regex' => 'Enter a valid phone number, e.g. 03001234567.']);
+
+        $topic = isset($validated['topic_id']) ? Lookup::whereKey($validated['topic_id'])->value('name') : null;
+
+        $admissionService->saveInquiry(null, [
+            'parent_name' => $validated['parent_name'],
+            'child_name' => $validated['child_name'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'],
+            'class_sought_id' => $validated['class_sought_id'] ?? null,
+            'source_id' => Lookup::where('type', 'inquiry_source')->where('name', 'Website')->value('id'),
+            'message' => ($topic ? "[{$topic}] " : '').$validated['message'],
         ]);
 
-        return back()->with('success', 'Thank you! Your inquiry has been submitted. Our admission counselor will reach out shortly.');
+        return ApiResponseHelper::success(null, 'Thank you! Your inquiry is with our admissions office; we will call you shortly.', 201);
     }
 }

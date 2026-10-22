@@ -9,12 +9,13 @@ use App\Http\Resources\CurriculumResource;
 use App\Models\ClassSubject;
 use App\Services\CurriculumService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CurriculumController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private CurriculumService $curriculumService) {}
 
@@ -45,9 +46,7 @@ class CurriculumController extends Controller
 
     public function destroy(ClassSubject $curriculum): JsonResponse
     {
-        $this->curriculumService->delete($curriculum);
-
-        return $this->successResponse(null, 'Subject removed from the class.');
+        return $this->deleteWithApproval($curriculum, 'Subject removed from the class.');
     }
 
     /**

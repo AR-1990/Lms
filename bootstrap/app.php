@@ -42,6 +42,13 @@ return Application::configure(basePath: dirname(__DIR__))
             $registerErpProtectedRoutes('routes/erp-core.php');
             $registerErpProtectedRoutes('routes/erp-academics.php');
             $registerErpProtectedRoutes('routes/erp-ledger.php');
+            $registerErpProtectedRoutes('routes/erp-hr.php');
+            $registerErpProtectedRoutes('routes/erp-students.php');
+            $registerErpProtectedRoutes('routes/erp-cards.php');
+            $registerErpProtectedRoutes('routes/erp-attendance.php');
+            $registerErpProtectedRoutes('routes/erp-diary.php');
+            $registerErpProtectedRoutes('routes/erp-exams.php');
+            $registerErpProtectedRoutes('routes/erp-performance.php');
             $registerErpProtectedRoutes('routes/erp-admin.php');
             $registerErpProtectedRoutes('routes/erp-teacher.php');
             $registerErpProtectedRoutes('routes/erp-student.php');

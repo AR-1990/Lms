@@ -8,11 +8,12 @@ use App\Http\Resources\BankAccountResource;
 use App\Models\BankAccount;
 use App\Services\BankAccountService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 
 class BankAccountController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private BankAccountService $bankAccountService) {}
 
@@ -43,8 +44,6 @@ class BankAccountController extends Controller
 
     public function destroy(BankAccount $bankAccount): JsonResponse
     {
-        $this->bankAccountService->delete($bankAccount);
-
-        return $this->successResponse(null, 'Bank account deleted.');
+        return $this->deleteWithApproval($bankAccount, 'Bank account deleted.');
     }
 }

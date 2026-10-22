@@ -330,23 +330,10 @@
         if (deleteButton) {
             const target = rowFrom(deleteButton);
 
-            ui.confirm(target.data.name).then(function (accepted) {
-                if (!accepted) {
-                    return;
+            ui.eraseRecord(target.data.name, target.tr, resourceUrl + '/' + target.data.id).then(function (result) {
+                if (result === 'deleted') {
+                    refresh();
                 }
-
-                ui.erase(target.tr)
-                    .then(function () {
-                        return ui.api('DELETE', resourceUrl + '/' + target.data.id);
-                    })
-                    .then(function (envelope) {
-                        ui.toast(envelope.message);
-                        refresh();
-                    })
-                    .catch(function (envelope) {
-                        target.tr.classList.remove('is-erasing');
-                        ui.toast(messageOf(envelope, 'Could not delete the option.'), 'error');
-                    });
             });
         }
     });

@@ -8,12 +8,13 @@ use App\Http\Resources\VendorResource;
 use App\Models\Vendor;
 use App\Services\VendorService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class VendorController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private VendorService $vendorService) {}
 
@@ -44,9 +45,7 @@ class VendorController extends Controller
 
     public function destroy(Vendor $vendor): JsonResponse
     {
-        $this->vendorService->delete($vendor);
-
-        return $this->successResponse(null, 'Vendor deleted.');
+        return $this->deleteWithApproval($vendor, 'Vendor deleted.');
     }
 
     /**

@@ -27,6 +27,15 @@ class DatabaseSeeder extends Seeder
             NumberSequenceSeeder::class,
             AcademicSeeder::class,
             AccountsSeeder::class,
+            HrSeeder::class,
+            FeeSeeder::class,
+            StudentSeeder::class,
+            WebsiteSeeder::class,
+            CardSeeder::class,
+            CalendarSeeder::class,
+            TimetableSeeder::class,
+            ExamSeeder::class,
+            PerformanceSeeder::class,
         ]);
     }
 }

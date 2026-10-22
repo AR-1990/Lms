@@ -127,10 +127,7 @@ class RolePermissionService
             ]);
         }
 
-        DB::transaction(function () use ($role): void {
-            $role->permissions()->detach();
-            $role->delete();
-        });
+        DB::transaction(fn () => $role->delete());
     }
 
     /**

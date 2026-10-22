@@ -210,7 +210,8 @@ These rules are decided by the project owner and override any generic guidance a
 
 ## 9. Data safety
 - Money is stored as integer minor units (paisa) in `bigInteger` columns, never as float or decimal.
-- People and master records use soft deletes. Financial records (posted invoices, payments, journal entries) are never edited or deleted after posting; corrections are made by reversal entries.
+- Nothing is ever permanently deleted. Every table whose rows can be deleted has `deleted_at` and its model uses `SoftDeletes`; every delete action (including child rows a Service replaces or cleans up, and pivot links) is a soft delete. Never use `forceDelete()`, query-builder `->delete()` on business tables, or `detach()` that erases rows. Only security/session data (Sanctum tokens, sessions, cache) may be hard deleted.
+- Financial records (posted invoices, payments, journal entries) are never edited or deleted after posting; corrections are made by reversal entries.
 - Most fields beyond the identifying ones are nullable (optional), so records can be created quickly and completed later.
 
 ## 10. No database foreign-key constraints

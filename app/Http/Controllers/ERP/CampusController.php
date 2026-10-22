@@ -9,12 +9,13 @@ use App\Http\Resources\CampusResource;
 use App\Models\Campus;
 use App\Services\CampusService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CampusController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private CampusService $campusService) {}
 
@@ -47,9 +48,7 @@ class CampusController extends Controller
 
     public function destroy(Campus $campus): JsonResponse
     {
-        $this->campusService->delete($campus);
-
-        return $this->successResponse(null, 'Campus deleted.');
+        return $this->deleteWithApproval($campus, 'Campus deleted.');
     }
 
     /**

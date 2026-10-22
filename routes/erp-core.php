@@ -1,16 +1,26 @@
 <?php
 
 use App\Http\Controllers\ERP\ActivityLogController;
+use App\Http\Controllers\ERP\ApprovalController;
 use App\Http\Controllers\ERP\AttachmentController;
 use App\Http\Controllers\ERP\CampusController;
 use App\Http\Controllers\ERP\DeviceController;
 use App\Http\Controllers\ERP\LookupController;
 use App\Http\Controllers\ERP\NumberSequenceController;
+use App\Http\Controllers\ERP\WebsiteContentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('devices', [DeviceController::class, 'index'])->name('devices.index');
 Route::put('devices/push-token', [DeviceController::class, 'updatePushToken'])->name('devices.push-token');
 Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
+
+Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index');
+Route::get('approvals/datatable', [ApprovalController::class, 'datatable'])->name('approvals.datatable');
+
+Route::middleware('permission:approve-requests')->group(function () {
+    Route::post('approvals/{approval_request}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::post('approvals/{approval_request}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
+});
 
 Route::get('attachments', [AttachmentController::class, 'index'])->name('attachments.index');
 Route::post('attachments', [AttachmentController::class, 'store'])->name('attachments.store');
@@ -45,4 +55,13 @@ Route::middleware('permission:view-activity-log')->group(function () {
     Route::get('activity-logs/filters', [ActivityLogController::class, 'filterOptions'])->name('activity-logs.filters');
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('activity-logs/{activityLog}', [ActivityLogController::class, 'show'])->name('activity-logs.show');
+});
+
+Route::middleware('permission:manage-website')->prefix('website')->name('website.')->group(function () {
+    Route::post('posts/{id}/image', [WebsiteContentController::class, 'image'])->whereNumber('id')->name('posts.image');
+    Route::get('{type}/datatable', [WebsiteContentController::class, 'datatable'])->name('datatable');
+    Route::post('{type}', [WebsiteContentController::class, 'store'])->name('store');
+    Route::get('{type}/{id}', [WebsiteContentController::class, 'show'])->whereNumber('id')->name('show');
+    Route::put('{type}/{id}', [WebsiteContentController::class, 'update'])->whereNumber('id')->name('update');
+    Route::delete('{type}/{id}', [WebsiteContentController::class, 'destroy'])->whereNumber('id')->name('destroy');
 });

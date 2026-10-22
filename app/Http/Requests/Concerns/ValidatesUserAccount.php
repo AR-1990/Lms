@@ -22,7 +22,7 @@ trait ValidatesUserAccount
             'is_active' => ['sometimes', 'boolean'],
             'campus_id' => ['nullable', 'integer', Rule::exists('campuses', 'id')->whereNull('deleted_at')],
             'roles' => ['array'],
-            'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
+            'roles.*' => ['string', 'distinct', 'exists:roles,slug,deleted_at,NULL'],
         ];
     }
 

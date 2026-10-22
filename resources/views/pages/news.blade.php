@@ -41,7 +41,7 @@
             <div class="glow-card" data-reveal="fade-up" style="margin-bottom: 3.5rem; overflow: hidden;">
                 <div class="grid-2" style="gap: 0; align-items: stretch;">
                     <div style="min-height: 320px; position: relative;">
-                        <img src="{{ asset('images/' . $featured['image']) }}" alt="{{ $featured['title'] }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="{{ $featured['image'] }}" alt="{{ $featured['title'] }}" style="width: 100%; height: 100%; object-fit: cover;">
                         <span class="badge badge-amber" style="position: absolute; top: 1.25rem; left: 1.25rem; font-size: 0.85rem;">
                             ★ Featured Story
                         </span>
@@ -74,7 +74,7 @@
                 <div class="facility-card" data-reveal="fade-up">
                     <div class="facility-img-wrapper">
                         <span class="badge badge-amber facility-badge">{{ $article['category'] }}</span>
-                        <img src="{{ asset('images/' . $article['image']) }}" alt="{{ $article['title'] }}" class="facility-img" loading="lazy">
+                        <img src="{{ $article['image'] }}" alt="{{ $article['title'] }}" class="facility-img" loading="lazy">
                     </div>
                     <div class="facility-body">
                         <div style="font-size: 0.8rem; color: #78716c; font-weight: 600; margin-bottom: 0.5rem;">
@@ -106,26 +106,20 @@
         </div>
 
         <div class="grid-3">
-            <div class="card" data-reveal="fade-up" style="padding: 2rem;">
-                <span class="badge badge-amber" style="margin-bottom: 1rem;">September 2026</span>
-                <h4 style="margin-bottom: 0.75rem;">Annual Science & Tech Fair</h4>
-                <p style="font-size: 0.9rem; color: #57534e; margin-bottom: 1rem;">Inter-wing robotic rover demonstrations, 3D printing showcase, and scientific research posters.</p>
-                <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Venue: Central Quadrangle</div>
-            </div>
-
-            <div class="card" data-reveal="fade-up" style="padding: 2rem; transition-delay: 0.15s;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">October 2026</span>
-                <h4 style="margin-bottom: 0.75rem;">Inter-School Sports Gala</h4>
-                <p style="font-size: 0.9rem; color: #57534e; margin-bottom: 1rem;">Athletic track events, football championship matches, and prize distribution ceremony.</p>
-                <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Venue: 5-Acre Sports Complex</div>
-            </div>
-
-            <div class="card" data-reveal="fade-up" style="padding: 2rem; transition-delay: 0.3s;">
-                <span class="badge badge-dark" style="margin-bottom: 1rem;">November 2026</span>
-                <h4 style="margin-bottom: 0.75rem;">Parent-Teacher Review Conference</h4>
-                <p style="font-size: 0.9rem; color: #57534e; margin-bottom: 1rem;">Comprehensive individual progress review and academic counseling sessions for term 1.</p>
-                <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Venue: Main Campus Auditorium</div>
-            </div>
+            @forelse ($calendar as $event)
+                <div class="card" data-reveal="fade-up" style="padding: 2rem; transition-delay: {{ $loop->index * 0.15 }}s;">
+                    <span class="badge {{ ['badge-amber', 'badge-primary', 'badge-dark'][$loop->index % 3] }}" style="margin-bottom: 1rem;">{{ $event->starts_on->format('d F Y') }}</span>
+                    <h4 style="margin-bottom: 0.75rem;">{{ $event->title }}</h4>
+                    @if ($event->description)
+                        <p style="font-size: 0.9rem; color: #57534e; margin-bottom: 1rem;">{{ $event->description }}</p>
+                    @endif
+                    @if ($event->venue)
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Venue: {{ $event->venue }}</div>
+                    @endif
+                </div>
+            @empty
+                <p style="grid-column: 1 / -1; text-align: center; color: #57534e;">The next term calendar will be published soon.</p>
+            @endforelse
         </div>
     </div>
 </section>

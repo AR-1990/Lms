@@ -2,7 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\AdmissionApplication;
 use App\Models\Attachment;
+use App\Models\Employee;
+use App\Models\JobApplication;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +29,10 @@ class AttachmentService
      */
     public const OWNERS = [
         'users' => ['model' => User::class, 'permission' => 'manage-users'],
+        'students' => ['model' => Student::class, 'permission' => 'manage-students'],
+        'admission_applications' => ['model' => AdmissionApplication::class, 'permission' => 'manage-admissions'],
+        'employees' => ['model' => Employee::class, 'permission' => 'manage-hr'],
+        'job_applications' => ['model' => JobApplication::class, 'permission' => 'manage-recruitment'],
     ];
 
     private const DISK = 'local';

@@ -48,6 +48,22 @@ class AdminPortalController extends PortalController
         return $this->page('dashboards.admin.activity-log', 'admin', 'activity_log', $activityLogService->filterOptions());
     }
 
+    /**
+     * Website content screens: posts (news & notices), stats, testimonials, faqs.
+     */
+    public function website(string $type, LookupService $lookupService): View
+    {
+        return $this->page('dashboards.admin.website', 'admin', 'website', [
+            'type' => $type,
+            'news_categories' => $lookupService->options('news_category'),
+        ]);
+    }
+
+    public function approvals(): View
+    {
+        return $this->page('dashboards.admin.approvals', 'admin', 'approvals');
+    }
+
     public function campuses(): View
     {
         return $this->page('dashboards.admin.campuses', 'admin', 'campuses');

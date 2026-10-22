@@ -82,6 +82,7 @@ class AccountsSeeder extends Seeder
         ['Receipt Voucher', 'RV', 'voucher_rv'],
         ['Payment Voucher', 'PV', 'voucher_pv'],
         ['Contra Voucher', 'CV', 'voucher_cv'],
+        ['Fee Invoice', 'FIV', 'voucher_fiv'],
     ];
 
     /**

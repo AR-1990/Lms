@@ -111,6 +111,11 @@ class AccountService
             throw ValidationException::withMessages(['account' => ['Built-in accounts keep their type and group setting.']]);
         }
 
+        // Automatic postings (fees, payroll…) find built-in accounts by code.
+        if ($account->is_system && isset($data['code']) && $data['code'] !== $account->code) {
+            throw ValidationException::withMessages(['code' => ['Built-in accounts keep their code; rename them instead.']]);
+        }
+
         if ($isGroup && ! $account->is_group && $account->journalLines()->exists()) {
             throw ValidationException::withMessages(['is_group' => ['This account already has entries, so it cannot become a group heading.']]);
         }

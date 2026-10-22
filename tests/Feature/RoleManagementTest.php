@@ -161,8 +161,8 @@ class RoleManagementTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'Role deleted.');
 
-        $this->assertModelMissing($custom);
-        $this->assertDatabaseMissing('permission_role', ['role_id' => $custom->id]);
+        $this->assertSoftDeleted($custom);
+        $this->assertNull(Role::where('slug', $custom->slug)->first());
     }
 
     public function test_assign_revoke_and_sync_user_roles_are_logged_and_protect_own_admin_role(): void

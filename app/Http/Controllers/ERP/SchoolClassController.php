@@ -8,12 +8,13 @@ use App\Http\Resources\SchoolClassResource;
 use App\Models\SchoolClass;
 use App\Services\SchoolClassService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SchoolClassController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private SchoolClassService $classService) {}
 
@@ -44,9 +45,7 @@ class SchoolClassController extends Controller
 
     public function destroy(SchoolClass $class): JsonResponse
     {
-        $this->classService->delete($class);
-
-        return $this->successResponse(null, 'Class deleted.');
+        return $this->deleteWithApproval($class, 'Class deleted.');
     }
 
     /**

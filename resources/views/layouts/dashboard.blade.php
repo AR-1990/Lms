@@ -110,6 +110,10 @@
                 <p id="dashConfirmMessage" data-confirm-message>This record will be erased.</p>
             </div>
         </div>
+        <div class="dash-field dash-confirm-reason">
+            <label for="dashConfirmReason">Reason <span class="dash-optional">an administrator approves deletions</span></label>
+            <textarea id="dashConfirmReason" rows="2" maxlength="500" placeholder="Why is this being deleted?" data-confirm-reason></textarea>
+        </div>
         <div class="dash-modal-actions">
             <button type="button" class="dash-btn dash-btn-ghost" data-confirm-cancel>Cancel</button>
             <button type="button" class="dash-btn dash-btn-danger" data-confirm-accept>

@@ -325,6 +325,7 @@
 
         if (entry.reversed_by) {
             meta.push(['Reversed by', entry.reversed_by.voucher_no + (entry.reversal_reason ? ' — ' + entry.reversal_reason : '')]);
+            meta.push(['Reversed on', (entry.reversed_by_name || '—') + (entry.reversed_at ? ' · ' + new Date(entry.reversed_at).toLocaleString('en-GB') : '')]);
         }
 
         viewer.querySelector('[data-view-title]').textContent = entry.voucher_no;
@@ -468,23 +469,10 @@
         }
 
         if (button.hasAttribute('data-delete')) {
-            ui.confirm(row.voucher_no).then(function (accepted) {
-                if (!accepted) {
-                    return;
+            ui.eraseRecord(row.voucher_no, tr, resourceUrl + '/' + row.id).then(function (result) {
+                if (result === 'deleted') {
+                    refresh();
                 }
-
-                ui.erase(tr)
-                    .then(function () {
-                        return ui.api('DELETE', resourceUrl + '/' + row.id);
-                    })
-                    .then(function (envelope) {
-                        ui.toast(envelope.message);
-                        refresh();
-                    })
-                    .catch(function (envelope) {
-                        tr.classList.remove('is-erasing');
-                        ui.toast(messageOf(envelope, 'Could not delete.'), 'error');
-                    });
             });
         }
     });

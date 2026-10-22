@@ -8,11 +8,12 @@ use App\Http\Resources\FiscalYearResource;
 use App\Models\FiscalYear;
 use App\Services\FiscalYearService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 
 class FiscalYearController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private FiscalYearService $fiscalYearService) {}
 
@@ -43,9 +44,7 @@ class FiscalYearController extends Controller
 
     public function destroy(FiscalYear $fiscalYear): JsonResponse
     {
-        $this->fiscalYearService->delete($fiscalYear);
-
-        return $this->successResponse(null, 'Fiscal year deleted.');
+        return $this->deleteWithApproval($fiscalYear, 'Fiscal year deleted.');
     }
 
     public function close(FiscalYear $fiscalYear): JsonResponse

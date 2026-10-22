@@ -9,12 +9,15 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['name', 'starts_on', 'ends_on', 'is_current', 'status', 'closed_by', 'closed_at'])]
 class FiscalYear extends Model
 {
     /** @use HasFactory<FiscalYearFactory> */
     use HasFactory, LogsActivity, TracksAuthor;
+
+    use SoftDeletes;
 
     public const STATUS_OPEN = 'open';
 

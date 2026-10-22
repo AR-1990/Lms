@@ -8,6 +8,7 @@ use Database\Factories\PeriodFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * One slot of the daily bell schedule.
@@ -17,6 +18,8 @@ class Period extends Model
 {
     /** @use HasFactory<PeriodFactory> */
     use HasFactory, LogsActivity, TracksAuthor;
+
+    use SoftDeletes;
 
     protected string $activityModule = 'periods';
 

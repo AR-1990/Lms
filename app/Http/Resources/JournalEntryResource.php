@@ -32,6 +32,8 @@ class JournalEntryResource extends JsonResource
             'posted_by' => $this->whenLoaded('postedBy', fn (): ?string => $this->postedBy?->name),
             'posted_at' => $this->posted_at?->toIso8601String(),
             'reversal_reason' => $this->reversal_reason,
+            'reversed_at' => $this->reversed_at?->toIso8601String(),
+            'reversed_by_name' => $this->whenLoaded('reverser', fn (): ?string => $this->reverser?->name),
             'reversed_by' => $this->whenLoaded('reversedBy', fn (): ?array => $this->reversedBy ? ['id' => $this->reversedBy->id, 'voucher_no' => $this->reversedBy->voucher_no] : null),
             'reverses' => $this->whenLoaded('reverses', fn (): ?array => $this->reverses ? ['id' => $this->reverses->id, 'voucher_no' => $this->reverses->voucher_no] : null),
             'lines' => $this->whenLoaded('lines', fn (): array => $this->lines->map(fn ($line): array => [

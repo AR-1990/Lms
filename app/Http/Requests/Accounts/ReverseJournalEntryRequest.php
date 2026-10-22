@@ -18,8 +18,18 @@ class ReverseJournalEntryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reason' => ['required', 'string', 'max:200'],
+            'reason' => ['required', 'string', 'min:10', 'max:200'],
             'entry_date' => ['nullable', 'date_format:Y-m-d'],
         ];
+    }
+
+    /**
+     * The reason becomes the narration of the reversing voucher.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return ['reason' => 'narration'];
     }
 }

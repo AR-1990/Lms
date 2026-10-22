@@ -166,8 +166,8 @@
     <div class="dash-detail-body" data-view-body></div>
     <div class="dash-reverse-box" data-reverse-box hidden>
         <div class="dash-field">
-            <label for="reverseReason">Why is this voucher being reversed?</label>
-            <input id="reverseReason" maxlength="200" autocomplete="off" data-reverse-reason>
+            <label for="reverseReason">Narration — why is this voucher being reversed?</label>
+            <input id="reverseReason" minlength="10" maxlength="200" autocomplete="off" placeholder="At least 10 characters; goes on the reversal voucher" data-reverse-reason>
             <p class="dash-field-error" data-reverse-error hidden></p>
         </div>
     </div>

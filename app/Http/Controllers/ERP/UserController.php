@@ -9,12 +9,13 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private UserService $userService) {}
 
@@ -49,9 +50,7 @@ class UserController extends Controller
 
     public function destroy(User $user): JsonResponse
     {
-        $this->userService->deleteUser($user);
-
-        return $this->successResponse(null, 'User deleted.');
+        return $this->deleteWithApproval($user, 'User deleted.');
     }
 
     /**

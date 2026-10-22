@@ -388,80 +388,50 @@ function initAccordions() {
 }
 
 /**
- * 9. Interactive Dynamic Range-Slider Fee Calculator
+ * 9. Fee Estimator — amounts come from this session's class fee structures (paisa on each option)
  */
 function initFeeCalculator() {
-    const rangeInput = document.getElementById('calcGradeRange');
-    const calcGradeSelect = document.getElementById('calcGrade');
-    const calcTransport = document.getElementById('calcTransport');
-    const calcSibling = document.getElementById('calcSibling');
+    const gradeSelect = document.getElementById('calcGrade');
+    const concessionSelect = document.getElementById('calcConcession');
+    const optionalBox = document.getElementById('calcTransport');
 
-    if (!rangeInput && !calcGradeSelect) return;
+    if (!gradeSelect) return;
 
-    const gradesMeta = [
-        { key: 'preschool', name: 'Early Years / Montessori (Ages 3-5)', tuition: 8500, reg: 15000 },
-        { key: 'primary',   name: 'Primary Wing (Grades 1 to 5)',      tuition: 11000, reg: 18000 },
-        { key: 'middle',    name: 'Middle Wing (Grades 6 to 8)',       tuition: 13500, reg: 20000 },
-        { key: 'secondary', name: 'Matric / O-Levels (Grades 9 & 10)', tuition: 16500, reg: 22000 },
-        { key: 'hssc',      name: 'College / HSSC (Grades 11 & 12)',   tuition: 19500, reg: 25000 },
-    ];
+    const rupees = paisa => 'Rs. ' + Math.round(paisa / 100).toLocaleString();
 
     function calculate() {
-        let selectedIndex = 1; // Primary default
+        const grade = gradeSelect.selectedOptions[0];
 
-        if (rangeInput) {
-            selectedIndex = parseInt(rangeInput.value, 10);
-        } else if (calcGradeSelect) {
-            const val = calcGradeSelect.value;
-            const found = gradesMeta.findIndex(g => g.key === val);
-            if (found !== -1) selectedIndex = found;
-        }
+        if (!grade) return;
 
-        const grade = gradesMeta[selectedIndex] || gradesMeta[1];
+        const monthly = Number(grade.dataset.monthly || 0);
+        const oneTime = Number(grade.dataset.oneTime || 0);
+        const optional = optionalBox && optionalBox.checked ? Number(grade.dataset.optional || 0) : 0;
+        const percent = concessionSelect && concessionSelect.selectedOptions[0] ? Number(concessionSelect.selectedOptions[0].dataset.percent || 0) : 0;
+        const discount = Math.round(monthly * percent / 10000);
 
-        // Update Grade Label
-        const gradeNameEl = document.getElementById('calcSelectedGradeName');
-        if (gradeNameEl) gradeNameEl.innerText = grade.name;
+        const set = (id, text) => {
+            const element = document.getElementById(id);
+            if (element) element.innerText = text;
+        };
 
-        let tuition = grade.tuition;
-        let reg = grade.reg;
-        let transport = calcTransport && calcTransport.checked ? 3500 : 0;
-        let siblingRebate = 0;
-
-        if (calcSibling && calcSibling.checked) {
-            siblingRebate = Math.round(tuition * 0.15); // 15% off tuition
-        }
-
-        const netMonthly = (tuition - siblingRebate) + transport;
-
-        // UI Outputs
-        const tuitionEl = document.getElementById('calcTuitionOutput');
-        const regEl = document.getElementById('calcRegOutput');
-        const discountEl = document.getElementById('calcDiscountOutput');
-        const transportEl = document.getElementById('calcTransportOutput');
-        const totalEl = document.getElementById('calcTotalOutput');
-
-        if (tuitionEl) tuitionEl.innerText = `Rs. ${tuition.toLocaleString()}/mo`;
-        if (regEl) regEl.innerText = `Rs. ${regFeeOutput(reg)}`;
-        if (discountEl) discountEl.innerText = siblingRebate > 0 ? `- Rs. ${siblingRebate.toLocaleString()}` : 'Rs. 0';
-        if (transportEl) transportEl.innerText = transport > 0 ? `+ Rs. ${transport.toLocaleString()}` : 'Not included';
-        if (totalEl) totalEl.innerText = `Rs. ${netMonthly.toLocaleString()}/month`;
+        set('calcSelectedGradeName', grade.textContent.trim());
+        set('calcTuitionOutput', rupees(monthly) + '/mo');
+        set('calcRegOutput', rupees(oneTime) + ' (One-time)');
+        set('calcDiscountOutput', discount > 0 ? '- ' + rupees(discount) : 'Rs. 0');
+        set('calcTransportOutput', optional > 0 ? '+ ' + rupees(optional) : 'Not included');
+        set('calcTotalOutput', rupees(monthly - discount + optional) + '/month');
     }
 
-    function regFeeOutput(fee) {
-        return `Rs. ${fee.toLocaleString()} (One-time)`;
-    }
-
-    if (rangeInput) rangeInput.addEventListener('input', calculate);
-    if (calcGradeSelect) calcGradeSelect.addEventListener('change', calculate);
-    if (calcTransport) calcTransport.addEventListener('change', calculate);
-    if (calcSibling) calcSibling.addEventListener('change', calculate);
+    [gradeSelect, concessionSelect, optionalBox].forEach(control => {
+        if (control) control.addEventListener('change', calculate);
+    });
 
     calculate();
 }
 
 /**
- * 10. Interactive Inquiry Form Submission
+ * 10. Inquiry forms — saved as admission inquiries for the admissions office
  */
 function initInquiryForms() {
     const forms = document.querySelectorAll('form[data-ajax-inquiry]');
@@ -478,18 +448,30 @@ function initInquiryForms() {
                 submitBtn.innerHTML = 'Sending Inquiry...';
             }
 
-            setTimeout(() => {
-                showToast('Inquiry Received! Our admissions counselor will contact you within 24 hours.', 'success');
-                form.reset();
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(form)
+            })
+                .then(response => response.json().then(body => ({ ok: response.ok, body })))
+                .then(({ ok, body }) => {
+                    if (ok) {
+                        showToast(body.message, 'success');
+                        form.reset();
+                        return;
+                    }
 
-                const rangeInput = document.getElementById('calcGradeRange');
-                if (rangeInput) rangeInput.dispatchEvent(new Event('input'));
-
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }
-            }, 700);
+                    const fields = body.errors && (body.errors.fields || body.errors);
+                    const first = fields && typeof fields === 'object' ? Object.values(fields)[0] : null;
+                    showToast((Array.isArray(first) ? first[0] : null) || body.message || 'Please check the form.', 'error');
+                })
+                .catch(() => showToast('Could not send right now. Please call the school office.', 'error'))
+                .finally(() => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                });
         });
     });
 }

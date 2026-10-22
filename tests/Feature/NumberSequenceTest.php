@@ -47,6 +47,7 @@ class NumberSequenceTest extends TestCase
 
     public function test_next_hands_out_consecutive_formatted_numbers(): void
     {
+        $this->resetCounters();
         $service = app(NumberSequenceService::class);
 
         $this->assertSame('PIA-2026-00001', $service->next('admission_no'));
@@ -57,6 +58,7 @@ class NumberSequenceTest extends TestCase
 
     public function test_yearly_sequences_restart_in_a_new_year_and_others_keep_counting(): void
     {
+        $this->resetCounters();
         $service = app(NumberSequenceService::class);
         $service->next('fee_invoice');
         $service->next('admission_no');
@@ -65,6 +67,14 @@ class NumberSequenceTest extends TestCase
 
         $this->assertSame('INV-2027-000001', $service->next('fee_invoice'));
         $this->assertSame('PIA-2027-00002', $service->next('admission_no'));
+    }
+
+    /**
+     * Demo seeders (staff, students) already used some numbers; start these counters fresh.
+     */
+    private function resetCounters(): void
+    {
+        NumberSequence::whereIn('type', ['admission_no', 'employee_code', 'fee_invoice'])->update(['next_number' => 1]);
     }
 
     public function test_unknown_type_fails_loudly(): void

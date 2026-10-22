@@ -88,7 +88,7 @@
                         @csrf
                         <div class="form-group">
                             <label class="form-label" for="cntName">Your Full Name</label>
-                            <input type="text" id="cntName" name="name" class="form-control" placeholder="e.g. Asim Rauf" required>
+                            <input type="text" id="cntName" name="parent_name" class="form-control" placeholder="e.g. Asim Rauf" required>
                         </div>
 
                         <div class="grid-2" style="gap: 1rem;">
@@ -98,18 +98,16 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="cntEmail">Email Address</label>
-                                <input type="email" id="cntEmail" name="email" class="form-control" placeholder="asim@example.com" required>
+                                <input type="email" id="cntEmail" name="email" class="form-control" placeholder="asim@example.com">
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label" for="cntDept">Inquiry Type / Department</label>
-                            <select id="cntDept" name="grade" class="form-control">
-                                <option value="General Admission">New Student Admission Inquiry</option>
-                                <option value="Fee & Accounts">Fee Structure & Accounts Inquiry</option>
-                                <option value="Campus Tour">Schedule Campus Visit</option>
-                                <option value="Academics">Curriculum & Subject Inquiry</option>
-                                <option value="Transport">School Transport Route Inquiry</option>
+                            <select id="cntDept" name="topic_id" class="form-control">
+                                @foreach ($topics as $topic)
+                                    <option value="{{ $topic->id }}">{{ $topic->name }}</option>
+                                @endforeach
                             </select>
                         </div>
 
@@ -138,49 +136,17 @@
         </div>
 
         <div class="faq-list" style="max-width: 840px; margin: 0 auto;" data-reveal="fade-up">
-            <!-- FAQ 1 -->
-            <div class="faq-item">
-                <button class="faq-trigger" type="button">
-                    <span>What is the minimum age requirement for Montessori admission?</span>
-                    <span class="faq-icon">&darr;</span>
-                </button>
-                <div class="faq-content">
-                    Children should be at least 2.5 to 3 years old by the start of the academic session for Playgroup, and 3.5 to 4 years old for Nursery.
+            @foreach ($faqs as $faq)
+                <div class="faq-item">
+                    <button class="faq-trigger" type="button">
+                        <span>{{ $faq->question }}</span>
+                        <span class="faq-icon">&darr;</span>
+                    </button>
+                    <div class="faq-content">
+                        {{ $faq->answer }}
+                    </div>
                 </div>
-            </div>
-
-            <!-- FAQ 2 -->
-            <div class="faq-item">
-                <button class="faq-trigger" type="button">
-                    <span>Can students transfer between Federal Board (Matric) and Cambridge (O-Levels)?</span>
-                    <span class="faq-icon">&darr;</span>
-                </button>
-                <div class="faq-content">
-                    Yes! At Grade 8, our academic counselors evaluate each student's aptitude and provide structured bridging modules to ensure a smooth transition into either the Cambridge O-Levels or Federal Board Matric track.
-                </div>
-            </div>
-
-            <!-- FAQ 3 -->
-            <div class="faq-item">
-                <button class="faq-trigger" type="button">
-                    <span>Are sibling discounts automatically applied?</span>
-                    <span class="faq-icon">&darr;</span>
-                </button>
-                <div class="faq-content">
-                    Yes, a 15% discount on the monthly tuition fee is automatically calculated for the 2nd and subsequent enrolled siblings upon verification of admission records.
-                </div>
-            </div>
-
-            <!-- FAQ 4 -->
-            <div class="faq-item">
-                <button class="faq-trigger" type="button">
-                    <span>What safety measures are implemented for school transport?</span>
-                    <span class="faq-icon">&darr;</span>
-                </button>
-                <div class="faq-content">
-                    All our school buses are air-conditioned, equipped with real-time GPS tracking accessible to parents via SMS alerts, and accompanied by female attendant staff for early years and primary students.
-                </div>
-            </div>
+            @endforeach
         </div>
     </div>
 </section>

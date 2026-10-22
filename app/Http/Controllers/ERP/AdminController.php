@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\AdminService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {

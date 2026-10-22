@@ -8,12 +8,13 @@ use App\Http\Resources\PaymentMethodResource;
 use App\Models\PaymentMethod;
 use App\Services\PaymentMethodService;
 use App\Traits\ApiResponse;
+use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PaymentMethodController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, DeletesWithApproval;
 
     public function __construct(private PaymentMethodService $paymentMethodService) {}
 
@@ -49,8 +50,6 @@ class PaymentMethodController extends Controller
 
     public function destroy(PaymentMethod $paymentMethod): JsonResponse
     {
-        $this->paymentMethodService->delete($paymentMethod);
-
-        return $this->successResponse(null, 'Payment method deleted.');
+        return $this->deleteWithApproval($paymentMethod, 'Payment method deleted.');
     }
 }

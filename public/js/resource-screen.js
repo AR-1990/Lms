@@ -13,7 +13,10 @@
  *   nameOf(row),               // name used in toasts and the delete confirmation
  *   canEdit(row) / canDelete(row) → true or a reason string shown as tooltip,
  *   viewUrl(row) / editUrl(row) // optional: open full pages instead of the popup
+ *   onView(row)                // optional: book icon that opens a detail popup instead of a page
+ *   loadRow(row) → Promise     // optional: fetch the full record before the edit popup opens
  *   creatable                  // false hides "add" (edit-only resources)
+ *   editable / deletable       // false hides the pen / eraser (posted financial records)
  * })
  */
 (function () {
@@ -35,6 +38,71 @@
         }
 
         return (envelope && envelope.message) || fallback;
+    }
+
+    /**
+     * Hide every field error and the general error of a form.
+     */
+    function clearFormErrors(form) {
+        form.querySelectorAll('[data-error-for]').forEach(function (element) {
+            element.hidden = true;
+            element.textContent = '';
+        });
+        form.querySelectorAll('.is-invalid').forEach(function (element) {
+            element.classList.remove('is-invalid');
+        });
+
+        const general = form.querySelector('[data-form-error]');
+
+        if (general) {
+            general.hidden = true;
+        }
+    }
+
+    /**
+     * Put API validation errors next to their fields. A key like `guardians.0.phone` uses
+     * `[data-error-for="guardians.0.phone"]` when present, else `[data-error-for="guardians"]`.
+     */
+    function showFormErrors(form, envelope) {
+        const fields = envelope && envelope.errors && envelope.errors.fields ? envelope.errors.fields : null;
+        let placed = false;
+
+        if (fields) {
+            Object.keys(fields).forEach(function (field) {
+                const key = field.split('.')[0];
+                const target = form.querySelector('[data-error-for="' + field + '"]') || form.querySelector('[data-error-for="' + key + '"]');
+                const input = form.elements[field] || form.elements[key];
+
+                if (target && target.hidden) {
+                    target.textContent = fields[field][0];
+                    target.hidden = false;
+                    placed = true;
+                } else if (target) {
+                    placed = true;
+                }
+
+                if (input && input.classList) {
+                    input.classList.add('is-invalid');
+                }
+            });
+        }
+
+        if (!placed) {
+            const general = form.querySelector('[data-form-error]');
+
+            if (general) {
+                general.textContent = messageOf(envelope, 'Something went wrong. Try again.');
+                general.hidden = false;
+            } else {
+                window.PinnacleDashboard.toast(messageOf(envelope, 'Something went wrong. Try again.'), 'error');
+            }
+        }
+
+        const firstInvalid = form.querySelector('.is-invalid');
+
+        if (firstInvalid && firstInvalid.focus) {
+            firstInvalid.focus();
+        }
     }
 
     function mount(config) {
@@ -60,9 +128,13 @@
                 }
 
                 const name = esc(config.nameOf(row));
-                const canEdit = allowed(config.canEdit, row);
+                const canEdit = config.editable === false ? null : allowed(config.canEdit, row);
                 const canDelete = config.deletable === false ? null : allowed(config.canDelete, row);
                 let html = '<div class="dash-actions">';
+
+                if (config.onView) {
+                    html += '<button type="button" class="dash-action dash-action-view" data-view data-tooltip="Open" aria-label="Open ' + name + '">' + icon('book') + '</button>';
+                }
 
                 if (config.viewUrl) {
                     const viewHref = config.viewUrl(row);
@@ -72,7 +144,9 @@
                         : '<span class="dash-action dash-action-view is-disabled" data-tooltip="Nothing to open">' + icon('book') + '</span>';
                 }
 
-                if (canEdit !== true) {
+                if (canEdit === null) {
+                    html += '';
+                } else if (canEdit !== true) {
                     html += '<span class="dash-action dash-action-edit is-disabled" data-tooltip="' + esc(canEdit) + '">' + icon('pen') + '</span>';
                 } else if (config.editUrl) {
                     html += '<a href="' + esc(config.editUrl(row)) + '" class="dash-action dash-action-edit" data-tooltip="Edit" aria-label="Edit ' + name + '">' + icon('pen') + '</a>';
@@ -111,54 +185,11 @@
         /* ---------- Form popup ---------- */
 
         function clearErrors() {
-            form.querySelectorAll('[data-error-for]').forEach(function (element) {
-                element.hidden = true;
-                element.textContent = '';
-            });
-            form.querySelectorAll('.is-invalid').forEach(function (element) {
-                element.classList.remove('is-invalid');
-            });
-
-            const general = form.querySelector('[data-form-error]');
-
-            if (general) {
-                general.hidden = true;
-            }
+            clearFormErrors(form);
         }
 
         function showErrors(envelope) {
-            const fields = envelope && envelope.errors && envelope.errors.fields ? envelope.errors.fields : null;
-            let placed = false;
-
-            if (fields) {
-                Object.keys(fields).forEach(function (field) {
-                    const key = field.split('.')[0];
-                    const target = form.querySelector('[data-error-for="' + key + '"]');
-                    const input = form.elements[key];
-
-                    if (target) {
-                        target.textContent = fields[field][0];
-                        target.hidden = false;
-                        placed = true;
-                    }
-
-                    if (input && input.classList) {
-                        input.classList.add('is-invalid');
-                    }
-                });
-            }
-
-            if (!placed) {
-                const general = form.querySelector('[data-form-error]');
-                general.textContent = messageOf(envelope, 'Something went wrong. Try again.');
-                general.hidden = false;
-            }
-
-            const firstInvalid = form.querySelector('.is-invalid');
-
-            if (firstInvalid && firstInvalid.focus) {
-                firstInvalid.focus();
-            }
+            showFormErrors(form, envelope);
         }
 
         function open(row) {
@@ -222,6 +253,10 @@
                         close();
                         ui.toast(envelope.message);
                         refresh();
+
+                        if (config.afterSave) {
+                            config.afterSave(envelope.data);
+                        }
                     })
                     .catch(showErrors)
                     .finally(function () {
@@ -235,32 +270,31 @@
         root.querySelector('[data-grid]').addEventListener('click', function (event) {
             const editButton = event.target.closest('[data-edit]');
             const deleteButton = event.target.closest('[data-delete]');
+            const viewButton = event.target.closest('[data-view]');
+
+            if (viewButton && config.onView) {
+                config.onView(grid.row(viewButton.closest('tr')).data());
+            }
 
             if (editButton) {
-                open(grid.row(editButton.closest('tr')).data());
+                const row = grid.row(editButton.closest('tr')).data();
+
+                // Grids carry a few columns; screens that edit more fields load the full record first.
+                (config.loadRow ? config.loadRow(row) : Promise.resolve(row))
+                    .then(open)
+                    .catch(function (envelope) {
+                        ui.toast(messageOf(envelope, 'Could not open the record.'), 'error');
+                    });
             }
 
             if (deleteButton) {
                 const tr = deleteButton.closest('tr');
                 const row = grid.row(tr).data();
 
-                ui.confirm(config.nameOf(row)).then(function (accepted) {
-                    if (!accepted) {
-                        return;
+                ui.eraseRecord(config.nameOf(row), tr, resourceUrl + '/' + row.id).then(function (result) {
+                    if (result === 'deleted') {
+                        refresh();
                     }
-
-                    ui.erase(tr)
-                        .then(function () {
-                            return ui.api('DELETE', resourceUrl + '/' + row.id);
-                        })
-                        .then(function (envelope) {
-                            ui.toast(envelope.message);
-                            refresh();
-                        })
-                        .catch(function (envelope) {
-                            tr.classList.remove('is-erasing');
-                            ui.toast(messageOf(envelope, 'Could not delete.'), 'error');
-                        });
                 });
             }
         });
@@ -268,5 +302,125 @@
         return { grid: grid, open: open, refresh: refresh };
     }
 
-    window.PinnacleResource = { mount: mount, messageOf: messageOf };
+    /**
+     * Read a form into an API body. spec maps field → 'text' | 'int' | 'number' | 'money' | 'bool'.
+     * `money` takes rupees in the form and sends paisa.
+     */
+    function readForm(form, spec) {
+        const body = {};
+
+        Object.keys(spec).forEach(function (name) {
+            const field = form.elements[name];
+
+            if (!field) {
+                return;
+            }
+
+            const raw = field.type === 'checkbox' ? field.checked : String(field.value).trim();
+
+            switch (spec[name]) {
+            case 'bool':
+                body[name] = Boolean(raw);
+                break;
+            case 'int':
+                body[name] = raw === '' ? null : parseInt(raw, 10);
+                break;
+            case 'number':
+                body[name] = raw === '' ? null : Number(raw);
+                break;
+            case 'money':
+                body[name] = raw === '' ? null : Math.round(parseFloat(raw) * 100);
+                break;
+            default:
+                body[name] = raw === '' ? null : raw;
+            }
+        });
+
+        return body;
+    }
+
+    /**
+     * Put a record into a form (null = defaults). `money` fields show paisa as rupees.
+     */
+    function fillForm(form, row, spec, defaults) {
+        Object.keys(spec).forEach(function (name) {
+            const field = form.elements[name];
+
+            if (!field) {
+                return;
+            }
+
+            let value = row ? row[name] : (defaults || {})[name];
+
+            if (spec[name] === 'money' && value !== null && value !== undefined && value !== '') {
+                value = (value / 100).toFixed(2);
+            }
+
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(value === undefined ? field.defaultChecked : value);
+            } else if (field.type === 'datetime-local' && value) {
+                field.value = String(value).slice(0, 16);
+            } else {
+                field.value = value === null || value === undefined ? '' : value;
+            }
+        });
+    }
+
+    /**
+     * Wire the close buttons and backdrop click of a <dialog> once.
+     */
+    function wireDialog(dialog) {
+        dialog.querySelectorAll('[data-modal-close]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                dialog.close();
+            });
+        });
+
+        dialog.addEventListener('click', function (event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+    }
+
+    /**
+     * Submit a small form to the API with error display; resolves with the envelope.
+     */
+    function submitForm(form, method, url, body) {
+        const button = form.querySelector('[type="submit"]');
+
+        clearFormErrors(form);
+
+        if (button) {
+            button.disabled = true;
+        }
+
+        return window.PinnacleDashboard.api(method, url, body)
+            .then(function (envelope) {
+                window.PinnacleDashboard.toast(envelope.message);
+
+                return envelope;
+            })
+            .catch(function (envelope) {
+                showFormErrors(form, envelope);
+
+                return Promise.reject(envelope);
+            })
+            .finally(function () {
+                if (button) {
+                    button.disabled = false;
+                }
+            });
+    }
+
+    window.PinnacleResource = {
+        mount: mount,
+        messageOf: messageOf,
+        clearErrors: clearFormErrors,
+        showErrors: showFormErrors,
+        readForm: readForm,
+        fillForm: fillForm,
+        wireDialog: wireDialog,
+        submitForm: submitForm
+    };
 })();
