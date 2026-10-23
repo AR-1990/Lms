@@ -17,7 +17,7 @@
 
 @include('dashboards.performance.tabs', ['current' => 'admin.performance.alerts'])
 
-<section class="dash-panel" data-performance="alerts" data-api-url="{{ url('/api/erp/performance') }}">
+<section class="dash-panel" data-performance="alerts" data-api-url="{{ url('/api/erp/performance') }}" @if (auth()->user()->hasPermission('manage-counselling')) data-counselling-url="{{ route('admin.performance.counselling') }}" @endif>
     <div class="dash-panel-head">
         <div class="dash-filters-inline">
             <label class="dash-select"><span class="dash-visually-hidden">Status</span>

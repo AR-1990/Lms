@@ -18,7 +18,7 @@
     const money = window.PinnacleGrid.money;
     const dateFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const screen = root.dataset.assets;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     const STATUS_TONES = { in_store: 'dash-badge-ok', assigned: 'dash-badge-brand', in_repair: 'dash-badge-warn', lost: 'dash-badge-danger', disposed: 'dash-badge-system', reported: 'dash-badge-warn', in_progress: 'dash-badge-brand', completed: 'dash-badge-ok', draft: 'dash-badge-warn' };
 
     function display(render) {

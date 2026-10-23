@@ -19,7 +19,7 @@
     const dateFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const screen = root.dataset.inventory;
     const canApprove = root.dataset.canApprove === '1';
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     const TONES = { draft: 'dash-badge-warn', approved: 'dash-badge-brand', partially_received: 'dash-badge-brand', received: 'dash-badge-ok', cancelled: 'dash-badge-system', issued: 'dash-badge-brand', partially_returned: 'dash-badge-warn', returned: 'dash-badge-ok' };
 
     function display(render) {

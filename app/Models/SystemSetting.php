@@ -28,6 +28,8 @@ class SystemSetting extends Model
         'logo_binary',
         'logo_mime_type',
         'logo_file_name',
+        'late_grace_count',
+        'lates_per_deduction_day',
     ];
 
     public function country(): BelongsTo

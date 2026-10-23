@@ -13,7 +13,7 @@
 
     <!-- Serif headings for the Ink & Paper theme -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=fraunces:500,600,700,600i&display=swap">
+    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=fraunces:500,600,700,600i|plus-jakarta-sans:400,500,600,700,800|playfair-display:600,700,600i&display=swap">
 
     <!-- External Theme CSS (Separated from Blade) -->
     <link rel="stylesheet" href="{{ asset('css/school-theme.css') }}?v={{ filemtime(public_path('css/school-theme.css')) }}">

@@ -160,6 +160,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/payroll', [HrPortalController::class, 'payroll'])->name('payroll');
                 Route::get('/payroll/{payroll_run}', [HrPortalController::class, 'payrollRun'])->name('payroll.run');
                 Route::get('/salaries', [HrPortalController::class, 'salaries'])->name('salaries');
+                Route::get('/adjustments', [HrPortalController::class, 'adjustments'])->name('adjustments');
                 Route::get('/salary-setup', [HrPortalController::class, 'salarySetup'])->name('salary-setup');
                 Route::get('/loans', [HrPortalController::class, 'loans'])->name('loans');
             });
@@ -182,6 +183,7 @@ Route::middleware('auth')->group(function () {
                 }
             });
         });
+        Route::get('/performance/counselling', [ExamsPortalController::class, 'counselling'])->middleware('permission:manage-counselling')->name('performance.counselling');
         Route::prefix('performance')->name('performance.')->middleware('permission:view-performance')->group(function () {
             foreach (['overview' => '/', 'skills' => '/skills', 'alerts' => '/alerts'] as $screen => $path) {
                 Route::get($path, [ExamsPortalController::class, 'performance'])->defaults('screen', $screen)->name($screen);
@@ -202,7 +204,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/periods', [AcademicsPortalController::class, 'periods'])->name('periods');
         });
         Route::get('/roles', [AdminPortalController::class, 'roles'])->middleware('permission:manage-roles')->name('roles');
-        Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats')->name('reports');
+        Route::get('/reports', [AdminPortalController::class, 'reports'])->middleware('permission:view-stats,view-ledger,view-fees,manage-fees,manage-students,manage-hr,manage-payroll,view-payroll,manage-expenses,manage-inventory,manage-assets,manage-transport')->name('reports');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:manage-settings')->name('settings');
         Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('permission:manage-settings')->name('settings.update');
     });

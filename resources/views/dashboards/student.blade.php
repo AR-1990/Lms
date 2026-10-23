@@ -51,6 +51,8 @@
 </section>
 @endif
 
+@include('dashboards.partials.counselling-notes', ['notes' => $summary['counselling'] ?? [], 'title' => 'From your counsellor'])
+
 <section class="dash-panel">
     <div class="dash-panel-head">
         <h2>Upcoming Papers</h2>

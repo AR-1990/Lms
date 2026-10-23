@@ -119,6 +119,14 @@ class HrPortalController extends PortalController
         return $this->screen('payroll');
     }
 
+    public function adjustments(): View
+    {
+        return $this->screen('adjustments', [
+            'staff' => $this->staff(),
+            'components' => SalaryComponent::where('is_active', true)->whereNotIn('code', SalaryComponent::SYSTEM_CODES)->orderBy('sort_order')->get(['id', 'name', 'type']),
+        ]);
+    }
+
     public function payrollRun(PayrollRun $payrollRun): View
     {
         return $this->screen('payroll-run', [

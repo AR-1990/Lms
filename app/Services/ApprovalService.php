@@ -21,6 +21,7 @@ use App\Models\Campus;
 use App\Models\CardTemplate;
 use App\Models\ClassSubject;
 use App\Models\ConcessionType;
+use App\Models\CounsellingNote;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\DiaryEntry;
@@ -45,6 +46,7 @@ use App\Models\Location;
 use App\Models\Lookup;
 use App\Models\MessageTemplate;
 use App\Models\PaymentMethod;
+use App\Models\PayrollAdjustment;
 use App\Models\PerformanceAlertRule;
 use App\Models\Period;
 use App\Models\PurchaseOrder;
@@ -101,6 +103,8 @@ class ApprovalService
         AppraisalCycle::class => [AppraisalService::class, 'deleteCycle'],
         AppraisalCriterion::class => [AppraisalService::class, 'deleteCriterion'],
         Asset::class => [AssetService::class, 'delete'],
+        CounsellingNote::class => [CounsellingService::class, 'delete'],
+        PayrollAdjustment::class => [PayrollService::class, 'deleteAdjustment'],
         TransportRoute::class => [TransportService::class, 'deleteRoute'],
         Vehicle::class => [TransportService::class, 'deleteVehicle'],
         Expense::class => [ExpenseService::class, 'delete'],

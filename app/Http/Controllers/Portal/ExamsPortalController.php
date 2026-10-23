@@ -12,11 +12,14 @@ use App\Models\FeeHead;
 use App\Models\GradingScale;
 use App\Models\PerformanceAlertRule;
 use App\Models\Section;
+use App\Models\Student;
 use App\Models\Subject;
 use App\Models\TeacherAssignment;
 use App\Services\AcademicSessionService;
+use App\Services\CounsellingService;
 use App\Services\LookupService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -62,6 +65,20 @@ class ExamsPortalController extends PortalController
             'sections' => $this->sections($manager ? null : ($employeeId ?? 0)),
             'assignments' => $manager ? collect() : TeacherAssignment::where('employee_id', $employeeId ?? 0)->get(['section_id', 'subject_id']),
             'is_manager' => $manager,
+        ]);
+    }
+
+    /**
+     * Counselling sessions. ?student=&alert= opens a new session for a student from a performance alert.
+     */
+    public function counselling(Request $request, LookupService $lookupService, CounsellingService $counsellingService): View
+    {
+        $student = $request->integer('student') ? Student::find($request->integer('student'), ['id', 'first_name', 'middle_name', 'last_name', 'admission_no']) : null;
+
+        return $this->page('dashboards.performance.counselling', 'admin', 'performance', [
+            'concerns' => $lookupService->options('counselling_concern'),
+            'counsellors' => $counsellingService->counsellors($this->portalUser()),
+            'prefill' => $student === null ? null : ['id' => $student->id, 'name' => $student->fullName().' · '.$student->admission_no, 'alert' => $request->integer('alert') ?: null],
         ]);
     }
 

@@ -44,6 +44,10 @@
     @include('dashboards.parent.children-table', ['children' => $children])
 </section>
 
+@foreach ($children as $child)
+    @include('dashboards.partials.counselling-notes', ['notes' => $child['counselling'] ?? [], 'title' => 'Counsellor notes · '.($child['name'] ?? '')])
+@endforeach
+
 <section class="dash-panel">
     <div class="dash-panel-head">
         <h2>Latest Notices</h2>

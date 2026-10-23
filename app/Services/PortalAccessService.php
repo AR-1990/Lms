@@ -83,6 +83,7 @@ class PortalAccessService
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
             ['key' => 'fees', 'label' => 'Fees', 'route' => 'accounts.fees.challans', 'icon' => 'hash', 'tone' => 'amber'],
             ['key' => 'accounting', 'label' => 'Accounts', 'route' => 'accounts.chart', 'icon' => 'book', 'tone' => 'emerald'],
+            ['key' => 'reports', 'label' => 'Reports', 'route' => 'admin.reports', 'icon' => 'chart', 'tone' => 'emerald'],
         ],
     ];
 

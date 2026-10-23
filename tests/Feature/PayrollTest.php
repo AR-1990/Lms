@@ -149,6 +149,66 @@ class PayrollTest extends TestCase
         $this->assertTrue(JournalEntry::where('narration', 'like', 'Reversal of %Wrong attendance for two teachers')->exists());
     }
 
+    public function test_lates_cut_pay_under_the_late_policy_and_leave_is_listed_per_type(): void
+    {
+        LeaveRequest::query()->update(['status' => 'cancelled']);
+        StaffAttendance::where('employee_id', $this->teacher->id)->get()->each->delete();
+
+        foreach (['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-09'] as $day) {
+            StaffAttendance::create(['employee_id' => $this->teacher->id, 'date' => $day, 'status' => 'late', 'late_minutes' => 10, 'source' => 'manual']);
+        }
+
+        foreach ([['CL', '2026-11-10', '2026-11-10'], ['UL', '2026-11-11', '2026-11-12']] as [$code, $from, $to]) {
+            $leave = app(LeaveService::class)->apply($this->teacher, ['leave_type_id' => $this->type($code)->id, 'from_date' => $from, 'to_date' => $to, 'reason' => 'Family matter'], $this->teacherUser);
+            $this->actingAs($this->admin, 'sanctum')->postJson("/api/erp/leave-requests/{$leave->id}/decide", ['approve' => true])->assertOk();
+        }
+
+        // Default policy: no free lates, every 3 lates = one day, so 7 lates cost 2 days.
+        $run = $this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/payroll-runs/generate', ['month' => '2026-11'])->json('data');
+        $slip = Payslip::where('payroll_run_id', $run['id'])->where('employee_id', $this->teacher->id)->with(['items.component', 'leaves.leaveType'])->first();
+        $late = $slip->items->firstWhere('component.code', 'LATE');
+        $regular = (int) $slip->items->where('type', 'earning')->sum('amount');
+
+        $this->assertSame(7, $slip->late_count);
+        $this->assertSame(70, $slip->late_minutes);
+        $this->assertSame(2.0, $slip->late_deduction_days);
+        $this->assertSame((int) round($regular / $slip->working_days * 2), $late->amount);
+        $this->assertSame(['Casual Leave' => 1.0, 'Unpaid Leave' => 2.0], $slip->leaves->mapWithKeys(fn ($row): array => [$row->leaveType->name => $row->days])->sort()->all());
+
+        $this->putJson('/api/erp/payroll-late-policy', ['late_grace_count' => 2, 'lates_per_deduction_day' => 0])->assertOk();
+        $this->postJson('/api/erp/payroll-runs/generate', ['month' => '2026-11'])->assertCreated();
+        $slip = Payslip::where('payroll_run_id', $run['id'])->where('employee_id', $this->teacher->id)->first();
+        $this->assertSame(0.0, $slip->late_deduction_days);
+        $this->assertFalse($slip->items()->whereHas('component', fn ($query) => $query->where('code', 'LATE'))->exists());
+        $this->assertSame(2, $slip->leaves()->count());
+    }
+
+    public function test_one_off_adjustments_land_on_the_draft_payslip_and_lock_once_approved(): void
+    {
+        $run = $this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/payroll-runs/generate', ['month' => '2026-11'])->json('data');
+        $before = Payslip::where('payroll_run_id', $run['id'])->where('employee_id', $this->teacher->id)->first();
+        $component = fn (string $code): int => SalaryComponent::where('code', $code)->value('id');
+
+        $this->postJson('/api/erp/payroll-adjustments', ['employee_id' => $this->teacher->id, 'month' => '2026-11', 'salary_component_id' => $component('LATE'), 'amount' => 100000])
+            ->assertUnprocessable();
+        $bonus = $this->postJson('/api/erp/payroll-adjustments', ['employee_id' => $this->teacher->id, 'month' => '2026-11', 'salary_component_id' => $component('OVERTIME'), 'amount' => 500000, 'note' => '12 hours'])
+            ->assertCreated()
+            ->json('data.id');
+        $this->postJson('/api/erp/payroll-adjustments', ['employee_id' => $this->teacher->id, 'month' => '2026-11', 'salary_component_id' => $component('FINE'), 'amount' => 100000])->assertCreated();
+
+        $after = Payslip::where('payroll_run_id', $run['id'])->where('employee_id', $this->teacher->id)->with('items.component')->first();
+        $this->assertSame($before->gross + 500000, $after->gross);
+        $this->assertSame('12 hours', $after->items->firstWhere('component.code', 'OVERTIME')->note);
+        $this->assertSame(100000, $after->items->firstWhere('component.code', 'FINE')->amount);
+        $this->getJson('/api/erp/payroll-adjustments/datatable?month=2026-11')->assertOk()->assertJsonPath('data.recordsFiltered', 2);
+
+        $this->postJson("/api/erp/payroll-runs/{$run['id']}/approve")->assertOk();
+        $this->putJson("/api/erp/payroll-adjustments/{$bonus}", ['employee_id' => $this->teacher->id, 'month' => '2026-11', 'salary_component_id' => $component('OVERTIME'), 'amount' => 900000])
+            ->assertUnprocessable();
+        $this->deleteJson("/api/erp/payroll-adjustments/{$bonus}")->assertUnprocessable();
+        $this->postJson('/api/erp/payroll-adjustments', ['employee_id' => $this->teacher->id, 'month' => '2026-12', 'salary_component_id' => $component('BONUS'), 'amount' => 300000])->assertCreated();
+    }
+
     public function test_a_loan_is_approved_by_an_admin_paid_out_and_recovered_through_payroll(): void
     {
         $loan = EmployeeLoan::where('employee_id', $this->teacher->id)->where('status', 'pending')->first();
@@ -191,7 +251,7 @@ class PayrollTest extends TestCase
 
     public function test_hr_screens_and_my_hr_page(): void
     {
-        foreach (['admin.hr.leave', 'admin.hr.leave-types', 'admin.hr.payroll', 'admin.hr.salaries', 'admin.hr.salary-setup', 'admin.hr.loans'] as $routeName) {
+        foreach (['admin.hr.leave', 'admin.hr.leave-types', 'admin.hr.payroll', 'admin.hr.salaries', 'admin.hr.salary-setup', 'admin.hr.loans', 'admin.hr.adjustments'] as $routeName) {
             $this->actingAs($this->admin)->get(route($routeName))->assertOk()->assertSee('js/admin-payroll.js', false);
         }
 

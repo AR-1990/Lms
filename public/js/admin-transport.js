@@ -16,7 +16,7 @@
     const esc = window.PinnacleGrid.escape;
     const money = window.PinnacleGrid.money;
     const dateFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
     function display(render) {
         return function (value, type, row) {

@@ -4,6 +4,7 @@ use App\Models\AcademicSession;
 use App\Models\ExamTerm;
 use App\Services\AnnouncementService;
 use App\Services\ChatService;
+use App\Services\CounsellingService;
 use App\Services\PerformanceService;
 use App\Services\StickyNoteService;
 use App\Services\TaskService;
@@ -51,4 +52,5 @@ Artisan::command('chat:sync-departments', function (ChatService $chatService) {
 })->purpose('Keep one chat group per department with its current staff');
 
 Schedule::call(fn () => app(TransportService::class)->sendExpiryAlerts())->name('transport:expiry-alerts')->dailyAt('08:00');
+Schedule::call(fn () => app(CounsellingService::class)->sendFollowUpReminders())->name('counselling:follow-up-reminders')->dailyAt('07:30');
 Schedule::command('chat:sync-departments')->dailyAt('01:30');

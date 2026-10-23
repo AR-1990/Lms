@@ -232,6 +232,63 @@
             }
         });
         loadSlabs();
+
+        /* Late policy: free lates, then every N lates = one day's pay. */
+        const latePanel = document.querySelector('[data-late-policy]');
+        const lateForm = latePanel.querySelector('form');
+        const LATE_SPEC = { late_grace_count: 'int', lates_per_deduction_day: 'int' };
+        const explain = function () {
+            const grace = Number(lateForm.elements.late_grace_count.value) || 0;
+            const perDay = Number(lateForm.elements.lates_per_deduction_day.value) || 0;
+            const example = grace + perDay * 2 + 1;
+
+            latePanel.querySelector('[data-late-example]').textContent = perDay
+                ? 'Example: ' + example + ' lates in a month → ' + Math.floor((example - grace) / perDay) + ' day(s) of pay cut.'
+                : 'Lates are shown on the payslip but never cut pay.';
+        };
+
+        ui.api('GET', latePanel.dataset.url).then(function (envelope) {
+            kit.fillForm(lateForm, envelope.data, LATE_SPEC, {});
+            explain();
+        }).catch(function () {});
+        lateForm.addEventListener('input', explain);
+        lateForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            kit.submitForm(lateForm, 'PUT', latePanel.dataset.url, kit.readForm(lateForm, LATE_SPEC)).catch(function () {});
+        });
+    }
+
+    /* ---------- One-off pay adjustments ---------- */
+
+    if (screen === 'adjustments') {
+        const SPEC = { employee_id: 'int', month: 'text', salary_component_id: 'int', amount: 'money', note: 'text' };
+        const thisMonth = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
+        const mounted = kit.mount({
+            root: root,
+            modal: document.getElementById('adjustmentModal'),
+            order: [[1, 'desc']],
+            titles: { create: 'Add pay adjustment', edit: 'Edit pay adjustment' },
+            emptyText: 'No adjustments for this month.',
+            searchPlaceholder: 'Search employee…',
+            params: filterParams,
+            nameOf: function (row) { return row.component_name + ' for ' + row.employee_name; },
+            canEdit: function (row) { return row.run_status && row.run_status !== 'draft' ? 'Payroll already ' + row.run_status : true; },
+            canDelete: function (row) { return row.run_status && row.run_status !== 'draft' ? 'Payroll already ' + row.run_status : true; },
+            columns: [
+                { data: 'employee_name', orderable: false, render: display(function (value, row) { return titleCell(value, row.employee_code); }) },
+                { data: 'month', render: display(function (value) { return esc(new Date(value + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })); }) },
+                { data: 'component_name', orderable: false, render: display(function (value, row) { return titleCell(value, row.type === 'deduction' ? 'deduction' : 'earning'); }) },
+                { data: 'amount', searchable: false, render: display(function (value, row) { return '<strong class="' + (row.type === 'deduction' ? 'dash-down' : 'dash-up') + '">' + (row.type === 'deduction' ? '− ' : '+ ') + rupees(value) + '</strong>'; }) },
+                { data: 'note', orderable: false, defaultContent: '—', render: display(function (value) { return esc(value || '—'); }) },
+                { data: 'run_status', orderable: false, searchable: false, render: display(function (value, row) {
+                    return row.payslip_id ? badge(value === 'draft' ? 'on payslip' : value) : '<span class="dash-badge dash-badge-warn">Next payroll</span>';
+                }) }
+            ],
+            fill: function (form, row) { kit.fillForm(form, row, SPEC, { month: root.querySelector('[data-filter="month"]').value || thisMonth }); },
+            payload: function (form) { return kit.readForm(form, SPEC); }
+        });
+
+        wireFilters(mounted.grid);
     }
 
     /* ---------- Salary structures ---------- */
@@ -274,7 +331,7 @@
                 modal.querySelector('[data-salary-current]').textContent = structure
                     ? 'Current since ' + dateFormat.format(new Date(structure.effective_from)) + ': basic ' + rupees(structure.basic_salary) + ', gross ' + rupees(structure.gross_salary) + '. Save from a new date to change it.'
                     : 'No salary yet. Leave an amount empty to use the component default.';
-                form.elements.effective_from.value = new Date().toISOString().slice(0, 10);
+                form.elements.effective_from.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                 form.elements.basic_salary.value = structure ? (structure.basic_salary / 100).toFixed(2) : '';
                 form.querySelectorAll('[data-item-on]').forEach(function (box) {
                     const item = items.find(function (entry) { return String(entry.salary_component_id) === box.dataset.itemOn; });
@@ -347,7 +404,7 @@
             columns: [
                 { data: 'employee_name', name: 'employee_id', render: display(function (value, row) { return titleCell(value, row.employee_code); }) },
                 { data: 'working_days', searchable: false, className: 'dash-hide-md', render: display(function (value, row) {
-                    return titleCell(row.present_days + ' / ' + value + ' present', [row.leave_days ? row.leave_days + ' leave' : null, row.unpaid_leave_days ? row.unpaid_leave_days + ' unpaid' : null, row.absent_days ? row.absent_days + ' absent' : null].filter(Boolean).join(' · '));
+                    return titleCell(row.present_days + ' / ' + value + ' present', [row.leave_days ? row.leave_days + ' leave' : null, row.unpaid_leave_days ? row.unpaid_leave_days + ' unpaid' : null, row.absent_days ? row.absent_days + ' absent' : null, row.late_count ? row.late_count + ' late' + (Number(row.late_deduction_days) ? ' (' + Number(row.late_deduction_days) + ' day cut)' : '') : null].filter(Boolean).join(' · '));
                 }) },
                 { data: 'gross', searchable: false, className: 'dash-hide-md', render: display(rupees) },
                 { data: 'deductions', searchable: false, className: 'dash-hide-md', render: display(rupees) },
@@ -385,7 +442,7 @@
                 } else if (action === 'pay') {
                     const dialog = document.getElementById('payModal');
 
-                    dialog.querySelector('form').elements.paid_on.value = new Date().toISOString().slice(0, 10);
+                    dialog.querySelector('form').elements.paid_on.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                     dialog.showModal();
                 } else if (action === 'reverse') {
                     document.getElementById('reverseModal').showModal();
@@ -467,7 +524,7 @@
 
             if (disburse) {
                 disbursing = disburse.dataset.disburse;
-                document.querySelector('[data-disburse-form]').elements.issued_on.value = new Date().toISOString().slice(0, 10);
+                document.querySelector('[data-disburse-form]').elements.issued_on.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                 document.getElementById('disburseModal').showModal();
             }
         });

@@ -25,7 +25,7 @@ class SalaryComponent extends Model
 
     public const CALCULATIONS = ['fixed', 'percent_of_basic'];
 
-    public const SYSTEM_CODES = ['BASIC', 'ABSENT', 'LOAN', 'TAX'];
+    public const SYSTEM_CODES = ['BASIC', 'ABSENT', 'LATE', 'LOAN', 'TAX'];
 
     protected string $activityModule = 'payroll';
 

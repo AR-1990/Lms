@@ -10,8 +10,10 @@ use App\Models\FiscalYear;
 use App\Models\JournalEntry;
 use App\Models\LeaveRequest;
 use App\Models\PaymentMethod;
+use App\Models\PayrollAdjustment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
+use App\Models\PayslipLeave;
 use App\Models\SalaryComponent;
 use App\Models\SalaryIncrement;
 use App\Models\StaffAttendance;
@@ -29,7 +31,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Payroll: salary components, salary structures and increments, tax slabs, and the monthly run —
- * generate payslips (attendance, unpaid leave, loan instalments, income tax) → approve → post the
+ * generate payslips (attendance, lates under the late policy, unpaid leave, leave per type, one-off
+ * adjustments such as bonus / overtime / fines, loan instalments, income tax) → approve → post the
  * salary journal (Dr salary expense / Cr deductions and salaries payable) → pay (Dr salaries payable /
  * Cr cash or bank). A posted but unpaid run can be reversed with a narration.
  */
@@ -234,17 +237,20 @@ class PayrollService
 
             foreach ($run->payslips()->get() as $old) {
                 EmployeeLoanInstalment::where('payslip_id', $old->id)->update(['payslip_id' => null]);
+                PayrollAdjustment::where('payslip_id', $old->id)->update(['payslip_id' => null]);
+                $old->leaves()->get()->each->delete();
                 $old->items()->get()->each->delete();
                 $old->delete();
             }
 
+            $policy = SystemSetting::query()->first(['late_grace_count', 'lates_per_deduction_day']);
             $employees = Employee::whereIn('status', Employee::CURRENT_STATUSES)->whereDate('joining_date', '<=', $end)->orderBy('first_name')->get();
 
             foreach ($employees as $employee) {
                 $structure = $this->currentStructure($employee, $end->toDateString());
 
                 if ($structure !== null) {
-                    $this->makePayslip($run, $employee, $structure, $start, $end, $workingDates, $components);
+                    $this->makePayslip($run, $employee, $structure, $start, $end, $workingDates, $components, $policy);
                 }
             }
 
@@ -382,9 +388,115 @@ class PayrollService
      */
     public function pdf(Collection $payslips, string $filename): Response
     {
-        $payslips->load(['run:id,month,status', 'employee.designation:id,name', 'employee.department:id,name', 'items.component:id,name,code', 'paymentMethod:id,name']);
+        $payslips->load(['run:id,month,status', 'employee.designation:id,name', 'employee.department:id,name', 'items.component:id,name,code', 'paymentMethod:id,name', 'leaves.leaveType:id,name,is_paid']);
 
         return Pdf::loadView('pdf.payslips', ['payslips' => $payslips, 'schoolName' => SystemSetting::query()->value('school_name')])->setPaper('a4')->stream($filename);
+    }
+
+    /* ---------- Late policy and one-off adjustments ---------- */
+
+    /**
+     * @return array{late_grace_count: int, lates_per_deduction_day: int}
+     */
+    public function latePolicy(): array
+    {
+        $settings = SystemSetting::query()->first(['late_grace_count', 'lates_per_deduction_day']);
+
+        return ['late_grace_count' => (int) ($settings?->late_grace_count ?? 0), 'lates_per_deduction_day' => (int) ($settings?->lates_per_deduction_day ?? 0)];
+    }
+
+    /**
+     * @param  array{late_grace_count: int, lates_per_deduction_day: int}  $data
+     * @return array{late_grace_count: int, lates_per_deduction_day: int}
+     */
+    public function saveLatePolicy(array $data, User $user): array
+    {
+        SystemSetting::query()->firstOrFail()->update($data);
+        $this->activityLogger->record('payroll', 'late_policy', "{$user->name} set the late policy: first {$data['late_grace_count']} free, then every {$data['lates_per_deduction_day']} lates = 1 day", null);
+
+        return $this->latePolicy();
+    }
+
+    /**
+     * Days of pay taken for lates: the first few are free, then every N lates cost one day (0 = never).
+     */
+    public function lateDeductionDays(int $lateCount, ?SystemSetting $policy): float
+    {
+        $perDay = (int) ($policy?->lates_per_deduction_day ?? 0);
+
+        return $perDay > 0 ? (float) intdiv(max(0, $lateCount - (int) ($policy?->late_grace_count ?? 0)), $perDay) : 0.0;
+    }
+
+    /**
+     * @param  array{month?: string|null, employee_id?: int|null}  $filters
+     * @return array<string, mixed>
+     */
+    public function adjustmentsDatatable(array $filters): array
+    {
+        $query = PayrollAdjustment::query()
+            ->select(['id', 'employee_id', 'month', 'salary_component_id', 'amount', 'note', 'payslip_id', 'created_at'])
+            ->with(['employee:id,first_name,middle_name,last_name,employee_code', 'component:id,name,type', 'payslip:id,payroll_run_id,status', 'payslip.run:id,status'])
+            ->when($filters['month'] ?? null, fn (Builder $query, string $month) => $query->whereDate('month', $month.'-01'))
+            ->when($filters['employee_id'] ?? null, fn (Builder $query, int $id) => $query->where('employee_id', $id));
+
+        return DataTables::eloquent($query)
+            ->addColumn('employee_name', fn (PayrollAdjustment $row): ?string => $row->employee?->fullName())
+            ->addColumn('employee_code', fn (PayrollAdjustment $row): ?string => $row->employee?->employee_code)
+            ->addColumn('component_name', fn (PayrollAdjustment $row): ?string => $row->component?->name)
+            ->addColumn('type', fn (PayrollAdjustment $row): ?string => $row->component?->type)
+            ->addColumn('run_status', fn (PayrollAdjustment $row): ?string => $row->payslip?->run?->status)
+            ->editColumn('month', fn (PayrollAdjustment $row): string => $row->month->format('Y-m'))
+            ->filterColumn('employee_name', fn (Builder $query, string $keyword) => $query->whereHas('employee', fn (Builder $inner) => $inner->where(fn (Builder $match) => $match->where('first_name', 'like', "%{$keyword}%")->orWhere('last_name', 'like', "%{$keyword}%")->orWhere('employee_code', 'like', "%{$keyword}%"))))
+            ->removeColumn('employee', 'component', 'payslip')
+            ->toArray();
+    }
+
+    /**
+     * Add or change a one-off amount. A draft payroll of that month is rebuilt so the payslip shows it at once.
+     *
+     * @param  array{employee_id: int, month: string, salary_component_id: int, amount: int, note?: string|null}  $data
+     */
+    public function saveAdjustment(?PayrollAdjustment $adjustment, array $data, User $user): PayrollAdjustment
+    {
+        $month = Carbon::parse($data['month'].'-01')->toDateString();
+        $this->ensureMonthOpen($month);
+
+        if ($adjustment !== null) {
+            $this->ensureMonthOpen($adjustment->month->toDateString());
+        }
+
+        $adjustment ??= new PayrollAdjustment;
+        $adjustment->fill([...$data, 'month' => $month, 'payslip_id' => null])->save();
+        $this->rebuildDraft($month, $user);
+
+        return $adjustment->refresh()->load('component:id,name,type');
+    }
+
+    public function deleteAdjustment(PayrollAdjustment $adjustment): void
+    {
+        $month = $adjustment->month->toDateString();
+        $this->ensureMonthOpen($month);
+        $adjustment->delete();
+
+        if (auth()->user() !== null) {
+            $this->rebuildDraft($month, auth()->user());
+        }
+    }
+
+    private function ensureMonthOpen(string $month): void
+    {
+        $status = PayrollRun::whereDate('month', $month)->value('status');
+
+        if ($status !== null && $status !== 'draft') {
+            throw ValidationException::withMessages(['month' => ['The '.Carbon::parse($month)->format('F Y')." payroll is already {$status}; reverse it first or use next month."]]);
+        }
+    }
+
+    private function rebuildDraft(string $month, User $user): void
+    {
+        if (PayrollRun::whereDate('month', $month)->where('status', 'draft')->exists()) {
+            $this->generate(Carbon::parse($month)->format('Y-m'), $user);
+        }
     }
 
     /* ---------- Internals ---------- */
@@ -393,14 +505,21 @@ class PayrollService
      * @param  array<int, string>  $workingDates
      * @param  \Illuminate\Support\Collection<string, SalaryComponent>  $components
      */
-    private function makePayslip(PayrollRun $run, Employee $employee, EmployeeSalaryStructure $structure, Carbon $start, Carbon $end, array $workingDates, $components): Payslip
+    private function makePayslip(PayrollRun $run, Employee $employee, EmployeeSalaryStructure $structure, Carbon $start, Carbon $end, array $workingDates, $components, ?SystemSetting $policy): Payslip
     {
-        $marks = StaffAttendance::where('employee_id', $employee->id)->whereDate('date', '>=', $start->toDateString())->whereDate('date', '<=', $end->toDateString())->pluck('status');
+        $attendance = StaffAttendance::where('employee_id', $employee->id)->whereDate('date', '>=', $start->toDateString())->whereDate('date', '<=', $end->toDateString())->get(['status', 'late_minutes']);
+        $marks = $attendance->pluck('status');
         $unpaidDays = 0.0;
+        $leaveByType = [];
 
-        foreach (LeaveRequest::where('employee_id', $employee->id)->where('status', 'approved')->whereHas('leaveType', fn (Builder $query) => $query->where('is_paid', false))
+        foreach (LeaveRequest::where('employee_id', $employee->id)->where('status', 'approved')->with('leaveType:id,is_paid')
             ->whereDate('from_date', '<=', $end)->whereDate('to_date', '>=', $start)->get() as $leave) {
-            $unpaidDays += $leave->is_half_day ? 0.5 : count($this->leaveService->workingDates(max($leave->from_date, $start)->toDateString(), min($leave->to_date, $end)->toDateString()));
+            $days = $leave->is_half_day ? 0.5 : count($this->leaveService->workingDates(max($leave->from_date, $start)->toDateString(), min($leave->to_date, $end)->toDateString()));
+            $leaveByType[$leave->leave_type_id] = ($leaveByType[$leave->leave_type_id] ?? 0) + $days;
+
+            if ($leave->leaveType?->is_paid === false) {
+                $unpaidDays += $days;
+            }
         }
 
         $workingDays = count($workingDates);
@@ -413,12 +532,28 @@ class PayrollService
             $lines->push(['component' => $item->component, 'type' => $item->component->type, 'amount' => $item->amount, 'note' => null]);
         }
 
-        $gross = (int) $lines->where('type', 'earning')->sum('amount');
+        // A day's pay comes from the regular monthly pay, before one-off adjustments.
+        $dayRate = $workingDays > 0 ? (int) $lines->where('type', 'earning')->sum('amount') / $workingDays : 0;
         $chargeable = $absentDays + $unpaidDays;
 
-        if ($chargeable > 0 && $workingDays > 0) {
-            $lines->push(['component' => $components['ABSENT'], 'type' => 'deduction', 'amount' => (int) round($gross / $workingDays * $chargeable), 'note' => "{$chargeable} day(s)"]);
+        if ($chargeable > 0 && $dayRate > 0) {
+            $lines->push(['component' => $components['ABSENT'], 'type' => 'deduction', 'amount' => (int) round($dayRate * $chargeable), 'note' => "{$chargeable} day(s)"]);
         }
+
+        $lateCount = $marks->filter(fn (string $status): bool => $status === 'late')->count();
+        $lateDays = $this->lateDeductionDays($lateCount, $policy);
+
+        if ($lateDays > 0 && $dayRate > 0 && isset($components['LATE'])) {
+            $lines->push(['component' => $components['LATE'], 'type' => 'deduction', 'amount' => (int) round($dayRate * $lateDays), 'note' => "{$lateCount} late(s) = {$lateDays} day(s)"]);
+        }
+
+        $adjustments = PayrollAdjustment::where('employee_id', $employee->id)->whereDate('month', $start->toDateString())->whereNull('payslip_id')->with('component')->get();
+
+        foreach ($adjustments as $adjustment) {
+            $lines->push(['component' => $adjustment->component, 'type' => $adjustment->component->type, 'amount' => $adjustment->amount, 'note' => $adjustment->note]);
+        }
+
+        $gross = (int) $lines->where('type', 'earning')->sum('amount');
 
         $instalments = EmployeeLoanInstalment::whereHas('loan', fn (Builder $query) => $query->where('employee_id', $employee->id)->where('status', 'active'))
             ->whereDate('due_month', $start->toDateString())->where('status', 'due')->get();
@@ -440,7 +575,7 @@ class PayrollService
         $payslip = Payslip::create([
             'payroll_run_id' => $run->id, 'employee_id' => $employee->id, 'working_days' => $workingDays,
             'present_days' => max(0, $workingDays - $absentDays - $leaveDays - $unpaidDays), 'leave_days' => $leaveDays, 'unpaid_leave_days' => $unpaidDays,
-            'absent_days' => $absentDays, 'gross' => $gross, 'deductions' => $deductions, 'net' => $gross - $deductions, 'status' => 'draft',
+            'absent_days' => $absentDays, 'late_count' => $lateCount, 'late_minutes' => (int) $attendance->sum('late_minutes'), 'late_deduction_days' => $lateDays, 'gross' => $gross, 'deductions' => $deductions, 'net' => $gross - $deductions, 'status' => 'draft',
         ]);
 
         foreach ($lines->filter(fn (array $line): bool => $line['amount'] > 0) as $line) {
@@ -448,6 +583,11 @@ class PayrollService
         }
 
         $instalments->each(fn (EmployeeLoanInstalment $instalment) => $instalment->update(['payslip_id' => $payslip->id]));
+        $adjustments->each(fn (PayrollAdjustment $adjustment) => $adjustment->update(['payslip_id' => $payslip->id]));
+
+        foreach ($leaveByType as $leaveTypeId => $days) {
+            PayslipLeave::create(['payslip_id' => $payslip->id, 'leave_type_id' => $leaveTypeId, 'days' => $days]);
+        }
 
         return $payslip;
     }

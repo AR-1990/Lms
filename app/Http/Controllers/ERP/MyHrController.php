@@ -53,9 +53,10 @@ class MyHrController extends Controller
 
     public function payslips(Request $request): JsonResponse
     {
-        $payslips = Payslip::where('employee_id', $this->employee($request)->id)->whereIn('status', ['final', 'paid'])->with('run:id,month')->latest('id')->limit(36)->get()
+        $payslips = Payslip::where('employee_id', $this->employee($request)->id)->whereIn('status', ['final', 'paid'])->with(['run:id,month', 'leaves.leaveType:id,name'])->latest('id')->limit(36)->get()
             ->map(fn (Payslip $payslip): array => [
-                ...$payslip->only(['id', 'gross', 'deductions', 'net', 'status', 'working_days', 'absent_days', 'leave_days']),
+                ...$payslip->only(['id', 'gross', 'deductions', 'net', 'status', 'working_days', 'present_days', 'absent_days', 'leave_days', 'unpaid_leave_days', 'late_count', 'late_minutes', 'late_deduction_days']),
+                'leave_taken' => $payslip->leaves->map(fn ($leave): array => ['leave_type' => $leave->leaveType?->name, 'days' => $leave->days])->values()->all(),
                 'month' => $payslip->run?->month?->toDateString(), 'paid_on' => $payslip->paid_on?->toDateString(),
             ]);
 

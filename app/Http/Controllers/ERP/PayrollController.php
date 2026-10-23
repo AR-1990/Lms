@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\ERP;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Hr\SavePayrollAdjustmentRequest;
 use App\Http\Requests\Hr\SaveSalaryComponentRequest;
 use App\Http\Requests\Hr\SaveSalaryStructureRequest;
 use App\Http\Requests\Hr\SaveTaxSlabRequest;
 use App\Models\Employee;
+use App\Models\PayrollAdjustment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
 use App\Models\SalaryComponent;
@@ -110,6 +112,42 @@ class PayrollController extends Controller
     }
 
     /* ---------- Payroll runs ---------- */
+
+    /* ---------- Late policy and one-off adjustments ---------- */
+
+    public function latePolicy(): JsonResponse
+    {
+        return $this->successResponse($this->payrollService->latePolicy(), 'Late policy retrieved.');
+    }
+
+    public function saveLatePolicy(Request $request): JsonResponse
+    {
+        $data = $request->validate(['late_grace_count' => ['required', 'integer', 'min:0', 'max:31'], 'lates_per_deduction_day' => ['required', 'integer', 'min:0', 'max:31']]);
+
+        return $this->successResponse($this->payrollService->saveLatePolicy($data, $request->user()), 'Late policy saved.');
+    }
+
+    public function adjustmentsDatatable(Request $request): JsonResponse
+    {
+        $filters = $request->validate(['month' => ['nullable', 'date_format:Y-m'], 'employee_id' => ['nullable', 'integer']]);
+
+        return $this->successResponse($this->payrollService->adjustmentsDatatable($filters), 'Adjustments retrieved.');
+    }
+
+    public function storeAdjustment(SavePayrollAdjustmentRequest $request): JsonResponse
+    {
+        return $this->successResponse($this->payrollService->saveAdjustment(null, $request->validated(), $request->user()), 'Adjustment added.', 201);
+    }
+
+    public function updateAdjustment(SavePayrollAdjustmentRequest $request, PayrollAdjustment $payrollAdjustment): JsonResponse
+    {
+        return $this->successResponse($this->payrollService->saveAdjustment($payrollAdjustment, $request->validated(), $request->user()), 'Adjustment saved.');
+    }
+
+    public function destroyAdjustment(PayrollAdjustment $payrollAdjustment): JsonResponse
+    {
+        return $this->deleteWithApproval($payrollAdjustment, 'Adjustment deleted.');
+    }
 
     public function runsDatatable(): JsonResponse
     {

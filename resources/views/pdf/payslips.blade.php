@@ -24,7 +24,8 @@
         .net { margin-top: 14pt; padding: 10pt 12pt; border: 1.5pt solid #1d2b45; background: #fffdf5; }
         .net strong { float: right; font-size: 15pt; color: #1d2b45; }
         .days { margin-top: 12pt; }
-        .days td { border: 0.5pt solid #e5e7eb; padding: 5pt; text-align: center; width: 20%; }
+        .days td { border: 0.5pt solid #e5e7eb; padding: 5pt; text-align: center; width: 16.6%; }
+        .leave-line { margin: 5pt 0 0; color: #4b5563; font-size: 8.5pt; }
         .days span { display: block; color: #6b7280; font-size: 7.5pt; }
         .foot { margin-top: 24pt; color: #9ca3af; font-size: 7.5pt; text-align: center; }
     </style>
@@ -55,14 +56,19 @@
                 <td>{{ rtrim(rtrim(number_format($payslip->leave_days, 1), '0'), '.') }}<span>paid leave</span></td>
                 <td>{{ rtrim(rtrim(number_format($payslip->unpaid_leave_days, 1), '0'), '.') }}<span>unpaid leave</span></td>
                 <td>{{ rtrim(rtrim(number_format($payslip->absent_days, 1), '0'), '.') }}<span>absent</span></td>
+                <td>{{ $payslip->late_count }}<span>late{{ $payslip->late_minutes ? ' · '.$payslip->late_minutes.' min' : '' }}</span></td>
             </tr>
         </table>
+
+        @if ($payslip->leaves->isNotEmpty())
+            <p class="leave-line">Leave taken: {{ $payslip->leaves->map(fn ($leave) => rtrim(rtrim(number_format($leave->days, 1), '0'), '.').' '.($leave->leaveType?->name ?? '').($leave->leaveType?->is_paid === false ? ' (unpaid)' : ''))->implode(' · ') }}</p>
+        @endif
 
         <table class="lines">
             <tr><th>Earnings</th><th class="amount">Rs</th><th>Deductions</th><th class="amount">Rs</th></tr>
             @for ($i = 0; $i < $rows; $i++)
                 <tr>
-                    <td>{{ $earnings[$i]->component->name ?? '' }}</td>
+                    <td>{{ $earnings[$i]->component->name ?? '' }}@if (isset($earnings[$i]) && $earnings[$i]->note) <span class="note">({{ $earnings[$i]->note }})</span>@endif</td>
                     <td class="amount">{{ isset($earnings[$i]) ? number_format($earnings[$i]->amount / 100) : '' }}</td>
                     <td>{{ $deductions[$i]->component->name ?? '' }}@if (isset($deductions[$i]) && $deductions[$i]->note) <span class="note">({{ $deductions[$i]->note }})</span>@endif</td>
                     <td class="amount">{{ isset($deductions[$i]) ? number_format($deductions[$i]->amount / 100) : '' }}</td>

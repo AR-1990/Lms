@@ -33,7 +33,7 @@ use Illuminate\Validation\ValidationException;
  */
 class PerformanceService
 {
-    public function __construct(private AttendanceService $attendanceService) {}
+    public function __construct(private AttendanceService $attendanceService, private CounsellingService $counsellingService) {}
 
     /**
      * Rebuild term snapshots (and alerts) for a term, optionally one section.
@@ -155,6 +155,7 @@ class PerformanceService
                 ->map(fn (SkillAssessment $assessment): array => ['skill' => $assessment->skill?->name, 'rating' => $assessment->rating?->name, 'comment' => $assessment->comment])->all(),
             'goals' => StudentGoal::where('student_id', $student->id)->with('subject:id,name')->latest('id')->get()
                 ->map(fn (StudentGoal $goal): array => [...$goal->only(['id', 'title', 'target_value', 'achieved_value', 'status', 'notes']), 'subject' => $goal->subject?->name, 'target_date' => $goal->target_date?->toDateString()])->all(),
+            'counselling' => $this->counsellingService->shared($student),
             'alerts' => PerformanceAlert::where('student_id', $student->id)->where('status', '!=', 'resolved')->with('rule:id,name,metric,operator,threshold')->latest('id')->get()
                 ->map(fn (PerformanceAlert $alert): array => ['id' => $alert->id, 'rule' => $alert->rule?->name, 'metric_value' => $alert->metric_value, 'status' => $alert->status])->all(),
         ];

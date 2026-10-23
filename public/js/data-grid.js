@@ -239,7 +239,7 @@
                 const name = (options.exportName || document.title.split('|')[0].trim() || 'export').replace(/[^\w-]+/g, '-').toLowerCase();
 
                 link.href = URL.createObjectURL(blob);
-                link.download = name + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+                link.download = name + '-' + new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) + '.csv';
                 document.body.appendChild(link);
                 link.click();
                 link.remove();

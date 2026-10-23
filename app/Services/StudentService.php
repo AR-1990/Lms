@@ -145,6 +145,7 @@ class StudentService
             'fee_balance' => (int) (clone $open)->sum('balance'),
             'open_invoices' => (clone $open)->count(),
             'bus' => app(TransportService::class)->busFor($student),
+            'counselling' => app(CounsellingService::class)->shared($student, 3),
         ];
     }
 

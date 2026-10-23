@@ -6,6 +6,7 @@ use App\Http\Controllers\ERP\ExamController;
 use App\Http\Controllers\ERP\IdCardController;
 use App\Http\Controllers\ERP\MyHrController;
 use App\Http\Controllers\ERP\PayrollController;
+use App\Http\Controllers\ERP\ReportController;
 use App\Http\Controllers\ERP\TransportController;
 use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,10 @@ Route::middleware(['api', ForceJsonResponse::class, 'auth:sanctum'])->prefix('ap
 
     // Transport (PLAN.md §18)
     Route::get('transport-routes/{transport_route}/sheet', [TransportController::class, 'routeSheet'])->middleware('permission:manage-transport')->name('transport-routes.sheet');
+
+    // Reports centre (PLAN.md phase 17e): each report checks its module's permission
+    Route::get('reports/{report}/csv', [ReportController::class, 'csv'])->where('report', '[a-z-]+')->name('reports.csv');
+    Route::get('reports/{report}/pdf', [ReportController::class, 'pdf'])->where('report', '[a-z-]+')->name('reports.pdf');
 
     // Staff appraisals (PLAN.md §14.5): the employee, their reviewer or HR
     Route::get('appraisals/{appraisal}/pdf', [AppraisalController::class, 'pdf'])->whereNumber('appraisal')->name('appraisals.pdf');

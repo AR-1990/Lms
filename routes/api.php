@@ -19,6 +19,7 @@ use App\Http\Controllers\ERP\CalendarController;
 use App\Http\Controllers\ERP\CampusController;
 use App\Http\Controllers\ERP\ChatController;
 use App\Http\Controllers\ERP\ChatMonitorController;
+use App\Http\Controllers\ERP\CounsellingController;
 use App\Http\Controllers\ERP\CurriculumController;
 use App\Http\Controllers\ERP\DepartmentController;
 use App\Http\Controllers\ERP\DesignationController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\ERP\PerformanceController;
 use App\Http\Controllers\ERP\PeriodController;
 use App\Http\Controllers\ERP\PermissionController;
 use App\Http\Controllers\ERP\PurchaseRequestController;
+use App\Http\Controllers\ERP\ReportController;
 use App\Http\Controllers\ERP\RoleController;
 use App\Http\Controllers\ERP\SchoolClassController;
 use App\Http\Controllers\ERP\SectionController;
@@ -336,6 +338,12 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::get('employees/{employee}/salary-structure', [PayrollController::class, 'structure'])->name('employees.salary-structure');
         Route::post('employees/{employee}/salary-structure', [PayrollController::class, 'saveStructure'])->name('employees.salary-structure.store');
 
+        Route::get('payroll-late-policy', [PayrollController::class, 'latePolicy'])->name('payroll-late-policy');
+        Route::put('payroll-late-policy', [PayrollController::class, 'saveLatePolicy'])->name('payroll-late-policy.update');
+        Route::get('payroll-adjustments/datatable', [PayrollController::class, 'adjustmentsDatatable'])->name('payroll-adjustments.datatable');
+        Route::post('payroll-adjustments', [PayrollController::class, 'storeAdjustment'])->name('payroll-adjustments.store');
+        Route::put('payroll-adjustments/{payroll_adjustment}', [PayrollController::class, 'updateAdjustment'])->name('payroll-adjustments.update');
+        Route::delete('payroll-adjustments/{payroll_adjustment}', [PayrollController::class, 'destroyAdjustment'])->name('payroll-adjustments.destroy');
         Route::get('payroll-runs/datatable', [PayrollController::class, 'runsDatatable'])->name('payroll-runs.datatable');
         Route::post('payroll-runs/generate', [PayrollController::class, 'generate'])->name('payroll-runs.generate');
         Route::get('payroll-runs/{payroll_run}', [PayrollController::class, 'showRun'])->name('payroll-runs.show');
@@ -776,6 +784,22 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::put('bank-reconciliations/{bank_reconciliation}', [ExpenseController::class, 'saveReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.update');
         Route::post('bank-reconciliations/{bank_reconciliation}/complete', [ExpenseController::class, 'completeReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.complete');
         Route::delete('bank-reconciliations/{bank_reconciliation}', [ExpenseController::class, 'destroyReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.destroy');
+    });
+
+    // ---------- Reports centre (PLAN.md phase 17e): each report checks its module's permission ----------
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/{report}', [ReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
+
+    // ---------- Counselling (PLAN.md §20) ----------
+    Route::middleware('permission:manage-counselling')->group(function () {
+        Route::get('counselling-notes/datatable', [CounsellingController::class, 'datatable'])->name('counselling-notes.datatable');
+        Route::get('counselling-counsellors', [CounsellingController::class, 'counsellors'])->name('counselling-counsellors');
+        Route::get('counselling-students', [CounsellingController::class, 'students'])->name('counselling-students');
+        Route::get('counselling-notes/{counselling_note}', [CounsellingController::class, 'show'])->whereNumber('counselling_note')->name('counselling-notes.show');
+        Route::post('counselling-notes', [CounsellingController::class, 'store'])->name('counselling-notes.store');
+        Route::put('counselling-notes/{counselling_note}', [CounsellingController::class, 'update'])->whereNumber('counselling_note')->name('counselling-notes.update');
+        Route::delete('counselling-notes/{counselling_note}', [CounsellingController::class, 'destroy'])->whereNumber('counselling_note')->name('counselling-notes.destroy');
+        Route::post('counselling-notes/{counselling_note}/follow-up-done', [CounsellingController::class, 'completeFollowUp'])->whereNumber('counselling_note')->name('counselling-notes.follow-up-done');
     });
 
     // ---------- Staff appraisals (PLAN.md §14.5) ----------

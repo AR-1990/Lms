@@ -239,6 +239,7 @@
                         + (alert.action_taken ? '<p class="dash-muted">Action: ' + escape(alert.action_taken) + '</p>' : '') + '</div>'
                         + (alert.status === 'resolved' ? '<span class="dash-badge dash-badge-ok">Resolved</span>'
                             : '<div class="dash-alert-actions"><input class="dash-inline-score dash-inline-feedback" placeholder="What was done?" data-action-taken aria-label="Action taken">'
+                            + (root.dataset.counsellingUrl ? '<a class="dash-btn dash-btn-ghost dash-btn-sm" href="' + escape(root.dataset.counsellingUrl + '?student=' + alert.student_id + '&alert=' + alert.id) + '">Counselling</a>' : '')
                             + (alert.status === 'open' ? '<button type="button" class="dash-btn dash-btn-ghost dash-btn-sm" data-alert-status="acknowledged">Acknowledge</button>' : '')
                             + '<button type="button" class="dash-btn dash-btn-primary dash-btn-sm" data-alert-status="resolved">Resolve</button></div>')
                         + '</li>';

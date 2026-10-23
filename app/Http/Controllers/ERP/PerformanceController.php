@@ -108,6 +108,7 @@ class PerformanceController extends Controller
         return $this->successResponse([
             'items' => $alerts->getCollection()->map(fn (PerformanceAlert $alert): array => [
                 'id' => $alert->id,
+                'student_id' => $alert->student_id,
                 'student' => $alert->student?->fullName(),
                 'admission_no' => $alert->student?->admission_no,
                 'rule' => $alert->rule?->name,

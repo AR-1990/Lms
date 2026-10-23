@@ -11,7 +11,7 @@
 <section class="dash-page-head">
     <div class="dash-page-intro">
         <h1>Salary Setup</h1>
-        <p>Allowances and deductions with the ledger account each posts to, and the income-tax slabs. Built-in items (Basic, Absent, Loan, Tax) are filled by payroll itself.</p>
+        <p>Allowances and deductions with the ledger account each posts to, and the income-tax slabs. Built-in items (Basic, Absent, Late, Loan, Tax) are filled by payroll itself; one-off items such as Bonus or Fine are entered under Pay Adjustments.</p>
     </div>
     <button type="button" class="dash-btn dash-btn-primary" data-resource-create>
         @include('partials.dashboard-icon', ['name' => 'plus'])
@@ -67,6 +67,22 @@
             </tfoot>
         </table>
     </div>
+</section>
+
+<section class="dash-panel" data-late-policy data-url="{{ route('erp.payroll-late-policy') }}">
+    <div class="dash-panel-head">
+        <div>
+            <h2>Late arrival policy</h2>
+            <p>Lates come from staff attendance. After the free lates, every set number of lates cuts one day's pay on the payslip. Set it to 0 to never cut pay for lates.</p>
+        </div>
+    </div>
+    <form class="dash-form-grid dash-late-policy" novalidate>
+        @include('dashboards.partials.field', ['name' => 'late_grace_count', 'label' => 'Free lates per month', 'type' => 'number', 'min' => 0, 'max' => 31, 'id' => 'lateGrace'])
+        @include('dashboards.partials.field', ['name' => 'lates_per_deduction_day', 'label' => 'Lates that cost one day', 'type' => 'number', 'min' => 0, 'max' => 31, 'id' => 'latesPerDay'])
+        <p class="dash-muted dash-field-wide" data-late-example></p>
+        <p class="dash-form-error" data-form-error hidden></p>
+        <div><button type="submit" class="dash-btn dash-btn-primary" data-submit>@include('partials.dashboard-icon', ['name' => 'check']) Save policy</button></div>
+    </form>
 </section>
 
 <dialog class="dash-modal dash-form-modal" id="payrollModal" aria-labelledby="payrollModalTitle">

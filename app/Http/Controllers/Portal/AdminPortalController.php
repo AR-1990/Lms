@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Models\Role;
+use App\Models\SchoolClass;
 use App\Models\WebsiteSectionItem;
 use App\Services\ActivityLogService;
 use App\Services\AdminService;
 use App\Services\LookupService;
+use App\Services\ReportService;
 use App\Services\RolePermissionService;
 use Illuminate\View\View;
 
@@ -83,8 +85,18 @@ class AdminPortalController extends PortalController
         return $this->page('dashboards.admin.numbering', 'admin', 'numbering');
     }
 
-    public function reports(): View
+    /**
+     * Reports centre: the catalogue is filtered by the user's permissions; data loads from /api/erp/reports/{key}.
+     */
+    public function reports(ReportService $reportService): View
     {
-        return $this->page('dashboards.admin.reports', 'admin', 'reports', $this->adminService->getReportsSnapshot());
+        $user = $this->portalUser();
+        $catalogue = $reportService->catalogue($user);
+        abort_if($catalogue === [], 403);
+
+        return $this->page('dashboards.admin.reports', $user->hasPermission('view-stats') ? 'admin' : 'accounts', 'reports', [
+            'catalogue' => $catalogue,
+            'classes' => SchoolClass::where('is_active', true)->orderBy('level_order')->get(['id', 'name']),
+        ]);
     }
 }

@@ -62,7 +62,8 @@
     function loadPayslips() {
         return ui.api('GET', api + '/payslips').then(function (envelope) {
             root.querySelector('[data-payslip-list]').innerHTML = envelope.data.length ? envelope.data.map(function (payslip) {
-                return '<li><div><strong>' + esc(monthFormat.format(new Date(payslip.month))) + '</strong><span class="dash-muted">Gross ' + rupees(payslip.gross) + ' · deductions ' + rupees(payslip.deductions) + '</span></div>'
+                return '<li><div><strong>' + esc(monthFormat.format(new Date(payslip.month))) + '</strong><span class="dash-muted">Gross ' + rupees(payslip.gross) + ' · deductions ' + rupees(payslip.deductions) + '</span>'
+                    + '<span class="dash-muted">' + esc([payslip.present_days + ' of ' + payslip.working_days + ' days present', payslip.late_count ? payslip.late_count + ' late' + (Number(payslip.late_deduction_days) ? ' (' + Number(payslip.late_deduction_days) + ' day cut)' : '') : null, Number(payslip.absent_days) ? payslip.absent_days + ' absent' : null].concat((payslip.leave_taken || []).map(function (leave) { return leave.days + ' ' + leave.leave_type; })).filter(Boolean).join(' · ')) + '</span></div>'
                     + '<span><strong>' + rupees(payslip.net) + '</strong> ' + badge(payslip.status) + ' <button type="button" class="dash-link-btn" data-payslip="' + payslip.id + '">PDF</button></span></li>';
             }).join('') : '<li class="dash-muted">No payslips yet.</li>';
         });

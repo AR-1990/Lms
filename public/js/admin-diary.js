@@ -236,7 +236,7 @@
                 { data: 'submitted_count', searchable: false, className: 'dash-col-num' }
             ],
             fill: function (homeworkForm, row) {
-                kit.fillForm(homeworkForm, row, SPEC, { assigned_on: new Date().toISOString().slice(0, 10) });
+                kit.fillForm(homeworkForm, row, SPEC, { assigned_on: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) });
                 syncSubjects();
 
                 if (row) {

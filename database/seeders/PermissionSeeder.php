@@ -60,6 +60,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'Assign Assets', 'slug' => 'assign-assets', 'group' => 'assets', 'description' => 'Hand assets to staff, students, departments or rooms and take them back.'],
             ['name' => 'Manage Expenses', 'slug' => 'manage-expenses', 'group' => 'accounts', 'description' => 'Record and pay expenses and vendor bills; approving them needs Approve Requests.'],
             ['name' => 'Reconcile Bank', 'slug' => 'reconcile-bank', 'group' => 'accounts', 'description' => 'Match bank statements against the bank accounts in the ledger.'],
+            ['name' => 'Manage Counselling', 'slug' => 'manage-counselling', 'group' => 'academics', 'description' => 'Record counselling sessions with students, follow-ups and confidential notes.'],
             ['name' => 'Manage Appraisals', 'slug' => 'manage-appraisals', 'group' => 'hr', 'description' => 'Appraisal cycles and criteria, launching reviews, reassigning reviewers and seeing every result.'],
             ['name' => 'Manage Transport', 'slug' => 'manage-transport', 'group' => 'transport', 'description' => 'Vehicles, routes, stops and which students ride the school buses.'],
             ['name' => 'Manage Inventory', 'slug' => 'manage-inventory', 'group' => 'inventory', 'description' => 'Items, stock, purchase orders, goods receipts, transfers and stock counts.'],
