@@ -6,17 +6,21 @@ use App\Http\Controllers\Portal\AccountingPortalController;
 use App\Http\Controllers\Portal\AdminPortalController;
 use App\Http\Controllers\Portal\AdminSettingsController;
 use App\Http\Controllers\Portal\AdminUserController;
+use App\Http\Controllers\Portal\AssetsPortalController;
 use App\Http\Controllers\Portal\AttendancePortalController;
 use App\Http\Controllers\Portal\CardsPortalController;
 use App\Http\Controllers\Portal\CollaborationPortalController;
 use App\Http\Controllers\Portal\CommunicationPortalController;
 use App\Http\Controllers\Portal\ExamsPortalController;
+use App\Http\Controllers\Portal\ExpensesPortalController;
 use App\Http\Controllers\Portal\FeesPortalController;
 use App\Http\Controllers\Portal\HrPortalController;
+use App\Http\Controllers\Portal\InventoryPortalController;
 use App\Http\Controllers\Portal\ParentPortalController;
 use App\Http\Controllers\Portal\StudentPortalController;
 use App\Http\Controllers\Portal\StudentsPortalController;
 use App\Http\Controllers\Portal\TeacherPortalController;
+use App\Http\Controllers\Portal\TransportPortalController;
 use App\Http\Controllers\SchoolController;
 use Illuminate\Support\Facades\Route;
 
@@ -97,6 +101,40 @@ Route::middleware('auth')->group(function () {
             Route::get('/applications', [StudentsPortalController::class, 'applications'])->name('applications');
             Route::get('/inquiries', [StudentsPortalController::class, 'inquiries'])->name('inquiries');
         });
+        Route::prefix('transport')->name('transport.')->middleware('permission:manage-transport')->group(function () {
+            Route::get('/', [TransportPortalController::class, 'routes'])->name('routes');
+            Route::get('/riders', [TransportPortalController::class, 'riders'])->name('riders');
+            Route::get('/vehicles', [TransportPortalController::class, 'vehicles'])->name('vehicles');
+        });
+
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            Route::get('/issues', [InventoryPortalController::class, 'issues'])->middleware('permission:issue-stock,manage-inventory')->name('issues');
+            Route::middleware('permission:manage-inventory')->group(function () {
+                Route::get('/', [InventoryPortalController::class, 'index'])->name('index');
+                Route::get('/orders', [InventoryPortalController::class, 'orders'])->name('orders');
+                Route::get('/receipts', [InventoryPortalController::class, 'receipts'])->name('receipts');
+                Route::get('/transfers', [InventoryPortalController::class, 'transfers'])->name('transfers');
+                Route::get('/counts', [InventoryPortalController::class, 'counts'])->name('counts');
+                Route::get('/ledger', [InventoryPortalController::class, 'ledger'])->name('ledger');
+                Route::get('/categories', [InventoryPortalController::class, 'categories'])->name('categories');
+            });
+        });
+
+        Route::prefix('assets')->name('assets.')->group(function () {
+            Route::middleware('permission:assign-assets,manage-assets')->group(function () {
+                Route::get('/', [AssetsPortalController::class, 'index'])->name('index');
+                Route::get('/handovers', [AssetsPortalController::class, 'handovers'])->name('handovers');
+            });
+            Route::middleware('permission:manage-assets')->group(function () {
+                Route::get('/repairs', [AssetsPortalController::class, 'repairs'])->name('repairs');
+                Route::get('/verification', [AssetsPortalController::class, 'verification'])->name('verification');
+                Route::get('/depreciation', [AssetsPortalController::class, 'depreciation'])->name('depreciation');
+                Route::get('/disposals', [AssetsPortalController::class, 'disposals'])->name('disposals');
+                Route::get('/categories', [AssetsPortalController::class, 'categories'])->name('categories');
+                Route::get('/locations', [AssetsPortalController::class, 'locations'])->name('locations');
+            });
+        });
+
         Route::prefix('hr')->name('hr.')->group(function () {
             Route::middleware('permission:manage-hr')->group(function () {
                 Route::get('/employees', [HrPortalController::class, 'employees'])->name('employees');
@@ -112,6 +150,11 @@ Route::middleware('auth')->group(function () {
             Route::middleware('permission:manage-leave')->group(function () {
                 Route::get('/leave', [HrPortalController::class, 'leave'])->name('leave');
                 Route::get('/leave-types', [HrPortalController::class, 'leaveTypes'])->name('leave-types');
+            });
+            Route::middleware('permission:manage-appraisals')->group(function () {
+                Route::get('/appraisals', [HrPortalController::class, 'appraisals'])->name('appraisals');
+                Route::get('/appraisal-cycles', [HrPortalController::class, 'appraisalCycles'])->name('appraisal-cycles');
+                Route::get('/appraisal-criteria', [HrPortalController::class, 'appraisalCriteria'])->name('appraisal-criteria');
             });
             Route::middleware('permission:manage-payroll')->group(function () {
                 Route::get('/payroll', [HrPortalController::class, 'payroll'])->name('payroll');
@@ -203,6 +246,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/chart/{account}/ledger', [AccountingPortalController::class, 'ledger'])->middleware('permission:view-ledger')->name('ledger');
         Route::get('/vouchers', [AccountingPortalController::class, 'vouchers'])->middleware('permission:view-ledger,manage-vouchers,post-vouchers')->name('vouchers');
         Route::get('/trial-balance', [AccountingPortalController::class, 'trialBalance'])->middleware('permission:view-ledger')->name('trial-balance');
+        Route::middleware('permission:manage-expenses')->group(function () {
+            Route::get('/expenses', [ExpensesPortalController::class, 'expenses'])->name('expenses');
+            Route::get('/expense-categories', [ExpensesPortalController::class, 'categories'])->name('expense-categories');
+            Route::get('/vendor-payments', [ExpensesPortalController::class, 'vendorPayments'])->name('vendor-payments');
+        });
+        Route::get('/bank-reconciliation', [ExpensesPortalController::class, 'reconciliation'])->middleware('permission:reconcile-bank')->name('bank-reconciliation');
         Route::middleware('permission:manage-accounts')->group(function () {
             Route::get('/fiscal-years', [AccountingPortalController::class, 'fiscalYears'])->name('fiscal-years');
             Route::get('/voucher-types', [AccountingPortalController::class, 'voucherTypes'])->name('voucher-types');

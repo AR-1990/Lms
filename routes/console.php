@@ -7,6 +7,7 @@ use App\Services\ChatService;
 use App\Services\PerformanceService;
 use App\Services\StickyNoteService;
 use App\Services\TaskService;
+use App\Services\TransportService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -49,4 +50,5 @@ Artisan::command('chat:sync-departments', function (ChatService $chatService) {
     $this->info($chatService->syncDepartmentGroups().' department groups in sync.');
 })->purpose('Keep one chat group per department with its current staff');
 
+Schedule::call(fn () => app(TransportService::class)->sendExpiryAlerts())->name('transport:expiry-alerts')->dailyAt('08:00');
 Schedule::command('chat:sync-departments')->dailyAt('01:30');

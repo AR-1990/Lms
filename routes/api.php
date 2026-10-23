@@ -8,7 +8,9 @@ use App\Http\Controllers\ERP\AdminController;
 use App\Http\Controllers\ERP\AdmissionApplicationController;
 use App\Http\Controllers\ERP\AdmissionInquiryController;
 use App\Http\Controllers\ERP\AnnouncementController;
+use App\Http\Controllers\ERP\AppraisalController;
 use App\Http\Controllers\ERP\ApprovalController;
+use App\Http\Controllers\ERP\AssetController;
 use App\Http\Controllers\ERP\AttachmentController;
 use App\Http\Controllers\ERP\AttendanceController;
 use App\Http\Controllers\ERP\AuthController;
@@ -24,12 +26,14 @@ use App\Http\Controllers\ERP\DeviceController;
 use App\Http\Controllers\ERP\DiaryController;
 use App\Http\Controllers\ERP\EmployeeController;
 use App\Http\Controllers\ERP\ExamController;
+use App\Http\Controllers\ERP\ExpenseController;
 use App\Http\Controllers\ERP\FeeInvoiceController;
 use App\Http\Controllers\ERP\FeePaymentController;
 use App\Http\Controllers\ERP\FeeSetupController;
 use App\Http\Controllers\ERP\FiscalYearController;
 use App\Http\Controllers\ERP\HomeworkController;
 use App\Http\Controllers\ERP\IdCardController;
+use App\Http\Controllers\ERP\InventoryController;
 use App\Http\Controllers\ERP\JobApplicationController;
 use App\Http\Controllers\ERP\JobOpeningController;
 use App\Http\Controllers\ERP\JournalEntryController;
@@ -59,6 +63,7 @@ use App\Http\Controllers\ERP\TaskController;
 use App\Http\Controllers\ERP\TeacherAssignmentController;
 use App\Http\Controllers\ERP\TeacherController;
 use App\Http\Controllers\ERP\TimetableController;
+use App\Http\Controllers\ERP\TransportController;
 use App\Http\Controllers\ERP\UserController;
 use App\Http\Controllers\ERP\VendorController;
 use App\Http\Controllers\ERP\VoucherTypeController;
@@ -665,6 +670,156 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::get('conversations/{conversation}', [ChatMonitorController::class, 'show'])->whereNumber('conversation')->name('show');
         Route::get('conversations/{conversation}/messages', [ChatMonitorController::class, 'messages'])->whereNumber('conversation')->name('messages');
         Route::put('conversations/{conversation}/members', [ChatMonitorController::class, 'members'])->whereNumber('conversation')->name('members');
+    });
+
+    // ---------- Assets (PLAN.md §15) ----------
+    Route::get('my-assets', [AssetController::class, 'mine'])->name('my-assets');
+    Route::middleware('permission:assign-assets,manage-assets')->group(function () {
+        Route::get('assets/holders', [AssetController::class, 'holders'])->name('assets.holders');
+        Route::post('assets/{asset}/assign', [AssetController::class, 'assign'])->whereNumber('asset')->name('assets.assign');
+        Route::post('assets/{asset}/return', [AssetController::class, 'takeBack'])->whereNumber('asset')->name('assets.return');
+        Route::get('asset-assignments/datatable', [AssetController::class, 'assignmentsDatatable'])->name('asset-assignments.datatable');
+        Route::get('assets/datatable', [AssetController::class, 'datatable'])->name('assets.datatable');
+        Route::get('assets/{asset}', [AssetController::class, 'show'])->whereNumber('asset')->name('assets.show');
+    });
+    Route::middleware('permission:manage-assets')->group(function () {
+        Route::get('asset-categories/datatable', [AssetController::class, 'categoriesDatatable'])->name('asset-categories.datatable');
+        Route::post('asset-categories', [AssetController::class, 'storeCategory'])->name('asset-categories.store');
+        Route::put('asset-categories/{asset_category}', [AssetController::class, 'updateCategory'])->name('asset-categories.update');
+        Route::delete('asset-categories/{asset_category}', [AssetController::class, 'destroyCategory'])->name('asset-categories.destroy');
+        Route::get('locations/datatable', [AssetController::class, 'locationsDatatable'])->name('locations.datatable');
+        Route::post('locations', [AssetController::class, 'storeLocation'])->name('locations.store');
+        Route::put('locations/{location}', [AssetController::class, 'updateLocation'])->name('locations.update');
+        Route::delete('locations/{location}', [AssetController::class, 'destroyLocation'])->name('locations.destroy');
+        Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+        Route::put('assets/{asset}', [AssetController::class, 'update'])->whereNumber('asset')->name('assets.update');
+        Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->whereNumber('asset')->name('assets.destroy');
+        Route::post('assets/{asset}/repairs', [AssetController::class, 'reportRepair'])->whereNumber('asset')->name('assets.repairs.store');
+        Route::post('assets/{asset}/dispose', [AssetController::class, 'dispose'])->whereNumber('asset')->name('assets.dispose');
+        Route::get('asset-maintenances/datatable', [AssetController::class, 'maintenancesDatatable'])->name('asset-maintenances.datatable');
+        Route::put('asset-maintenances/{asset_maintenance}', [AssetController::class, 'updateRepair'])->name('asset-maintenances.update');
+        Route::post('asset-maintenances/{asset_maintenance}/complete', [AssetController::class, 'completeRepair'])->name('asset-maintenances.complete');
+        Route::get('asset-audits/datatable', [AssetController::class, 'auditsDatatable'])->name('asset-audits.datatable');
+        Route::post('asset-audits', [AssetController::class, 'startAudit'])->name('asset-audits.store');
+        Route::get('asset-audits/{asset_audit}', [AssetController::class, 'showAudit'])->name('asset-audits.show');
+        Route::put('asset-audits/{asset_audit}', [AssetController::class, 'saveAudit'])->name('asset-audits.update');
+        Route::get('asset-depreciation/datatable', [AssetController::class, 'depreciationDatatable'])->name('asset-depreciation.datatable');
+        Route::get('asset-depreciation/preview', [AssetController::class, 'depreciationPreview'])->name('asset-depreciation.preview');
+        Route::post('asset-depreciation/run', [AssetController::class, 'depreciationRun'])->name('asset-depreciation.run');
+        Route::post('asset-depreciation/reverse', [AssetController::class, 'depreciationReverse'])->name('asset-depreciation.reverse');
+        Route::get('asset-disposals/datatable', [AssetController::class, 'disposalsDatatable'])->name('asset-disposals.datatable');
+    });
+
+    // ---------- Inventory & procurement (PLAN.md §16) ----------
+    Route::middleware('permission:issue-stock,manage-inventory')->group(function () {
+        Route::get('inventory/items/search', [InventoryController::class, 'searchItems'])->name('inventory.items.search');
+        Route::get('inventory/recipients', [InventoryController::class, 'recipients'])->name('inventory.recipients');
+        Route::get('stock-issues/datatable', [InventoryController::class, 'issuesDatatable'])->name('stock-issues.datatable');
+        Route::get('stock-issues/overdue', [InventoryController::class, 'overdueReturns'])->name('stock-issues.overdue');
+        Route::get('stock-issues/{stock_issue}', [InventoryController::class, 'showIssue'])->name('stock-issues.show');
+        Route::post('stock-issues', [InventoryController::class, 'storeIssue'])->name('stock-issues.store');
+        Route::post('stock-issues/{stock_issue}/return', [InventoryController::class, 'returnIssue'])->name('stock-issues.return');
+    });
+    Route::middleware('permission:manage-inventory')->group(function () {
+        Route::get('item-categories/datatable', [InventoryController::class, 'categoriesDatatable'])->name('item-categories.datatable');
+        Route::post('item-categories', [InventoryController::class, 'storeCategory'])->name('item-categories.store');
+        Route::put('item-categories/{item_category}', [InventoryController::class, 'updateCategory'])->name('item-categories.update');
+        Route::delete('item-categories/{item_category}', [InventoryController::class, 'destroyCategory'])->name('item-categories.destroy');
+        Route::get('inventory/items/datatable', [InventoryController::class, 'itemsDatatable'])->name('inventory.items.datatable');
+        Route::get('inventory/items/{inventory_item}', [InventoryController::class, 'showItem'])->whereNumber('inventory_item')->name('inventory.items.show');
+        Route::post('inventory/items', [InventoryController::class, 'storeItem'])->name('inventory.items.store');
+        Route::put('inventory/items/{inventory_item}', [InventoryController::class, 'updateItem'])->whereNumber('inventory_item')->name('inventory.items.update');
+        Route::delete('inventory/items/{inventory_item}', [InventoryController::class, 'destroyItem'])->whereNumber('inventory_item')->name('inventory.items.destroy');
+        Route::get('stock-movements/datatable', [InventoryController::class, 'movementsDatatable'])->name('stock-movements.datatable');
+        Route::get('purchase-orders/datatable', [InventoryController::class, 'ordersDatatable'])->name('purchase-orders.datatable');
+        Route::get('purchase-orders/{purchase_order}', [InventoryController::class, 'showOrder'])->name('purchase-orders.show');
+        Route::post('purchase-orders', [InventoryController::class, 'storeOrder'])->name('purchase-orders.store');
+        Route::put('purchase-orders/{purchase_order}', [InventoryController::class, 'updateOrder'])->name('purchase-orders.update');
+        Route::post('purchase-orders/{purchase_order}/approve', [InventoryController::class, 'approveOrder'])->name('purchase-orders.approve');
+        Route::post('purchase-orders/{purchase_order}/cancel', [InventoryController::class, 'cancelOrder'])->name('purchase-orders.cancel');
+        Route::delete('purchase-orders/{purchase_order}', [InventoryController::class, 'destroyOrder'])->name('purchase-orders.destroy');
+        Route::get('goods-receipts/datatable', [InventoryController::class, 'receiptsDatatable'])->name('goods-receipts.datatable');
+        Route::get('goods-receipts/{goods_receipt}', [InventoryController::class, 'showReceipt'])->name('goods-receipts.show');
+        Route::post('goods-receipts', [InventoryController::class, 'receive'])->name('goods-receipts.store');
+        Route::get('stock-transfers/datatable', [InventoryController::class, 'transfersDatatable'])->name('stock-transfers.datatable');
+        Route::get('stock-transfers/{stock_transfer}', [InventoryController::class, 'showTransfer'])->name('stock-transfers.show');
+        Route::post('stock-transfers', [InventoryController::class, 'transfer'])->name('stock-transfers.store');
+        Route::get('stock-adjustments/datatable', [InventoryController::class, 'adjustmentsDatatable'])->name('stock-adjustments.datatable');
+        Route::post('stock-adjustments', [InventoryController::class, 'adjust'])->name('stock-adjustments.store');
+    });
+
+    // ---------- Expenses, vendor payments, bank reconciliation (PLAN.md §11) ----------
+    Route::middleware('permission:manage-expenses')->group(function () {
+        Route::get('expense-categories/datatable', [ExpenseController::class, 'categoriesDatatable'])->name('expense-categories.datatable');
+        Route::post('expense-categories', [ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+        Route::put('expense-categories/{expense_category}', [ExpenseController::class, 'updateCategory'])->name('expense-categories.update');
+        Route::delete('expense-categories/{expense_category}', [ExpenseController::class, 'destroyCategory'])->name('expense-categories.destroy');
+        Route::get('expenses/datatable', [ExpenseController::class, 'datatable'])->name('expenses.datatable');
+        Route::get('expenses/{expense}', [ExpenseController::class, 'show'])->name('expenses.show');
+        Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::put('expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::post('expenses/{expense}/approve', [ExpenseController::class, 'approve'])->name('expenses.approve');
+        Route::post('expenses/{expense}/pay', [ExpenseController::class, 'pay'])->name('expenses.pay');
+        Route::post('expenses/{expense}/cancel', [ExpenseController::class, 'cancel'])->name('expenses.cancel');
+        Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::get('vendor-balances/datatable', [ExpenseController::class, 'vendorBalances'])->name('vendor-balances.datatable');
+        Route::get('vendors/{vendor}/owed', [ExpenseController::class, 'vendorOwed'])->name('vendors.owed');
+        Route::get('vendor-payments/datatable', [ExpenseController::class, 'paymentsDatatable'])->name('vendor-payments.datatable');
+        Route::post('vendor-payments', [ExpenseController::class, 'payVendor'])->name('vendor-payments.store');
+        Route::post('vendor-payments/{vendor_payment}/reverse', [ExpenseController::class, 'reversePayment'])->name('vendor-payments.reverse');
+    });
+    Route::middleware('permission:reconcile-bank')->group(function () {
+        Route::get('bank-reconciliations/datatable', [ExpenseController::class, 'reconciliations'])->name('bank-reconciliations.datatable');
+        Route::get('bank-reconciliations/bank-accounts', [ExpenseController::class, 'bankAccounts'])->name('bank-reconciliations.bank-accounts');
+        Route::post('bank-reconciliations', [ExpenseController::class, 'startReconciliation'])->name('bank-reconciliations.store');
+        Route::get('bank-reconciliations/{bank_reconciliation}', [ExpenseController::class, 'showReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.show');
+        Route::put('bank-reconciliations/{bank_reconciliation}', [ExpenseController::class, 'saveReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.update');
+        Route::post('bank-reconciliations/{bank_reconciliation}/complete', [ExpenseController::class, 'completeReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.complete');
+        Route::delete('bank-reconciliations/{bank_reconciliation}', [ExpenseController::class, 'destroyReconciliation'])->whereNumber('bank_reconciliation')->name('bank-reconciliations.destroy');
+    });
+
+    // ---------- Staff appraisals (PLAN.md §14.5) ----------
+    Route::get('my-appraisals', [AppraisalController::class, 'mine'])->name('my-appraisals');
+    Route::get('appraisals/{appraisal}', [AppraisalController::class, 'show'])->whereNumber('appraisal')->name('appraisals.show');
+    Route::put('appraisals/{appraisal}/self-review', [AppraisalController::class, 'selfReview'])->whereNumber('appraisal')->name('appraisals.self-review');
+    Route::put('appraisals/{appraisal}/review', [AppraisalController::class, 'review'])->whereNumber('appraisal')->name('appraisals.review');
+    Route::post('appraisals/{appraisal}/acknowledge', [AppraisalController::class, 'acknowledge'])->whereNumber('appraisal')->name('appraisals.acknowledge');
+    Route::middleware('permission:manage-appraisals')->group(function () {
+        Route::get('appraisal-options', [AppraisalController::class, 'options'])->name('appraisal-options');
+        Route::get('appraisal-criteria/datatable', [AppraisalController::class, 'criteriaDatatable'])->name('appraisal-criteria.datatable');
+        Route::post('appraisal-criteria', [AppraisalController::class, 'storeCriterion'])->name('appraisal-criteria.store');
+        Route::put('appraisal-criteria/{appraisal_criterion}', [AppraisalController::class, 'updateCriterion'])->name('appraisal-criteria.update');
+        Route::delete('appraisal-criteria/{appraisal_criterion}', [AppraisalController::class, 'destroyCriterion'])->name('appraisal-criteria.destroy');
+        Route::get('appraisal-cycles/datatable', [AppraisalController::class, 'cyclesDatatable'])->name('appraisal-cycles.datatable');
+        Route::get('appraisal-cycles/{appraisal_cycle}', [AppraisalController::class, 'showCycle'])->whereNumber('appraisal_cycle')->name('appraisal-cycles.show');
+        Route::post('appraisal-cycles', [AppraisalController::class, 'storeCycle'])->name('appraisal-cycles.store');
+        Route::put('appraisal-cycles/{appraisal_cycle}', [AppraisalController::class, 'updateCycle'])->whereNumber('appraisal_cycle')->name('appraisal-cycles.update');
+        Route::delete('appraisal-cycles/{appraisal_cycle}', [AppraisalController::class, 'destroyCycle'])->whereNumber('appraisal_cycle')->name('appraisal-cycles.destroy');
+        Route::post('appraisal-cycles/{appraisal_cycle}/launch', [AppraisalController::class, 'launch'])->whereNumber('appraisal_cycle')->name('appraisal-cycles.launch');
+        Route::post('appraisal-cycles/{appraisal_cycle}/close', [AppraisalController::class, 'close'])->whereNumber('appraisal_cycle')->name('appraisal-cycles.close');
+        Route::get('appraisals/datatable', [AppraisalController::class, 'appraisalsDatatable'])->name('appraisals.datatable');
+        Route::get('appraisal-reviewers', [AppraisalController::class, 'reviewers'])->name('appraisal-reviewers');
+        Route::put('appraisals/{appraisal}/reviewer', [AppraisalController::class, 'reassign'])->whereNumber('appraisal')->name('appraisals.reviewer');
+        Route::post('appraisals/{appraisal}/reopen', [AppraisalController::class, 'reopen'])->whereNumber('appraisal')->name('appraisals.reopen');
+    });
+
+    // ---------- Transport (PLAN.md §18) ----------
+    Route::get('my-bus', [TransportController::class, 'myBus'])->name('my-bus');
+    Route::middleware('permission:manage-transport')->group(function () {
+        Route::get('vehicles/datatable', [TransportController::class, 'vehiclesDatatable'])->name('vehicles.datatable');
+        Route::post('vehicles', [TransportController::class, 'storeVehicle'])->name('vehicles.store');
+        Route::put('vehicles/{vehicle}', [TransportController::class, 'updateVehicle'])->name('vehicles.update');
+        Route::delete('vehicles/{vehicle}', [TransportController::class, 'destroyVehicle'])->name('vehicles.destroy');
+        Route::get('transport-routes/datatable', [TransportController::class, 'routesDatatable'])->name('transport-routes.datatable');
+        Route::get('transport-routes/{transport_route}', [TransportController::class, 'showRoute'])->whereNumber('transport_route')->name('transport-routes.show');
+        Route::post('transport-routes', [TransportController::class, 'storeRoute'])->name('transport-routes.store');
+        Route::put('transport-routes/{transport_route}', [TransportController::class, 'updateRoute'])->whereNumber('transport_route')->name('transport-routes.update');
+        Route::delete('transport-routes/{transport_route}', [TransportController::class, 'destroyRoute'])->whereNumber('transport_route')->name('transport-routes.destroy');
+        Route::get('transport-stops', [TransportController::class, 'stops'])->name('transport-stops.index');
+        Route::get('transport-students', [TransportController::class, 'students'])->name('transport-students.index');
+        Route::get('student-transport/datatable', [TransportController::class, 'ridersDatatable'])->name('student-transport.datatable');
+        Route::post('student-transport', [TransportController::class, 'assign'])->name('student-transport.store');
+        Route::post('student-transport/{student_transport}/end', [TransportController::class, 'end'])->name('student-transport.end');
     });
 
     // ---------- Admin ----------

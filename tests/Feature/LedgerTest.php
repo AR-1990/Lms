@@ -123,11 +123,12 @@ class LedgerTest extends TestCase
 
     public function test_draft_voucher_gets_a_number_and_balances(): void
     {
+        $nextNumber = NumberSequence::where('type', 'voucher_jv')->value('next_number');
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/erp/ledger/vouchers', $this->voucher([['1100', 150050, 0], ['3100', 0, 150050]]));
 
         $response->assertCreated()
-            ->assertJsonPath('data.voucher_no', 'JV-2026-00001')
+            ->assertJsonPath('data.voucher_no', 'JV-2026-'.str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT))
             ->assertJsonPath('data.status', 'draft')
             ->assertJsonPath('data.total_debit', 150050)
             ->assertJsonPath('data.fiscal_year', 'FY 2026-27')
@@ -138,6 +139,9 @@ class LedgerTest extends TestCase
 
     public function test_unbalanced_one_sided_group_and_single_line_vouchers_are_rejected(): void
     {
+        $entriesBefore = JournalEntry::count();
+        $nextNumber = NumberSequence::where('type', 'voucher_jv')->value('next_number');
+
         $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/erp/ledger/vouchers', $this->voucher([['1100', 10000, 0], ['3100', 0, 9000]]))
             ->assertUnprocessable()
@@ -160,8 +164,8 @@ class LedgerTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('errors.fields.lines.0', 'A voucher needs at least two lines.');
 
-        $this->assertSame(0, JournalEntry::count());
-        $this->assertSame(1, NumberSequence::where('type', 'voucher_jv')->value('next_number'));
+        $this->assertSame($entriesBefore, JournalEntry::count());
+        $this->assertSame($nextNumber, NumberSequence::where('type', 'voucher_jv')->value('next_number'));
     }
 
     public function test_vouchers_need_an_open_fiscal_year(): void
@@ -250,6 +254,7 @@ class LedgerTest extends TestCase
 
     public function test_trial_balance_and_ledger_include_opening_balances_and_posted_entries_only(): void
     {
+        $totalBefore = $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/ledger/trial-balance?as_of=2026-10-31')->json('data.total_debit');
         $this->account('1100')->update(['opening_balance' => 100000, 'opening_balance_type' => 'debit']);
         $this->account('3100')->update(['opening_balance' => 100000, 'opening_balance_type' => 'credit']);
 
@@ -271,7 +276,7 @@ class LedgerTest extends TestCase
         $this->assertSame(250000, $rows['4100']['credit']);
         $this->assertSame(40000, $rows['5200']['debit']);
         $this->assertTrue($trial->json('data.is_balanced'));
-        $this->assertSame(350000, $trial->json('data.total_debit'));
+        $this->assertSame($totalBefore + 350000, $trial->json('data.total_debit'));
 
         $ledger = $this->actingAs($this->admin, 'sanctum')
             ->getJson('/api/erp/ledger/accounts/'.$this->account('1100')->id.'/ledger?draw=1&from=2026-10-01&to=2026-10-31')

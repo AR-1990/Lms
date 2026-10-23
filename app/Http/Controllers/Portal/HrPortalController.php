@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Models\Account;
+use App\Models\AppraisalCycle;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Employee;
@@ -83,6 +84,21 @@ class HrPortalController extends PortalController
     public function leaveTypes(): View
     {
         return $this->screen('leave-types');
+    }
+
+    public function appraisals(): View
+    {
+        return $this->screen('appraisals', ['cycles' => AppraisalCycle::where('status', '!=', 'draft')->latest('id')->get(['id', 'name', 'status'])]);
+    }
+
+    public function appraisalCycles(): View
+    {
+        return $this->screen('appraisal-cycles');
+    }
+
+    public function appraisalCriteria(): View
+    {
+        return $this->screen('appraisal-criteria');
     }
 
     public function salarySetup(): View

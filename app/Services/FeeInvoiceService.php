@@ -159,7 +159,9 @@ class FeeInvoiceService
                 && $item->appliesToMonth($month->month)
                 && (! $item->applies_to_new_students_only || $isNewStudent));
 
-        if ($items->isEmpty()) {
+        $transport = app(TransportService::class)->monthlyLines($student, $month);
+
+        if ($items->isEmpty() && $transport->isEmpty()) {
             return null;
         }
 
@@ -174,7 +176,7 @@ class FeeInvoiceService
             'issue_date' => now()->toDateString(),
             'due_date' => $month->copy()->day($dueDay)->max(now()->startOfDay())->toDateString(),
             'fee_invoice_batch_id' => $batch?->id,
-        ], $this->linesFrom($items, $month), $student);
+        ], $this->linesFrom($items, $month)->concat($transport), $student);
     }
 
     /**

@@ -12,6 +12,67 @@
     const SIDEBAR_COOKIE = 'dash_sidebar';
     const BANNER_LIFETIME = 6000;
     const TOAST_LIFETIME = 4500;
+
+    /* Popups roll up like a scroll when they close. Every close() — buttons, Esc, saving a form — plays the
+       short closing animation first; reopening during it cancels the close. */
+    (function animateDialogs() {
+        if (!window.HTMLDialogElement) {
+            return;
+        }
+
+        const nativeClose = HTMLDialogElement.prototype.close;
+        const nativeShowModal = HTMLDialogElement.prototype.showModal;
+
+        function finishClose(dialog, value) {
+            clearTimeout(dialog.closeTimer);
+            dialog.removeEventListener('animationend', dialog.onCloseEnd);
+            dialog.classList.remove('is-closing');
+            delete dialog.dataset.closing;
+            nativeClose.call(dialog, value);
+        }
+
+        HTMLDialogElement.prototype.close = function (value) {
+            const dialog = this;
+
+            if (!dialog.open || !dialog.classList.contains('dash-modal') || REDUCED_MOTION.matches || document.hidden) {
+                return nativeClose.call(dialog, value);
+            }
+
+            if (dialog.dataset.closing) {
+                return undefined;
+            }
+
+            dialog.dataset.closing = '1';
+            dialog.onCloseEnd = function (event) {
+                if (event.target === dialog) {
+                    finishClose(dialog, value);
+                }
+            };
+            dialog.addEventListener('animationend', dialog.onCloseEnd);
+            dialog.closeTimer = setTimeout(function () { finishClose(dialog, value); }, 300);
+            dialog.classList.add('is-closing');
+
+            return undefined;
+        };
+
+        HTMLDialogElement.prototype.showModal = function () {
+            if (this.dataset.closing) {
+                finishClose(this);
+            }
+
+            return nativeShowModal.call(this);
+        };
+
+        // Esc closes through the same animation.
+        document.addEventListener('cancel', function (event) {
+            const dialog = event.target;
+
+            if (dialog instanceof HTMLDialogElement && dialog.classList.contains('dash-modal') && !REDUCED_MOTION.matches) {
+                event.preventDefault();
+                dialog.close();
+            }
+        }, true);
+    })();
     const FX_HOSTS = '.dash-btn, .dash-nav-link, .dash-account, .dash-dropdown-link, .dash-icon-btn, .dash-stat, .dash-kpi, .dash-quick-tile, .dash-feature, .dash-banner-close, .dash-action, .dash-page-link, .dash-role-option';
     const ERASE_DURATION = 950;
     const NO_INK_TARGETS = 'input, textarea, select, [contenteditable="true"]';

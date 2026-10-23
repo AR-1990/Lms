@@ -37,6 +37,20 @@
     </article>
 </section>
 
+@if ($bus = $summary['bus'] ?? null)
+<section class="dash-panel">
+    <div class="dash-panel-head"><h2>School Bus</h2></div>
+    <dl class="dash-asset-facts">
+        <div><dt>Route</dt><dd>{{ $bus['route'] }}</dd></div>
+        <div><dt>Stop</dt><dd>{{ $bus['stop'] }}</dd></div>
+        <div><dt>Pickup / drop</dt><dd>{{ $bus['pickup_time'] ?? '—' }} / {{ $bus['drop_time'] ?? '—' }}</dd></div>
+        <div><dt>Vehicle</dt><dd>{{ $bus['vehicle'] ?? '—' }}</dd></div>
+        <div><dt>Driver</dt><dd>{{ $bus['driver'] ?? '—' }}{{ $bus['driver_phone'] ? ' · '.$bus['driver_phone'] : '' }}</dd></div>
+        <div><dt>Attendant</dt><dd>{{ $bus['attendant'] ?? '—' }}{{ $bus['attendant_phone'] ? ' · '.$bus['attendant_phone'] : '' }}</dd></div>
+    </dl>
+</section>
+@endif
+
 <section class="dash-panel">
     <div class="dash-panel-head">
         <h2>Upcoming Papers</h2>

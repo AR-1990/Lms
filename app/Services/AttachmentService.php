@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AdmissionApplication;
 use App\Models\Attachment;
 use App\Models\Employee;
+use App\Models\Expense;
 use App\Models\JobApplication;
 use App\Models\Student;
 use App\Models\User;
@@ -32,6 +33,7 @@ class AttachmentService
         'students' => ['model' => Student::class, 'permission' => 'manage-students'],
         'admission_applications' => ['model' => AdmissionApplication::class, 'permission' => 'manage-admissions'],
         'employees' => ['model' => Employee::class, 'permission' => 'manage-hr'],
+        'expenses' => ['model' => Expense::class, 'permission' => 'manage-expenses'],
         'job_applications' => ['model' => JobApplication::class, 'permission' => 'manage-recruitment'],
     ];
 

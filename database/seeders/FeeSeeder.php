@@ -28,6 +28,7 @@ class FeeSeeder extends Seeder
         ['Computer Lab Fee', 'LAB', '4100', 'monthly', false, true],
         ['Exam Fee', 'EXM', '4400', 'one_time', false, false],
         ['Transport Fee', 'TRN', '4900', 'monthly', false, false],
+        ['Uniform & Books', 'UNB', '4500', 'one_time', false, false],
     ];
 
     /**

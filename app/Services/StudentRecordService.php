@@ -194,6 +194,10 @@ class StudentRecordService
 
             $student->currentEnrollment()->first()?->update(['status' => $isLeaving ? 'withdrawn' : 'active']);
 
+            if ($isLeaving) {
+                app(TransportService::class)->endForStudent($student, $effectiveOn);
+            }
+
             if ($student->user_id !== null) {
                 $user = $student->user()->first();
                 $user?->update(['is_active' => ! $isLeaving]);

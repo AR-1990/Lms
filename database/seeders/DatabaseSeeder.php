@@ -41,6 +41,11 @@ class DatabaseSeeder extends Seeder
             TaskSeeder::class,
             ChatSeeder::class,
             HrPayrollSeeder::class,
+            AssetSeeder::class,
+            InventorySeeder::class,
+            ExpenseSeeder::class,
+            TransportSeeder::class,
+            AppraisalSeeder::class,
         ]);
     }
 }

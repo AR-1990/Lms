@@ -131,7 +131,7 @@ class StudentService
     /**
      * Attendance this session, the latest published result and the fee still owed.
      *
-     * @return array{attendance_percentage: float|null, latest_result: array<string, mixed>|null, fee_balance: int, open_invoices: int}
+     * @return array{attendance_percentage: float|null, latest_result: array<string, mixed>|null, fee_balance: int, open_invoices: int, bus: array<string, mixed>|null}
      */
     public function summary(Student $student): array
     {
@@ -144,6 +144,7 @@ class StudentService
             'latest_result' => $result === null ? null : ['exam' => $result->exam?->name, 'percentage' => $result->percentage, 'grade' => $result->grade, 'result' => $result->result],
             'fee_balance' => (int) (clone $open)->sum('balance'),
             'open_invoices' => (clone $open)->count(),
+            'bus' => app(TransportService::class)->busFor($student),
         ];
     }
 

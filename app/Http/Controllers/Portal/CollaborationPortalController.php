@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Lookup;
 use App\Models\TaskBoard;
+use App\Services\AssetService;
 use App\Services\LeaveService;
 use App\Services\TaskService;
 use Illuminate\Http\Request;
@@ -60,6 +61,7 @@ class CollaborationPortalController extends PortalController
             'employee' => $employee,
             'leave_types' => $employee ? app(LeaveService::class)->typesFor($employee) : collect(),
             'loan_types' => Lookup::query()->ofType('loan_type')->active()->get(['id', 'name']),
+            'assets' => $employee ? app(AssetService::class)->heldBy($employee)->all() : [],
             'is_manager' => $employee !== null && Employee::where('reports_to_id', $employee->id)->exists(),
         ]);
     }

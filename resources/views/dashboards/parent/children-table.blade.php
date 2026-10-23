@@ -5,7 +5,7 @@
     <div class="dash-table-wrap">
         <table class="dash-table">
             <thead>
-                <tr><th>Name</th><th>Class</th><th>Roll No</th><th>Attendance</th><th>Last Result</th><th>Fee Due</th></tr>
+                <tr><th>Name</th><th>Class</th><th>Roll No</th><th>Attendance</th><th>Last Result</th><th>Bus</th><th>Fee Due</th></tr>
             </thead>
             <tbody>
                 @foreach ($children as $child)
@@ -15,6 +15,14 @@
                         <td>{{ $child['roll_no'] ?? '—' }}</td>
                         <td>{{ $child['attendance_percentage'] === null ? '—' : $child['attendance_percentage'].'%' }}</td>
                         <td>{{ $child['latest_result'] ? $child['latest_result']['exam'].': '.$child['latest_result']['percentage'].'% ('.$child['latest_result']['grade'].')' : '—' }}</td>
+                        <td>
+                            @if ($child['bus'])
+                                {{ $child['bus']['route'] }} · {{ $child['bus']['stop'] }}<br>
+                                <span class="dash-muted">Pickup {{ $child['bus']['pickup_time'] ?? '—' }}{{ $child['bus']['driver'] ? ' · '.$child['bus']['driver'] : '' }}{{ $child['bus']['driver_phone'] ? ' '.$child['bus']['driver_phone'] : '' }}</span>
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td>
                             <span class="dash-badge {{ $child['fee_balance'] > 0 ? 'dash-badge-warn' : 'dash-badge-ok' }}">
                                 {{ $child['fee_balance'] > 0 ? 'Rs '.number_format($child['fee_balance'] / 100) : 'Paid' }}

@@ -7,7 +7,7 @@
 <section class="dash-page-head">
     <div class="dash-page-intro">
         <h1>My HR</h1>
-        <p>Your leave balance, leave requests, payslips and loans.</p>
+        <p>Your leave balance, leave requests, payslips, loans and appraisals.</p>
     </div>
     @if ($data['employee'])
         <div class="dash-head-actions">
@@ -23,7 +23,7 @@
         <p>Your login is not linked to an employee record. Please ask HR.</p>
     </div>
 @else
-<div data-my-hr data-api="{{ url('/api/erp/my-hr') }}" data-team-url="{{ url('/api/erp/leave-requests') }}" data-is-manager="{{ $data['is_manager'] ? 1 : 0 }}">
+<div data-my-hr data-api="{{ url('/api/erp/my-hr') }}" data-team-url="{{ url('/api/erp/leave-requests') }}" data-is-manager="{{ $data['is_manager'] ? 1 : 0 }}" data-appraisals-url="{{ url('/api/erp/my-appraisals') }}">
     <section class="dash-leave-balances" data-balances aria-label="Leave balances"><p class="dash-muted">Loading…</p></section>
 
     <div class="dash-my-hr-grid">
@@ -53,6 +53,31 @@
     <section class="dash-panel">
         <div class="dash-panel-head"><h2>Loans &amp; advances</h2></div>
         <ul class="dash-list" data-loan-list><li class="dash-muted">Loading…</li></ul>
+    </section>
+
+    <div class="dash-my-hr-grid">
+        <section class="dash-panel">
+            <div class="dash-panel-head"><div><h2>My appraisals</h2><p>Rate yourself when a review starts, then read and acknowledge what your reviewer wrote.</p></div></div>
+            <ul class="dash-list" data-appraisal-mine><li class="dash-muted">Loading…</li></ul>
+        </section>
+
+        <section class="dash-panel" data-appraisal-review-panel hidden>
+            <div class="dash-panel-head"><div><h2>Reviews to do</h2><p>Staff you appraise this cycle.</p></div></div>
+            <ul class="dash-list" data-appraisal-review></ul>
+        </section>
+    </div>
+
+    <section class="dash-panel">
+        <div class="dash-panel-head"><h2>Assets I hold</h2></div>
+        @if ($data['assets'] === [])
+            <p class="dash-muted">No school assets are handed to you.</p>
+        @else
+            <ul class="dash-list">
+                @foreach ($data['assets'] as $held)
+                    <li><strong>{{ $held['asset_tag'] }} · {{ $held['name'] }}</strong> <span class="dash-muted">{{ collect([$held['category'], $held['serial_no'], 'since '.$held['since'], $held['expected_return_on'] ? 'return by '.$held['expected_return_on'] : null])->filter()->implode(' · ') }}</span></li>
+                @endforeach
+            </ul>
+        @endif
     </section>
 </div>
 
@@ -144,6 +169,7 @@
         </div>
     </form>
 </dialog>
+@include('dashboards.partials.appraisal-modal')
 @endif
 @endsection
 

@@ -1,5 +1,6 @@
 /**
- * My HR (employee self-service): leave balances and requests, payslips, loans, and a manager's team leave.
+ * My HR (employee self-service): leave balances and requests, payslips, loans, appraisals (own and to review)
+ * and a manager's team leave.
  * Same API as the mobile app: /api/erp/my-hr/*.
  */
 (function () {
@@ -99,7 +100,36 @@
         });
     }
 
+    const APPRAISAL = { self_review: ['Rate yourself', 'dash-badge-warn'], draft: ['With reviewer', 'dash-badge-warn'], submitted: ['Ready to read', 'dash-badge-ok'], acknowledged: ['Acknowledged', 'dash-badge-system'] };
+
+    function appraisalLine(appraisal, title, sub) {
+        const meta = APPRAISAL[appraisal.status] || [appraisal.status, ''];
+
+        return '<li><div><strong>' + esc(title) + '</strong><span class="dash-muted">' + esc(sub) + '</span></div>'
+            + '<span><span class="dash-badge ' + meta[1] + '">' + esc(meta[0]) + '</span> <button type="button" class="dash-link-btn" data-appraisal="' + appraisal.id + '">Open</button></span></li>';
+    }
+
+    function loadAppraisals() {
+        return ui.api('GET', root.dataset.appraisalsUrl).then(function (envelope) {
+            const panel = root.querySelector('[data-appraisal-review-panel]');
+
+            root.querySelector('[data-appraisal-mine]').innerHTML = envelope.data.mine.length ? envelope.data.mine.map(function (appraisal) {
+                return appraisalLine(appraisal, appraisal.cycle, [appraisal.reviewer ? 'Reviewer ' + appraisal.reviewer : 'Reviewer not set yet', appraisal.overall_score !== null ? 'score ' + Number(appraisal.overall_score).toFixed(2) + ' / 5' : null, appraisal.rating].filter(Boolean).join(' · '));
+            }).join('') : '<li class="dash-muted">No appraisals yet.</li>';
+            root.querySelector('[data-appraisal-review]').innerHTML = envelope.data.to_review.map(function (appraisal) {
+                return appraisalLine(appraisal, appraisal.employee, appraisal.cycle + (appraisal.status === 'self_review' ? ' · still rating themselves' : ''));
+            }).join('');
+            panel.hidden = envelope.data.to_review.length === 0;
+        });
+    }
+
     root.addEventListener('click', function (event) {
+        const appraisal = event.target.closest('[data-appraisal]');
+
+        if (appraisal && window.PinnacleAppraisal) {
+            window.PinnacleAppraisal.open(appraisal.dataset.appraisal, loadAppraisals);
+        }
+
         const cancel = event.target.closest('[data-cancel-leave]');
         const payslip = event.target.closest('[data-payslip]');
         const decide = event.target.closest('[data-team-decide]');
@@ -173,7 +203,7 @@
         }).catch(function () {});
     });
 
-    Promise.all([loadLeave(), loadPayslips(), loadLoans(), loadTeam()]).catch(function () {
+    Promise.all([loadLeave(), loadPayslips(), loadLoans(), loadTeam(), loadAppraisals()]).catch(function () {
         ui.toast('Some of your HR details could not be loaded.', 'error');
     });
 })();

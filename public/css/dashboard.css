@@ -8693,3 +8693,464 @@ select.dash-inline-score {
     border-color: var(--brand-500);
     box-shadow: 0 0 0 3px rgb(46 125 129 / 0.15);
 }
+
+/* ---------- Assets ---------- */
+
+.dash-asset-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.6rem 1rem;
+    margin: 0 0 1rem;
+}
+
+.dash-asset-facts dt {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.dash-asset-facts dd {
+    margin: 0.1rem 0 0;
+    font-weight: 600;
+}
+
+.dash-asset-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.dash-asset-history {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.4rem 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.dash-asset-history li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.6rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: #fffdf8;
+    font-size: 0.85rem;
+}
+
+.dash-holder-results {
+    display: grid;
+    gap: 0.15rem;
+    max-height: 12rem;
+    margin: 0.3rem 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.dash-holder-results:empty {
+    display: none;
+}
+
+.dash-holder-results button {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--gray-50, #faf8f3);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dash-holder-results button:hover {
+    background: var(--brand-50);
+}
+
+[data-sheet-rows] select,
+[data-sheet-rows] input {
+    min-height: 32px;
+    padding: 0.25rem 0.45rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+/* ---------- Inventory item lines ---------- */
+
+.dash-lines {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--gray-300);
+    border-radius: var(--radius-lg);
+    background: #fffdf8;
+}
+
+.dash-lines-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dash-lines-head input {
+    flex: 1 1 16rem;
+}
+
+.dash-lines-table input {
+    width: 100%;
+    min-width: 5.5rem;
+    min-height: 32px;
+    padding: 0.25rem 0.45rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.dash-lines-table td {
+    vertical-align: middle;
+}
+
+.dash-file-btn {
+    cursor: pointer;
+}
+
+/* ---------- Detail popups (record view with actions and history) ---------- */
+
+/* Wide popups are wide whether or not they hold a form. */
+.dash-modal.dash-modal-wide {
+    width: min(54rem, calc(100vw - 2rem));
+}
+
+/* Content placed straight in a popup (not inside a form grid) keeps clear of the paper's edge and margin line. */
+.dash-modal > .dash-form-scroll,
+.dash-modal > form > .dash-form-scroll {
+    padding: 0.5rem 1.5rem 1rem 2.6rem;
+}
+
+.dash-modal > form > .dash-form-scroll > .dash-form-grid,
+.dash-modal > .dash-form-scroll > .dash-form-grid {
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.dash-modal > form > .dash-form-grid {
+    padding-left: 2.6rem;
+}
+
+.dash-modal-head {
+    padding-left: 2.6rem;
+}
+
+.dash-modal .dash-modal-actions {
+    padding-left: 2.6rem;
+    background: transparent;
+    border-top: 1px dashed var(--gray-300);
+}
+
+.dash-modal h4 {
+    margin: 1.1rem 0 0.4rem;
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.dash-modal .dash-asset-facts {
+    margin-top: 0.5rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    background: #fff;
+}
+
+.dash-modal .dash-asset-actions {
+    margin-top: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .dash-modal > .dash-form-scroll,
+    .dash-modal > form > .dash-form-scroll,
+    .dash-modal-head,
+    .dash-modal .dash-modal-actions,
+    .dash-modal > form > .dash-form-grid {
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+}
+
+/* ---------- Quick next-step buttons and the verification scan bar ---------- */
+
+.dash-quick-action {
+    margin-left: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    min-height: 26px;
+    font-size: 0.75rem;
+}
+
+.dash-scan-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.25rem 0 0.75rem;
+}
+
+.dash-scan-bar[hidden] {
+    display: none;
+}
+
+.dash-scan-bar input {
+    flex: 1 1 18rem;
+}
+
+[data-sheet-rows] tr.is-scanned {
+    animation: dash-scan-flash 1.2s ease-out;
+}
+
+@keyframes dash-scan-flash {
+    from { background: rgb(16 185 129 / 0.25); }
+    to { background: transparent; }
+}
+
+/* ---------- Popups open like a scroll unrolling ----------
+   Only clip-path, transform and opacity animate (GPU-composited), so the page and its tables are never
+   re-laid out; the backdrop no longer blurs (a blur over a long table is expensive on every frame). */
+
+.dash-modal[open] {
+    animation: dash-scroll-open 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dash-modal.is-closing {
+    animation: dash-scroll-close 240ms cubic-bezier(0.55, 0, 0.75, 0.25) both;
+    pointer-events: none;
+}
+
+/* The paper's curled edges: shading at top and bottom that fades as the scroll flattens out. */
+.dash-modal::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    background:
+        linear-gradient(180deg, rgb(120 90 40 / 0.22), transparent 18px),
+        linear-gradient(0deg, rgb(120 90 40 / 0.22), transparent 18px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dash-modal[open]::after {
+    animation: dash-scroll-curl 520ms ease-out both;
+}
+
+.dash-modal::backdrop {
+    background: rgb(29 43 69 / 0.42);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+.dash-modal[open]::backdrop {
+    animation: dash-backdrop-in 260ms ease-out both;
+}
+
+.dash-modal.is-closing::backdrop {
+    animation: dash-backdrop-out 240ms ease-in both;
+}
+
+@keyframes dash-scroll-open {
+    0% { opacity: 0; clip-path: inset(49% -4% 49% -4%); transform: rotate(-0.6deg) scaleY(0.94); }
+    35% { opacity: 1; }
+    100% { opacity: 1; clip-path: inset(-80px -80px -100px -80px); transform: rotate(-0.6deg) scaleY(1); }
+}
+
+@keyframes dash-scroll-close {
+    0% { opacity: 1; clip-path: inset(-80px -80px -100px -80px); transform: rotate(-0.6deg) scaleY(1); }
+    100% { opacity: 0; clip-path: inset(49% -4% 49% -4%); transform: rotate(-0.6deg) scaleY(0.95); }
+}
+
+@keyframes dash-scroll-curl {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+@keyframes dash-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes dash-backdrop-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@media (max-width: 639px) {
+    @keyframes dash-scroll-open {
+        0% { opacity: 0; clip-path: inset(49% -4% 49% -4%); transform: scaleY(0.94); }
+        35% { opacity: 1; }
+        100% { opacity: 1; clip-path: inset(-80px -80px -100px -80px); transform: none; }
+    }
+
+    @keyframes dash-scroll-close {
+        0% { opacity: 1; clip-path: inset(-80px -80px -100px -80px); transform: none; }
+        100% { opacity: 0; clip-path: inset(49% -4% 49% -4%); transform: scaleY(0.95); }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-modal[open],
+    .dash-modal.is-closing,
+    .dash-modal[open]::after,
+    .dash-modal[open]::backdrop,
+    .dash-modal.is-closing::backdrop {
+        animation: none;
+    }
+}
+
+/* ---------- Appraisals: 1–5 score pills and criterion rows ---------- */
+
+.dash-appraisal-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+}
+
+.dash-appraisal-scores {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.dash-appraisal-row {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    background: #fff;
+}
+
+.dash-appraisal-row header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.dash-appraisal-row > p {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+}
+
+.dash-appraisal-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.dash-appraisal-line span {
+    min-width: 4.5rem;
+    color: var(--gray-500);
+}
+
+.dash-appraisal-line em {
+    color: var(--gray-600);
+}
+
+.dash-score-pick {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+}
+
+.dash-score-pick label {
+    cursor: pointer;
+}
+
+.dash-score-pick input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dash-score-pick span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 999px;
+    background: #fff;
+    font-weight: 600;
+    transition: transform 0.12s ease;
+}
+
+.dash-score-pick label:hover span {
+    transform: translateY(-1px);
+}
+
+.dash-score-pick input:checked + span {
+    border-color: var(--brand-600, #1d2b45);
+    background: var(--brand-600, #1d2b45);
+    color: #fff;
+}
+
+.dash-score-pick input:focus-visible + span {
+    outline: 2px solid var(--brand-600, #1d2b45);
+    outline-offset: 2px;
+}
+
+.dash-appraisal-comment {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    background: #fff;
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.dash-appraisal-comment:focus {
+    border-color: var(--brand-600);
+    outline: none;
+}
+
+.dash-appraisal-live {
+    margin: 0.9rem 0 0.25rem;
+    font-size: 0.9rem;
+}
+
+.dash-appraisal-text {
+    margin: 0;
+    white-space: pre-line;
+}
+
+.dash-appraisal-reviewer {
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-score-pick span {
+        transition: none;
+    }
+}
+
+.dash-my-hr-grid:has(> [data-appraisal-review-panel][hidden]) {
+    grid-template-columns: 1fr;
+}
+
+/* On phones the title and buttons wrap, so the scores area gives up the room they need. */
+@media (max-width: 640px) {
+    #appraisalModal .dash-form-scroll {
+        max-height: calc(100dvh - 17rem);
+    }
+}

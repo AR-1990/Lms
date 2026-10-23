@@ -8,8 +8,12 @@ use App\Models\AdmissionApplication;
 use App\Models\AdmissionInquiry;
 use App\Models\Announcement;
 use App\Models\AnnouncementCategory;
+use App\Models\AppraisalCriterion;
+use App\Models\AppraisalCycle;
 use App\Models\ApprovalRequest;
 use App\Models\AssessmentSkill;
+use App\Models\Asset;
+use App\Models\AssetCategory;
 use App\Models\Attachment;
 use App\Models\BankAccount;
 use App\Models\CalendarEvent;
@@ -24,20 +28,26 @@ use App\Models\Employee;
 use App\Models\Exam;
 use App\Models\ExamHall;
 use App\Models\ExamTerm;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\FeeHead;
 use App\Models\FeeStructure;
 use App\Models\FiscalYear;
 use App\Models\GradingScale;
 use App\Models\Homework;
+use App\Models\InventoryItem;
+use App\Models\ItemCategory;
 use App\Models\JobApplication;
 use App\Models\JobOpening;
 use App\Models\JournalEntry;
 use App\Models\LeaveType;
+use App\Models\Location;
 use App\Models\Lookup;
 use App\Models\MessageTemplate;
 use App\Models\PaymentMethod;
 use App\Models\PerformanceAlertRule;
 use App\Models\Period;
+use App\Models\PurchaseOrder;
 use App\Models\PurchaseRequest;
 use App\Models\Role;
 use App\Models\SalaryComponent;
@@ -52,7 +62,9 @@ use App\Models\TaskBoard;
 use App\Models\TaxSlab;
 use App\Models\TeacherAssignment;
 use App\Models\TimetableSlot;
+use App\Models\TransportRoute;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Models\Vendor;
 use App\Models\VoucherType;
 use App\Models\WebsiteFaq;
@@ -86,6 +98,18 @@ class ApprovalService
     private const DELETERS = [
         AcademicSession::class => [AcademicSessionService::class, 'delete'],
         Announcement::class => [AnnouncementService::class, 'delete'],
+        AppraisalCycle::class => [AppraisalService::class, 'deleteCycle'],
+        AppraisalCriterion::class => [AppraisalService::class, 'deleteCriterion'],
+        Asset::class => [AssetService::class, 'delete'],
+        TransportRoute::class => [TransportService::class, 'deleteRoute'],
+        Vehicle::class => [TransportService::class, 'deleteVehicle'],
+        Expense::class => [ExpenseService::class, 'delete'],
+        ExpenseCategory::class => [ExpenseService::class, 'deleteCategory'],
+        InventoryItem::class => [StockService::class, 'deleteItem'],
+        ItemCategory::class => [StockService::class, 'deleteCategory'],
+        PurchaseOrder::class => [ProcurementService::class, 'deleteOrder'],
+        AssetCategory::class => [AssetService::class, 'deleteCategory'],
+        Location::class => [AssetService::class, 'deleteLocation'],
         AnnouncementCategory::class => [AnnouncementService::class, 'deleteCategory'],
         Account::class => [AccountService::class, 'delete'],
         AdmissionApplication::class => [AdmissionService::class, 'deleteApplication'],
