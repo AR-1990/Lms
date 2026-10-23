@@ -6,6 +6,8 @@ use App\Models\AcademicSession;
 use App\Models\Account;
 use App\Models\AdmissionApplication;
 use App\Models\AdmissionInquiry;
+use App\Models\Announcement;
+use App\Models\AnnouncementCategory;
 use App\Models\ApprovalRequest;
 use App\Models\AssessmentSkill;
 use App\Models\Attachment;
@@ -30,18 +32,24 @@ use App\Models\Homework;
 use App\Models\JobApplication;
 use App\Models\JobOpening;
 use App\Models\JournalEntry;
+use App\Models\LeaveType;
 use App\Models\Lookup;
+use App\Models\MessageTemplate;
 use App\Models\PaymentMethod;
 use App\Models\PerformanceAlertRule;
 use App\Models\Period;
 use App\Models\PurchaseRequest;
 use App\Models\Role;
+use App\Models\SalaryComponent;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentConcession;
 use App\Models\StudentGoal;
 use App\Models\Subject;
+use App\Models\Task;
+use App\Models\TaskBoard;
+use App\Models\TaxSlab;
 use App\Models\TeacherAssignment;
 use App\Models\TimetableSlot;
 use App\Models\User;
@@ -49,6 +57,7 @@ use App\Models\Vendor;
 use App\Models\VoucherType;
 use App\Models\WebsiteFaq;
 use App\Models\WebsitePost;
+use App\Models\WebsiteSectionItem;
 use App\Models\WebsiteStat;
 use App\Models\WebsiteTestimonial;
 use Illuminate\Database\Eloquent\Builder;
@@ -76,6 +85,8 @@ class ApprovalService
      */
     private const DELETERS = [
         AcademicSession::class => [AcademicSessionService::class, 'delete'],
+        Announcement::class => [AnnouncementService::class, 'delete'],
+        AnnouncementCategory::class => [AnnouncementService::class, 'deleteCategory'],
         Account::class => [AccountService::class, 'delete'],
         AdmissionApplication::class => [AdmissionService::class, 'deleteApplication'],
         AdmissionInquiry::class => [AdmissionService::class, 'deleteInquiry'],
@@ -103,6 +114,7 @@ class ApprovalService
         JobOpening::class => [RecruitmentService::class, 'deleteOpening'],
         JournalEntry::class => [JournalService::class, 'deleteDraft'],
         Lookup::class => [LookupService::class, 'delete'],
+        MessageTemplate::class => [NotificationService::class, 'deleteTemplate'],
         PaymentMethod::class => [PaymentMethodService::class, 'delete'],
         PerformanceAlertRule::class => [ExamSetupService::class, 'delete'],
         Period::class => [PeriodService::class, 'delete'],
@@ -123,6 +135,12 @@ class ApprovalService
         WebsitePost::class => [WebsiteContentService::class, 'delete'],
         WebsiteStat::class => [WebsiteContentService::class, 'delete'],
         WebsiteTestimonial::class => [WebsiteContentService::class, 'delete'],
+        Task::class => [TaskService::class, 'delete'],
+        LeaveType::class => [LeaveService::class, 'deleteType'],
+        SalaryComponent::class => [PayrollService::class, 'deleteComponent'],
+        TaxSlab::class => [PayrollService::class, 'deleteTaxSlab'],
+        WebsiteSectionItem::class => [WebsitePageService::class, 'deleteItem'],
+        TaskBoard::class => [TaskService::class, 'deleteBoard'],
     ];
 
     public function __construct(private ActivityLogger $activityLogger) {}

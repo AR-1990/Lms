@@ -9,5 +9,11 @@
         'admin.hr.departments' => ['Departments', 'building', 'manage-hr'],
         'admin.hr.designations' => ['Designations', 'key', 'manage-hr'],
         'admin.hr.purchases' => ['Purchase Requests', 'inbox', 'manage-purchases'],
+        'admin.hr.leave' => ['Leave', 'calendar', 'manage-leave'],
+        'admin.hr.leave-types' => ['Leave Types', 'layers', 'manage-leave'],
+        'admin.hr.payroll' => ['Payroll', 'hash', 'manage-payroll'],
+        'admin.hr.salaries' => ['Salaries', 'trending-up', 'manage-payroll'],
+        'admin.hr.salary-setup' => ['Salary Setup', 'settings', 'manage-payroll'],
+        'admin.hr.loans' => ['Loans', 'key', 'manage-payroll'],
     ],
 ])

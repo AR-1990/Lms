@@ -8,6 +8,7 @@ use App\Models\Lookup;
 use App\Models\Permission;
 use App\Models\Region;
 use App\Models\Role;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\PortalAccessService;
 use Database\Seeders\DatabaseSeeder;
@@ -31,7 +32,6 @@ class PortalAccessTest extends TestCase
     public function test_parent_can_login_and_open_parent_portal_pages(): void
     {
         $response = $this->post('/login', [
-            'role' => 'parent',
             'username' => 'parent@lms.test',
             'password' => 'password',
         ]);
@@ -47,7 +47,6 @@ class PortalAccessTest extends TestCase
     public function test_admin_can_enter_parent_portal_flow(): void
     {
         $response = $this->post('/login', [
-            'role' => 'parent',
             'username' => 'admin@lms.test',
             'password' => 'password',
         ]);
@@ -62,7 +61,6 @@ class PortalAccessTest extends TestCase
     public function test_admin_always_lands_on_admin_dashboard_and_can_see_settings_option(): void
     {
         $response = $this->post('/login', [
-            'role' => 'student',
             'username' => 'admin@lms.test',
             'password' => 'password',
         ]);
@@ -138,7 +136,7 @@ class PortalAccessTest extends TestCase
 
         $response = $this->actingAs($teacher)->get('/dashboard');
 
-        $response->assertViewIs('dashboards.portal');
+        $response->assertViewIs('dashboards.teacher');
         $response->assertDontSee(route('admin.users'));
         $response->assertDontSee(route('admin.settings'));
     }
@@ -201,16 +199,39 @@ class PortalAccessTest extends TestCase
         $response->assertSeeInOrder(['dash-banner-success', 'System settings updated successfully.'], false);
     }
 
-    public function test_login_page_hides_demo_credentials_outside_local_environment(): void
-    {
-        $this->get('/login')->assertDontSee('Instant Demo Autofill');
-    }
-
-    public function test_login_page_shows_demo_credentials_in_local_environment(): void
+    public function test_login_page_has_one_form_without_demo_logins_or_portal_picker(): void
     {
         $this->app['env'] = 'local';
 
-        $this->get('/login')->assertSee('Instant Demo Autofill');
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee((string) SystemSetting::query()->value('school_name'))
+            ->assertDontSee('Demo')
+            ->assertDontSee('lms.test')
+            ->assertDontSee('name="role"', false)
+            ->assertDontSee('role-chip', false);
+    }
+
+    public function test_student_and_teacher_portal_pages_show_their_own_records(): void
+    {
+        $this->actingAs(User::where('email', 'student@lms.test')->first());
+        $this->get('/dashboard')->assertOk()->assertSee('John Doe')->assertSee('Grade 5');
+        $this->get('/student/courses')->assertOk();
+        $this->get('/student/attendance')->assertOk();
+        $this->get('/student/grades')->assertOk();
+
+        $this->actingAs(User::where('email', 'teacher@lms.test')->first());
+        $this->get('/dashboard')->assertOk()->assertSee('Sarah Jenkins');
+        $this->get('/teacher/classes')->assertOk()->assertSee('English');
+    }
+
+    public function test_teacher_signs_in_without_choosing_a_portal(): void
+    {
+        $this->post('/login', ['username' => 'teacher@lms.test', 'password' => 'password'])
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('portal', 'teacher');
+
+        $this->get('/dashboard')->assertOk();
     }
 
     public function test_custom_role_can_login_to_accounts_portal_through_permissions(): void
@@ -229,7 +250,6 @@ class PortalAccessTest extends TestCase
         ])->syncRoles(['finance-officer']);
 
         $response = $this->post('/login', [
-            'role' => 'accounts',
             'username' => 'finance@lms.test',
             'password' => 'password',
         ]);
@@ -237,9 +257,9 @@ class PortalAccessTest extends TestCase
         $response->assertRedirect(route('dashboard'));
 
         $this->get('/dashboard')->assertOk();
-        $this->get('/accounts/collections')->assertOk();
-        $this->get('/accounts/challans')->assertOk();
-        $this->get('/accounts/payroll')->assertOk();
+        $this->get('/accounts/collections')->assertRedirect('/accounts/fees/receipts');
+        $this->get('/accounts/fees/receipts')->assertOk();
+        $this->get('/accounts/fees/challans')->assertOk();
     }
 
     public function test_portal_keys_are_loaded_from_roles_table_dashboard_views(): void
@@ -261,7 +281,6 @@ class PortalAccessTest extends TestCase
         Country::query()->delete();
 
         $response = $this->post('/login', [
-            'role' => 'admin',
             'username' => 'admin@lms.test',
             'password' => 'password',
         ]);

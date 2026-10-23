@@ -28,7 +28,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Teacher',
                 'description' => 'Access to classes, attendance, and grading.',
-                'dashboard_view' => 'dashboards.portal',
+                'dashboard_view' => 'dashboards.teacher',
                 'is_system' => true,
             ],
         );
@@ -38,7 +38,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Student',
                 'description' => 'Access to academic and self-service features.',
-                'dashboard_view' => 'dashboards.portal',
+                'dashboard_view' => 'dashboards.student',
                 'is_system' => true,
             ],
         );
@@ -48,7 +48,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Parent',
                 'description' => 'Access to children, fees, and notices.',
-                'dashboard_view' => 'dashboards.portal',
+                'dashboard_view' => 'dashboards.parent',
                 'is_system' => true,
             ],
         );
@@ -58,15 +58,15 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'Accounts',
                 'description' => 'Access to collections, challans, and payroll.',
-                'dashboard_view' => 'dashboards.portal',
+                'dashboard_view' => 'dashboards.accounts',
                 'is_system' => true,
             ],
         );
 
         $adminRole->syncPermissions(Permission::query()->pluck('slug')->all());
-        $teacherRole->syncPermissions(['manage-classes', 'manage-diary', 'view-performance', 'record-attendance', 'submit-grades', 'view-courses', 'view-attendance']);
+        $teacherRole->syncPermissions(['use-tasks', 'use-chat', 'manage-classes', 'manage-diary', 'view-performance', 'record-attendance', 'submit-grades', 'view-courses', 'view-attendance']);
         $studentRole->syncPermissions(['view-courses', 'view-attendance', 'view-grades']);
         $parentRole->syncPermissions(['view-children', 'view-fees', 'view-attendance', 'view-grades', 'view-notices']);
-        $accountsRole->syncPermissions(['manage-fees', 'view-payroll', 'view-fees', 'manage-accounts', 'manage-vouchers', 'post-vouchers', 'view-ledger', 'manage-fee-setup']);
+        $accountsRole->syncPermissions(['use-tasks', 'use-chat', 'manage-payroll', 'manage-fees', 'view-payroll', 'view-fees', 'manage-accounts', 'manage-vouchers', 'post-vouchers', 'view-ledger', 'manage-fee-setup']);
     }
 }

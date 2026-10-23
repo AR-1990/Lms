@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Models\Role;
+use App\Models\WebsiteSectionItem;
 use App\Services\ActivityLogService;
 use App\Services\AdminService;
 use App\Services\LookupService;
@@ -57,6 +58,14 @@ class AdminPortalController extends PortalController
             'type' => $type,
             'news_categories' => $lookupService->options('news_category'),
         ]);
+    }
+
+    /**
+     * Website page editor (data: /api/erp/website/pages).
+     */
+    public function websitePages(): View
+    {
+        return $this->page('dashboards.admin.website-pages', 'admin', 'website', ['tones' => WebsiteSectionItem::TONES]);
     }
 
     public function approvals(): View

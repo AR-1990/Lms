@@ -31,11 +31,16 @@ class DatabaseSeeder extends Seeder
             FeeSeeder::class,
             StudentSeeder::class,
             WebsiteSeeder::class,
+            WebsitePageSeeder::class,
             CardSeeder::class,
             CalendarSeeder::class,
             TimetableSeeder::class,
             ExamSeeder::class,
             PerformanceSeeder::class,
+            CommunicationSeeder::class,
+            TaskSeeder::class,
+            ChatSeeder::class,
+            HrPayrollSeeder::class,
         ]);
     }
 }

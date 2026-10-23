@@ -65,6 +65,11 @@ class User extends Authenticatable
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    public function ownedTaskBoards(): HasMany
+    {
+        return $this->hasMany(TaskBoard::class, 'owner_id');
+    }
+
     public function devices(): HasMany
     {
         return $this->hasMany(UserDevice::class);

@@ -171,7 +171,8 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 These rules are decided by the project owner and override any generic guidance above. `PLAN.md` is the source of truth for modules and database fields; read it before adding or changing any table, and update it in the same change when the schema changes.
 
 ## 1. API-first
-- Every feature is built as an API first: route in `routes/api.php` or a `routes/erp-*.php` file (behind `auth:sanctum` + `permission:` middleware), then Controller → Service → Model.
+- Every feature is built as an API first: route in `routes/api.php` (inside the `erp` group, behind `auth:sanctum` + `permission:` middleware), then Controller → Service → Model.
+- Route files have fixed jobs: `routes/web.php` holds only Blade pages (plus the session login/logout form); `routes/api.php` holds every API route; `routes/export.php` holds every PDF, print sheet, report, export and file-download link. Never add an API or export route to `web.php`, and never create other route files.
 - Blade/admin screens reuse the same Service classes; business logic never lives in Blade views or web-only controllers.
 - One API serves every client: the web admin panel, the web portals, and the Android/iOS mobile apps. Build each feature once; never build a separate mobile-only or web-only version of the same logic.
 - Mobile apps authenticate with Sanctum personal access tokens (one per device, tracked in `user_devices`); web uses the Sanctum session. Output is shaped with Eloquent API Resources so all clients get identical fields.
@@ -229,4 +230,4 @@ These rules are decided by the project owner and override any generic guidance a
 - Never hard-code business data in controllers, services, views, or JavaScript (no arrays of news, events, quotes, options, stats, etc.). All data is read from the database through Services.
 - Master data the system needs (lookups, permissions, roles, reference lists) is created by seeders. Dummy / demo data for development is also created only by seeders (using factories), never typed into code or views.
 - Every new module ships with: migration(s), model + factory, a seeder for its master data, and a seeder for demo data when demo records are useful.
-- Follow the code structure described in these rules for every module: routes in `routes/erp-*.php` → Form Request → Controller (thin) → Service → Model, API Resource for output, standard envelope response, Yajra grid for lists, activity log on every action.
+- Follow the code structure described in these rules for every module: routes in `routes/api.php` (exports in `routes/export.php`) → Form Request → Controller (thin) → Service → Model, API Resource for output, standard envelope response, Yajra grid for lists, activity log on every action.

@@ -28,6 +28,7 @@ class ResultService
         private AttendanceService $attendanceService,
         private ActivityLogger $activityLogger,
         private PerformanceService $performanceService,
+        private NotificationService $notificationService,
     ) {}
 
     /**
@@ -105,6 +106,12 @@ class ResultService
 
         // New results change averages, ranks and risk levels in the performance tracker.
         $this->performanceService->compute(ExamTerm::findOrFail($exam->exam_term_id));
+
+        foreach (Student::whereIn('id', array_column($rows, 'student_id'))->get(['id', 'first_name', 'middle_name', 'last_name']) as $student) {
+            $this->notificationService->notifyEvent('result_published', $this->notificationService->familyUserIds([$student->id])->all(), [
+                'student_name' => $student->fullName(), 'exam_name' => $exam->name,
+            ], $exam);
+        }
 
         return $exam->refresh();
     }

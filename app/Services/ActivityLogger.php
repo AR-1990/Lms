@@ -19,6 +19,27 @@ class ActivityLogger
      */
     private const IGNORED_FIELDS = ['created_at', 'updated_at', 'deleted_at', 'remember_token', 'created_by', 'updated_by'];
 
+    private static bool $muted = false;
+
+    /**
+     * Run seeding work through the normal services without writing activity logs (demo data is not user activity).
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public static function quietly(callable $callback): mixed
+    {
+        self::$muted = true;
+
+        try {
+            return $callback();
+        } finally {
+            self::$muted = false;
+        }
+    }
+
     /**
      * Record a business action (approve, post, print, login…) with optional field changes.
      *
@@ -27,6 +48,10 @@ class ActivityLogger
      */
     public function record(string $module, string $action, string $description, ?Model $subject = null, array $changes = [], ?Model $actor = null): ActivityLog
     {
+        if (self::$muted) {
+            return new ActivityLog;
+        }
+
         $user = $actor ?? request()->user();
 
         $log = ActivityLog::create([

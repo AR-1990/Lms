@@ -54,7 +54,7 @@ class WebsiteContentTest extends TestCase
     {
         $grade5 = SchoolClass::where('name', 'Grade 5')->first();
 
-        $this->postJson('/inquiry', [
+        $this->postJson('/api/inquiry', [
             'parent_name' => 'Imran Khan',
             'child_name' => 'Daniyal Khan',
             'phone' => '03211234567',
@@ -69,7 +69,7 @@ class WebsiteContentTest extends TestCase
         $this->assertSame('Website', $inquiry->source?->name);
         $this->assertSame('[Campus Visit] We would like to visit on Saturday.', $inquiry->message);
 
-        $this->postJson('/inquiry', ['parent_name' => 'No Phone', 'message' => 'Hi'])->assertUnprocessable();
+        $this->postJson('/api/inquiry', ['parent_name' => 'No Phone', 'message' => 'Hi'])->assertUnprocessable();
     }
 
     public function test_admin_manages_website_content_and_others_cannot(): void

@@ -51,7 +51,7 @@ class AuthDeviceTest extends TestCase
 
     public function test_web_login_accepts_username_and_records_last_login(): void
     {
-        $this->post('/login', ['role' => 'teacher', 'username' => 'FAC-BIO-441', 'password' => 'password'])
+        $this->post('/login', ['username' => 'FAC-BIO-441', 'password' => 'password'])
             ->assertRedirect(route('dashboard'));
 
         $teacher = User::where('email', 'teacher@lms.test')->first();
@@ -64,7 +64,7 @@ class AuthDeviceTest extends TestCase
     {
         User::where('email', 'teacher@lms.test')->update(['is_active' => false]);
 
-        $this->post('/login', ['role' => 'teacher', 'username' => 'teacher@lms.test', 'password' => 'password'])
+        $this->post('/login', ['username' => 'teacher@lms.test', 'password' => 'password'])
             ->assertSessionHasErrors(['username' => 'This account has been disabled. Please contact the school office.']);
         $this->assertGuest();
 

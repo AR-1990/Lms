@@ -1,64 +1,35 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Courses')
-@section('page_heading', 'Enrolled Courses')
+@section('title', 'Subjects')
+@section('page_heading', 'My Subjects')
 
 @section('content')
 <section class="dash-page-intro">
-    <h1>Courses</h1>
-    <p>Your enrolled subjects for the current semester.</p>
-</section>
-
-<section class="dash-stats">
-    <article class="dash-stat">
-        <span class="dash-stat-label">Courses</span>
-        <strong class="dash-stat-value">{{ count($data['courses']) }}</strong>
-    </article>
-    <article class="dash-stat">
-        <span class="dash-stat-label">Credit Hours</span>
-        <strong class="dash-stat-value">{{ collect($data['courses'])->sum('credit_hours') }}</strong>
-    </article>
-    <article class="dash-stat">
-        <span class="dash-stat-label">Semester</span>
-        <strong class="dash-stat-value dash-stat-value-sm">Fall 2026</strong>
-    </article>
-    <article class="dash-stat">
-        <span class="dash-stat-label">Status</span>
-        <strong class="dash-stat-value dash-stat-value-sm">Active</strong>
-    </article>
+    <h1>My Subjects</h1>
+    <p>Subjects of your class this session and who teaches them.</p>
 </section>
 
 <section class="dash-panel">
-    <div class="dash-panel-head">
-        <h2>Course List</h2>
-    </div>
-    <div class="dash-table-wrap">
-        <table class="dash-table">
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Title</th>
-                    <th>Instructor</th>
-                    <th>Schedule</th>
-                    <th>Credits</th>
-                    <th>Progress</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($data['courses'] as $course)
-                    <tr>
-                        <td>{{ $course['code'] }}</td>
-                        <td>{{ $course['title'] }}</td>
-                        <td>{{ $course['instructor'] }}</td>
-                        <td>{{ $course['schedule'] }}</td>
-                        <td>{{ $course['credit_hours'] }}</td>
-                        <td>{{ $course['progress'] }}</td>
-                        <td><span class="dash-badge dash-badge-ok">{{ $course['status'] }}</span></td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+    @if ($data['courses'] === [])
+        <p class="dash-muted">No subjects found for your class.</p>
+    @else
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead>
+                    <tr><th>Subject</th><th>Code</th><th>Teacher</th><th>Periods / week</th></tr>
+                </thead>
+                <tbody>
+                    @foreach ($data['courses'] as $course)
+                        <tr>
+                            <td>{{ $course['title'] }} @if ($course['is_optional'])<span class="dash-badge">Optional</span>@endif</td>
+                            <td>{{ $course['code'] ?? '—' }}</td>
+                            <td>{{ $course['teacher'] ?? '—' }}</td>
+                            <td>{{ $course['periods_per_week'] ?? '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
 </section>
 @endsection

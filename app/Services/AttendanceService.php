@@ -26,6 +26,7 @@ class AttendanceService
     public function __construct(
         private CalendarService $calendarService,
         private TeacherAssignmentService $assignmentService,
+        private NotificationService $notificationService,
     ) {}
 
     /**
@@ -97,7 +98,9 @@ class AttendanceService
             }
         }
 
-        DB::transaction(function () use ($section, $date, $rows, $user, $enrollments): void {
+        $newlyAbsent = [];
+
+        DB::transaction(function () use ($section, $date, $rows, $user, $enrollments, &$newlyAbsent): void {
             foreach ($rows as $row) {
                 $attendance = StudentAttendance::where('enrollment_id', $row['enrollment_id'])->whereDate('date', $date)->first()
                     ?? new StudentAttendance(['enrollment_id' => $row['enrollment_id'], 'date' => $date]);
@@ -108,12 +111,27 @@ class AttendanceService
                     'remarks' => $row['remarks'] ?? null,
                 ]);
 
+                if ($attendance->isDirty('status') && $attendance->status === 'absent') {
+                    $newlyAbsent[] = $attendance->student_id;
+                }
+
                 if ($attendance->isDirty()) {
                     $attendance->marked_by = $user->id;
                     $attendance->save();
                 }
             }
         });
+
+        // Families of students newly marked absent get the "absent alert" message templates.
+        if ($newlyAbsent !== []) {
+            $classSection = $section->loadMissing('schoolClass:id,name')->schoolClass?->name.' '.$section->name;
+
+            foreach (Student::whereIn('id', $newlyAbsent)->get(['id', 'first_name', 'middle_name', 'last_name']) as $student) {
+                $this->notificationService->notifyEvent('absent_alert', $this->notificationService->familyUserIds([$student->id])->all(), [
+                    'student_name' => $student->fullName(), 'class_section' => $classSection, 'date' => Carbon::parse($date)->format('d M Y'),
+                ], $student);
+            }
+        }
 
         return collect($rows)->countBy('status')->all();
     }

@@ -34,6 +34,7 @@
     'label' => 'Website',
     'current' => 'admin.website.'.$type,
     'tabs' => [
+        'admin.website.pages' => ['Pages', 'layers', null],
         'admin.website.posts' => ['News & Notices', 'inbox', null],
         'admin.website.stats' => ['Stats', 'chart', null],
         'admin.website.testimonials' => ['Testimonials', 'heart', null],

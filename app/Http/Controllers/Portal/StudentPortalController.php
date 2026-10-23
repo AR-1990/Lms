@@ -13,9 +13,7 @@ class StudentPortalController extends PortalController
     {
         $user = $this->portalUser();
 
-        return $this->page('dashboards.student.courses', 'student', 'courses', [
-            'courses' => $this->studentService->getEnrolledCourses($user),
-        ]);
+        return $this->page('dashboards.student.courses', 'student', 'courses', $this->studentService->getEnrolledCourses($user));
     }
 
     public function attendance(): View

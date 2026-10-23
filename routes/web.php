@@ -1,15 +1,15 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ERP\AttachmentController;
 use App\Http\Controllers\Portal\AcademicsPortalController;
 use App\Http\Controllers\Portal\AccountingPortalController;
-use App\Http\Controllers\Portal\AccountsPortalController;
 use App\Http\Controllers\Portal\AdminPortalController;
 use App\Http\Controllers\Portal\AdminSettingsController;
 use App\Http\Controllers\Portal\AdminUserController;
 use App\Http\Controllers\Portal\AttendancePortalController;
 use App\Http\Controllers\Portal\CardsPortalController;
+use App\Http\Controllers\Portal\CollaborationPortalController;
+use App\Http\Controllers\Portal\CommunicationPortalController;
 use App\Http\Controllers\Portal\ExamsPortalController;
 use App\Http\Controllers\Portal\FeesPortalController;
 use App\Http\Controllers\Portal\HrPortalController;
@@ -24,6 +24,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Web Routes - Pinnacle International Academy
 |--------------------------------------------------------------------------
+| Blade pages only (plus the session sign-in form). The JSON API is in routes/api.php and every
+| PDF, print sheet, report, export and file link is in routes/export.php.
 */
 
 Route::get('/', [SchoolController::class, 'home'])->name('home');
@@ -38,17 +40,23 @@ Route::get('/login', [SchoolController::class, 'login'])->name('login');
 
 Route::post('/login', [SchoolController::class, 'handleLogin'])->name('login.submit');
 Route::get('/verify/{token}', [SchoolController::class, 'verifyCard'])->where('token', '[A-Za-z0-9]{20,64}')->middleware('throttle:30,1')->name('cards.verify');
-Route::post('/inquiry', [SchoolController::class, 'submitInquiry'])->middleware('throttle:10,1')->name('inquiry.submit');
-
-// Short-lived signed links to private files (web and mobile app); the signature is the permission.
-Route::get('/files/{attachment}', [AttachmentController::class, 'download'])
-    ->middleware(['signed', 'throttle:60,1'])
-    ->name('attachments.download');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [SchoolController::class, 'logout'])->name('logout');
     Route::get('/my-id-card', [CardsPortalController::class, 'mine'])->name('my-id-card');
+    Route::get('/notices', [CommunicationPortalController::class, 'notices'])->name('notices');
+    Route::get('/my-hr', [CollaborationPortalController::class, 'myHr'])->name('my-hr');
+    Route::get('/chat', [CollaborationPortalController::class, 'chat'])->middleware('permission:use-chat')->name('chat');
+    Route::get('/admin/chat-monitor', [CollaborationPortalController::class, 'chatMonitor'])->middleware('permission:monitor-chat')->name('admin.chat-monitor');
+    Route::prefix('tasks')->name('tasks.')->middleware('permission:use-tasks')->group(function () {
+        Route::get('/', [CollaborationPortalController::class, 'myTasks'])->name('index');
+        Route::get('/boards', [CollaborationPortalController::class, 'boards'])->name('boards');
+        Route::get('/boards/{board}', [CollaborationPortalController::class, 'board'])->name('board');
+    });
+    Route::get('/my-notes', [CommunicationPortalController::class, 'notes'])->defaults('view', 'active')->name('my-notes');
+    Route::get('/my-notes/done', [CommunicationPortalController::class, 'notes'])->defaults('view', 'done')->name('my-notes.done');
+    Route::get('/my-notes/archived', [CommunicationPortalController::class, 'notes'])->defaults('view', 'archived')->name('my-notes.archived');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('permission:manage-users')->group(function () {
@@ -61,6 +69,7 @@ Route::middleware('auth')->group(function () {
         });
         Route::get('/lookups', [AdminPortalController::class, 'lookups'])->middleware('permission:manage-lookups')->name('lookups');
         Route::prefix('website')->name('website.')->middleware('permission:manage-website')->group(function () {
+            Route::get('/pages', [AdminPortalController::class, 'websitePages'])->name('pages');
             foreach (['posts', 'stats', 'testimonials', 'faqs'] as $websiteType) {
                 Route::get('/'.$websiteType, [AdminPortalController::class, 'website'])->defaults('type', $websiteType)->name($websiteType);
             }
@@ -69,6 +78,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [CardsPortalController::class, 'cards'])->name('index');
             Route::get('/templates', [CardsPortalController::class, 'templates'])->name('templates');
             Route::get('/templates/{card_template}/design', [CardsPortalController::class, 'design'])->name('design');
+        });
+        Route::prefix('announcements')->name('announcements.')->middleware('permission:manage-announcements')->group(function () {
+            Route::get('/', [CommunicationPortalController::class, 'announcements'])->name('index');
+            Route::get('/categories', [CommunicationPortalController::class, 'settings'])->defaults('type', 'categories')->name('categories');
+            Route::get('/templates', [CommunicationPortalController::class, 'settings'])->defaults('type', 'templates')->name('templates');
+            Route::get('/delivery-log', [CommunicationPortalController::class, 'deliveryLog'])->name('delivery-log');
         });
         Route::get('/approvals', [AdminPortalController::class, 'approvals'])->middleware('permission:approve-requests')->name('approvals');
         Route::get('/activity-log', [AdminPortalController::class, 'activityLog'])->middleware('permission:view-activity-log')->name('activity-log');
@@ -94,6 +109,17 @@ Route::middleware('auth')->group(function () {
                 Route::get('/openings', [HrPortalController::class, 'openings'])->name('openings');
             });
             Route::get('/purchases', [HrPortalController::class, 'purchases'])->middleware('permission:manage-purchases')->name('purchases');
+            Route::middleware('permission:manage-leave')->group(function () {
+                Route::get('/leave', [HrPortalController::class, 'leave'])->name('leave');
+                Route::get('/leave-types', [HrPortalController::class, 'leaveTypes'])->name('leave-types');
+            });
+            Route::middleware('permission:manage-payroll')->group(function () {
+                Route::get('/payroll', [HrPortalController::class, 'payroll'])->name('payroll');
+                Route::get('/payroll/{payroll_run}', [HrPortalController::class, 'payrollRun'])->name('payroll.run');
+                Route::get('/salaries', [HrPortalController::class, 'salaries'])->name('salaries');
+                Route::get('/salary-setup', [HrPortalController::class, 'salarySetup'])->name('salary-setup');
+                Route::get('/loans', [HrPortalController::class, 'loans'])->name('loans');
+            });
         });
         Route::prefix('attendance')->name('attendance.')->group(function () {
             Route::middleware('permission:record-attendance')->group(function () {
@@ -140,8 +166,6 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('teacher')->name('teacher.')->group(function () {
         Route::get('/classes', [TeacherPortalController::class, 'classes'])->middleware('permission:manage-classes')->name('classes');
-        Route::get('/attendance', [TeacherPortalController::class, 'attendance'])->middleware('permission:record-attendance')->name('attendance');
-        Route::get('/grades', [TeacherPortalController::class, 'grades'])->middleware('permission:submit-grades')->name('grades');
     });
 
     Route::prefix('student')->name('student.')->group(function () {
@@ -153,13 +177,14 @@ Route::middleware('auth')->group(function () {
     Route::prefix('parent')->name('parent.')->group(function () {
         Route::get('/children', [ParentPortalController::class, 'children'])->middleware('permission:view-children')->name('children');
         Route::get('/fees', [ParentPortalController::class, 'fees'])->middleware('permission:view-fees')->name('fees');
-        Route::get('/notices', [ParentPortalController::class, 'notices'])->middleware('permission:view-notices')->name('notices');
+        Route::get('/notices', [CommunicationPortalController::class, 'notices'])->middleware('permission:view-notices')->name('notices');
     });
 
     Route::prefix('accounts')->name('accounts.')->group(function () {
-        Route::get('/collections', [AccountsPortalController::class, 'collections'])->middleware('permission:manage-fees')->name('collections');
-        Route::get('/challans', [AccountsPortalController::class, 'challans'])->middleware('permission:view-fees')->name('challans');
-        Route::get('/payroll', [AccountsPortalController::class, 'payroll'])->middleware('permission:view-payroll')->name('payroll');
+        // Old links open the real Fees and Payroll screens.
+        Route::redirect('/collections', '/accounts/fees/receipts')->name('collections');
+        Route::redirect('/challans', '/accounts/fees/challans')->name('challans');
+        Route::redirect('/payroll', '/admin/hr/payroll')->name('payroll');
 
         Route::prefix('fees')->name('fees.')->group(function () {
             Route::middleware('permission:manage-fees')->group(function () {

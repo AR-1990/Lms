@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#1d2b45">
     <meta name="robots" content="noindex, nofollow">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth<meta name="user-id" content="{{ auth()->id() }}">@endauth
     <title>@yield('title', 'Portal Dashboard') | Pinnacle Academy</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231d2b45'><path d='M12 3L1 9l11 6 9-4.91V17h2V9L12 3z'/></svg>">
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -76,6 +77,21 @@
                         @include('partials.dashboard-icon', ['name' => 'calendar'])
                         {{ now()->format('l, d M Y') }}
                     </span>
+                    <div class="dash-bell" data-bell data-summary-url="{{ url('/api/erp/notifications/summary') }}" data-read-url="{{ url('/api/erp/notifications') }}" data-all-url="{{ route('notices') }}">
+                        <button type="button" class="dash-icon-btn dash-bell-btn" data-bell-toggle aria-expanded="false" aria-controls="dashBellPanel" aria-label="Notifications">
+                            @include('partials.dashboard-icon', ['name' => 'bell'])
+                            <span class="dash-bell-count" data-bell-count hidden>0</span>
+                        </button>
+                        <div class="dash-bell-panel" id="dashBellPanel" data-bell-panel hidden>
+                            <div class="dash-bell-head">
+                                <strong>Notifications</strong>
+                                <button type="button" class="dash-link-btn" data-bell-sound aria-pressed="true">🔔 Sound on</button>
+                                <button type="button" class="dash-link-btn" data-bell-read-all>Mark all read</button>
+                            </div>
+                            <ul class="dash-bell-list" data-bell-list><li class="dash-muted">Loading…</li></ul>
+                            <a class="dash-bell-foot" href="{{ route('notices') }}">All notices</a>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -124,6 +140,8 @@
     </dialog>
 
     <div id="toastContainer" class="dash-toast-stack" aria-live="polite"></div>
+    @include('partials.realtime')
+    <script src="{{ asset('js/notification-bell.js') }}?v={{ filemtime(public_path('js/notification-bell.js')) }}" defer></script>
     @yield('extra_js')
 </body>
 </html>

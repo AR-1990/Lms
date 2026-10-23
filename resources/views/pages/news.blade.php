@@ -1,43 +1,28 @@
 @extends('layouts.school')
 
-@section('title', 'News, Events & Happenings | Pinnacle International Academy')
-@section('meta_description', 'Latest news, sports galas, robotics championships, academic achievements, and community events at Pinnacle International Academy.')
+@section('title', $page->meta_title ?: $page->name)
+@section('meta_description', (string) $page->meta_description)
 
 @section('content')
 
-<!-- News & Events Hero Banner -->
-<section class="page-hero-banner" style="background-image: linear-gradient(135deg, rgba(28,25,23,0.92) 0%, rgba(28,25,23,0.75) 100%), url('{{ asset('images/sports-gala.jpg') }}');">
-    <div class="container">
-        <div class="hero-banner-content">
-            <div class="slide-pill">
-                <span class="slide-pill-dot"></span>
-                <span>Campus Pulse &bull; News & Events</span>
-            </div>
-            <h1 class="hero-banner-title">
-                Happenings, Triumphs & <span class="text-amber-gradient">Campus Life</span>
-            </h1>
-            <p class="hero-banner-desc">
-                Stay connected with the latest academic milestones, robotics tournament victories, sports galas, and announcements from Pinnacle International Academy.
-            </p>
-        </div>
-    </div>
-</section>
+@include('partials.page-hero', ['page' => $page])
 
-<!-- News & Events Section with Filters -->
+<!-- News & Events with category filters -->
 <section class="section section-white">
     <div class="container">
-        <!-- Category Filter Tabs -->
-        <div class="tabs-nav" data-tabs data-reveal="fade-up">
-            <button class="tab-btn active" data-tab-target="all-news">All News & Events</button>
-            <button class="tab-btn" data-tab-target="achievements">STEM & Achievements</button>
-            <button class="tab-btn" data-tab-target="sports">Sports Gala</button>
-            <button class="tab-btn" data-tab-target="academics">Academic Milestones</button>
-            <button class="tab-btn" data-tab-target="campus">Campus & Admissions</button>
-        </div>
+        @php($categories = collect($articles)->pluck('category')->filter()->unique()->values())
+        @if ($categories->count() > 1)
+            <div class="tabs-nav" data-news-filters data-reveal="fade-up">
+                <button type="button" class="tab-btn active" data-news-filter="">All News & Events</button>
+                @foreach ($categories as $category)
+                    <button type="button" class="tab-btn" data-news-filter="{{ $category }}">{{ $category }}</button>
+                @endforeach
+            </div>
+        @endif
 
         <!-- Featured Article Highlight -->
         @if(count($articles) > 0)
-            @php $featured = $articles[0]; @endphp
+            @php($featured = $articles[0])
             <div class="glow-card" data-reveal="fade-up" style="margin-bottom: 3.5rem; overflow: hidden;">
                 <div class="grid-2" style="gap: 0; align-items: stretch;">
                     <div style="min-height: 320px; position: relative;">
@@ -71,7 +56,7 @@
         <!-- News Grid -->
         <div class="grid-3">
             @foreach($articles as $article)
-                <div class="facility-card" data-reveal="fade-up">
+                <div class="facility-card" data-reveal="fade-up" data-news-category="{{ $article['category'] }}">
                     <div class="facility-img-wrapper">
                         <span class="badge badge-amber facility-badge">{{ $article['category'] }}</span>
                         <img src="{{ $article['image'] }}" alt="{{ $article['title'] }}" class="facility-img" loading="lazy">
@@ -99,11 +84,9 @@
 <!-- Upcoming Academic Calendar & Highlights -->
 <section class="section section-light-alt">
     <div class="container">
-        <div class="section-header" data-reveal="fade-up">
-            <span class="section-subtitle">Official Schedule</span>
-            <h2 class="section-title">Upcoming Term Calendar</h2>
-            <p class="section-desc">Key milestones, exams, sports fixtures, and community parent meetings.</p>
-        </div>
+        @if ($calendarSection = $page->section('calendar'))
+            @include('partials.section-header', ['section' => $calendarSection])
+        @endif
 
         <div class="grid-3">
             @forelse ($calendar as $event)

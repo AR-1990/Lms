@@ -51,6 +51,12 @@ class PermissionSeeder extends Seeder
             ['name' => 'Manage Staff Attendance', 'slug' => 'manage-staff-attendance', 'group' => 'hr', 'description' => 'Mark daily staff attendance.'],
             ['name' => 'Manage ID Cards', 'slug' => 'manage-cards', 'group' => 'students', 'description' => 'Card templates, issuing and printing student and employee ID cards.'],
             ['name' => 'Manage Website', 'slug' => 'manage-website', 'group' => 'administration', 'description' => 'Public website stats, testimonials, news & notices and FAQs.'],
+            ['name' => 'Manage Announcements', 'slug' => 'manage-announcements', 'group' => 'communication', 'description' => 'Write, schedule and publish announcements; manage their categories, message templates and the delivery log.'],
+            ['name' => 'Manage Leave', 'slug' => 'manage-leave', 'group' => 'hr', 'description' => 'Leave types, approving staff leave and adjusting balances.'],
+            ['name' => 'Manage Payroll', 'slug' => 'manage-payroll', 'group' => 'hr', 'description' => 'Salary components and structures, payroll runs, payslips, loans and posting salaries to the ledger.'],
+            ['name' => 'Use Tasks', 'slug' => 'use-tasks', 'group' => 'communication', 'description' => 'Task boards, My Tasks, assigning and commenting on tasks.'],
+            ['name' => 'Use Staff Chat', 'slug' => 'use-chat', 'group' => 'communication', 'description' => 'One-to-one and group chat between employees.'],
+            ['name' => 'Monitor Staff Chat', 'slug' => 'monitor-chat', 'group' => 'communication', 'description' => 'Read every staff chat without being seen, get told about new groups, and add or remove group members.'],
             ['name' => 'Manage Fee Setup', 'slug' => 'manage-fee-setup', 'group' => 'accounts', 'description' => 'Fee heads, class fee structures, concession types and student concessions.'],
         ], ['slug'], ['name', 'group', 'description']);
     }

@@ -1,110 +1,67 @@
 @extends('layouts.school')
 
-@section('title', 'Admissions & Fee Guide | Pinnacle International Academy')
-@section('meta_description', 'Apply online for admissions at Pinnacle International Academy. Explore our admission roadmap, transparent fee estimator, and criteria.')
+@section('title', $page->meta_title ?: $page->name)
+@section('meta_description', (string) $page->meta_description)
 
 @section('content')
 
-<!-- Admissions Hero Banner -->
-<section class="page-hero-banner" style="background-image: linear-gradient(135deg, rgba(28,25,23,0.92) 0%, rgba(28,25,23,0.78) 100%), url('{{ asset('images/admissions-meeting.jpg') }}');">
-    <div class="container">
-        <div class="hero-banner-content">
-            <div class="slide-pill">
-                <span class="slide-pill-dot"></span>
-                <span>Session 2026-27 &bull; Applications Open</span>
-            </div>
-            <h1 class="hero-banner-title">
-                Begin Your Child's Journey of <span class="text-amber-gradient">Excellence</span>
-            </h1>
-            <p class="hero-banner-desc">
-                We welcome curious, ambitious students into our vibrant academic family. Explore our simple 4-step roadmap, transparent fee guide, and submit your registration online.
-            </p>
-        </div>
-    </div>
-</section>
+@include('partials.page-hero', ['page' => $page])
 
-<!-- 4-Step Admission Roadmap -->
+@if ($section = $page->section('steps'))
+<!-- Admission Roadmap -->
 <section class="section section-white">
     <div class="container">
-        <div class="section-header" data-reveal="fade-up">
-            <span class="section-subtitle">Streamlined Process</span>
-            <h2 class="section-title">4 Simple Steps to Enrollment</h2>
-            <p class="section-desc">Our admissions team provides comprehensive guidance throughout the application lifecycle.</p>
-        </div>
+        @include('partials.section-header', ['section' => $section])
 
         <div class="grid-4">
-            <!-- Step 1 -->
-            <div class="glow-card" data-reveal="fade-up" style="padding: 2.25rem 1.75rem;">
-                <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary); font-family: var(--font-heading); margin-bottom: 0.5rem; line-height: 1;">
-                    01
+            @foreach ($section->items as $step)
+                <div class="glow-card" data-reveal="fade-up" style="padding: 2.25rem 1.75rem; transition-delay: {{ $loop->index * 0.1 }}s;">
+                    <div style="font-size: 2.5rem; font-weight: 900; color: {{ ['amber' => 'var(--amber)', 'emerald' => 'var(--emerald)'][$step->tone] ?? 'var(--primary)' }}; font-family: var(--font-heading); margin-bottom: 0.5rem; line-height: 1;">
+                        {{ $step->value ?: str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}
+                    </div>
+                    <h4 style="font-size: 1.15rem; margin-bottom: 0.5rem;">{{ $step->title }}</h4>
+                    <p style="font-size: 0.875rem; color: #64748b; line-height: 1.6;">{{ $step->body }}</p>
                 </div>
-                <h4 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Online Registration</h4>
-                <p style="font-size: 0.875rem; color: #64748b; line-height: 1.6;">Submit the simple admission inquiry form online or visit our campus front desk for a prospectus.</p>
-            </div>
-
-            <!-- Step 2 -->
-            <div class="glow-card" data-reveal="fade-up" style="padding: 2.25rem 1.75rem; transition-delay: 0.1s;">
-                <div style="font-size: 2.5rem; font-weight: 900; color: var(--amber); font-family: var(--font-heading); margin-bottom: 0.5rem; line-height: 1;">
-                    02
-                </div>
-                <h4 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Aptitude Assessment</h4>
-                <p style="font-size: 0.875rem; color: #64748b; line-height: 1.6;">Age-appropriate diagnostic assessment in English and Math to understand your child's baseline strengths.</p>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="glow-card" data-reveal="fade-up" style="padding: 2.25rem 1.75rem; transition-delay: 0.2s;">
-                <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary); font-family: var(--font-heading); margin-bottom: 0.5rem; line-height: 1;">
-                    03
-                </div>
-                <h4 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Parent Interaction</h4>
-                <p style="font-size: 0.875rem; color: #64748b; line-height: 1.6;">A warm 20-minute conversation with our academic principal to align on goals and expectations.</p>
-            </div>
-
-            <!-- Step 4 -->
-            <div class="glow-card" data-reveal="fade-up" style="padding: 2.25rem 1.75rem; transition-delay: 0.3s;">
-                <div style="font-size: 2.5rem; font-weight: 900; color: var(--emerald); font-family: var(--font-heading); margin-bottom: 0.5rem; line-height: 1;">
-                    04
-                </div>
-                <h4 style="font-size: 1.15rem; margin-bottom: 0.5rem;">Offer & Welcome</h4>
-                <p style="font-size: 0.875rem; color: #64748b; line-height: 1.6;">Issuance of official admission offer, fee settlement, uniform orientation, and LMS credential onboarding.</p>
-            </div>
+            @endforeach
         </div>
     </div>
 </section>
+@endif
 
-<!-- Counselor Consultation Feature + Online Admission Form -->
+<!-- Counselor Consultation + Online Admission Form -->
 <section class="section section-light-alt">
     <div class="container">
         <div class="grid-2" style="align-items: flex-start; gap: 3.5rem;">
-            <!-- Counselor Consultation Info -->
-            <div data-reveal="fade-right">
-                <div style="border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-xl); margin-bottom: 2rem;">
-                    <img src="{{ asset('images/admissions-meeting.jpg') }}" alt="Admissions Counselor" style="width: 100%; height: auto;">
-                </div>
+            @if ($counselor = $page->section('counselor'))
+                <div data-reveal="fade-right">
+                    @if ($counselor->image_path)
+                        <div style="border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-xl); margin-bottom: 2rem;">
+                            <img src="{{ $counselor->imageUrl() }}" alt="{{ $counselor->title }}" style="width: 100%; height: auto;">
+                        </div>
+                    @endif
 
-                <span class="section-subtitle">Dedicated Guidance</span>
-                <h3 style="font-size: 1.75rem; margin-bottom: 1rem;">Meet Our Admission Counselors</h3>
-                <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 1.5rem;">
-                    Unsure which academic stream (Cambridge O-Levels or Federal Board) is right for your child? Our counselors provide personalized assessments, curriculum comparisons, and campus tour bookings.
-                </p>
+                    <span class="section-subtitle">{{ $counselor->subtitle }}</span>
+                    <h3 style="font-size: 1.75rem; margin-bottom: 1rem;">{{ $counselor->title }}</h3>
+                    <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 1.5rem;">{{ $counselor->description }}</p>
 
-                <div style="background: #ffffff; border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border-color); display: flex; gap: 1.25rem; align-items: center;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <div style="background: #ffffff; border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border-color); display: flex; gap: 1.25rem; align-items: center;">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            @include('partials.site-icon', ['name' => 'phone', 'size' => 24])
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 1.05rem;">{{ $counselor->image_caption ?: 'Admissions Direct Line' }}</div>
+                            <div style="font-size: 0.9rem; color: var(--primary); font-weight: 700;">{{ collect([$settings->admissions_phone, $settings->school_phone])->filter()->unique()->implode(' / ') }}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-weight: 800; font-size: 1.05rem;">Admissions Direct Line</div>
-                        <div style="font-size: 0.9rem; color: var(--primary); font-weight: 700;">+92 300 1234567 / (051) 8899770</div>
-                    </div>
                 </div>
-            </div>
+            @endif
 
-            <!-- Online Application Form -->
+            @php($form = $page->section('form'))
             <div data-reveal="fade-left">
                 <div class="card" style="padding: 2.75rem; border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); background: #ffffff;">
-                    <span class="badge badge-amber" style="margin-bottom: 0.75rem;">Fast Online Enrollment</span>
-                    <h3 style="margin-bottom: 0.5rem; font-size: 1.45rem;">Submit Online Application</h3>
-                    <p style="font-size: 0.925rem; margin-bottom: 1.5rem;">Fill out the student details to reserve an assessment interview slot.</p>
+                    @if ($form?->badge)<span class="badge badge-amber" style="margin-bottom: 0.75rem;">{{ $form->badge }}</span>@endif
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1.45rem;">{{ $form?->title ?? 'Submit Online Application' }}</h3>
+                    <p style="font-size: 0.925rem; margin-bottom: 1.5rem;">{{ $form?->description }}</p>
 
                     <form data-ajax-inquiry action="{{ route('inquiry.submit') }}" method="POST">
                         @csrf

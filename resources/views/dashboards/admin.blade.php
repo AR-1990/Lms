@@ -86,6 +86,8 @@
     </div>
 </section>
 
+@include('partials.sticky-notes', ['limit' => 8])
+
 <section class="dash-stats" aria-label="Key metrics">
     @foreach ($kpis as $kpi)
         <article class="dash-kpi dash-tone-{{ $kpi['tone'] }}">

@@ -51,6 +51,54 @@
                         </div>
 
                         <div class="settings-field">
+                            <label for="school_tagline">Tagline</label>
+                            <input id="school_tagline" name="school_tagline" type="text" @class(['settings-input', 'is-invalid' => $errors->has('school_tagline')]) value="{{ old('school_tagline', $settings['school_tagline']) }}">
+                            @error('school_tagline') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="admissions_phone">Admissions phone</label>
+                            <input id="admissions_phone" name="admissions_phone" type="text" @class(['settings-input', 'is-invalid' => $errors->has('admissions_phone')]) value="{{ old('admissions_phone', $settings['admissions_phone']) }}">
+                            @error('admissions_phone') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="whatsapp_number">WhatsApp number</label>
+                            <input id="whatsapp_number" name="whatsapp_number" type="text" @class(['settings-input', 'is-invalid' => $errors->has('whatsapp_number')]) value="{{ old('whatsapp_number', $settings['whatsapp_number']) }}">
+                            @error('whatsapp_number') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="contact_email">Contact email</label>
+                            <input id="contact_email" name="contact_email" type="email" @class(['settings-input', 'is-invalid' => $errors->has('contact_email')]) value="{{ old('contact_email', $settings['contact_email']) }}">
+                            @error('contact_email') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="admissions_email">Admissions email</label>
+                            <input id="admissions_email" name="admissions_email" type="email" @class(['settings-input', 'is-invalid' => $errors->has('admissions_email')]) value="{{ old('admissions_email', $settings['admissions_email']) }}">
+                            @error('admissions_email') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="office_hours">Office hours</label>
+                            <input id="office_hours" name="office_hours" type="text" @class(['settings-input', 'is-invalid' => $errors->has('office_hours')]) value="{{ old('office_hours', $settings['office_hours']) }}">
+                            @error('office_hours') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="visiting_hours">Visiting hours</label>
+                            <input id="visiting_hours" name="visiting_hours" type="text" @class(['settings-input', 'is-invalid' => $errors->has('visiting_hours')]) value="{{ old('visiting_hours', $settings['visiting_hours']) }}">
+                            @error('visiting_hours') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field settings-field-wide">
+                            <label for="footer_text">Footer text</label>
+                            <textarea id="footer_text" name="footer_text" @class(['settings-input', 'settings-textarea', 'is-invalid' => $errors->has('footer_text')])>{{ old('footer_text', $settings['footer_text']) }}</textarea>
+                            @error('footer_text') <p class="settings-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="settings-field">
                             <label for="logo">School Logo</label>
                             <input id="logo" name="logo" type="file" @class(['settings-input', 'settings-file', 'is-invalid' => $errors->has('logo')]) accept="image/*">
                             @error('logo') <p class="settings-error">{{ $message }}</p> @enderror

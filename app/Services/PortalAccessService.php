@@ -32,7 +32,11 @@ class PortalAccessService
             ['key' => 'campuses', 'label' => 'Campuses', 'route' => 'admin.campuses', 'icon' => 'building', 'tone' => 'emerald'],
             ['key' => 'numbering', 'label' => 'Numbering', 'route' => 'admin.numbering', 'icon' => 'hash', 'tone' => 'blue'],
             ['key' => 'id_cards', 'label' => 'ID Cards', 'route' => 'admin.cards.index', 'icon' => 'key', 'tone' => 'amber'],
-            ['key' => 'website', 'label' => 'Website', 'route' => 'admin.website.posts', 'icon' => 'globe', 'tone' => 'sky'],
+            ['key' => 'tasks', 'label' => 'Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'tone' => 'blue'],
+            ['key' => 'chat', 'label' => 'Chat', 'route' => 'chat', 'icon' => 'chat', 'tone' => 'emerald'],
+            ['key' => 'chat_monitor', 'label' => 'Chat Monitor', 'route' => 'admin.chat-monitor', 'icon' => 'shield', 'tone' => 'violet'],
+            ['key' => 'announcements', 'label' => 'Announcements', 'route' => 'admin.announcements.index', 'icon' => 'megaphone', 'tone' => 'rose'],
+            ['key' => 'website', 'label' => 'Website', 'route' => 'admin.website.pages', 'icon' => 'globe', 'tone' => 'sky'],
             ['key' => 'approvals', 'label' => 'Approvals', 'route' => 'admin.approvals', 'icon' => 'shield', 'tone' => 'violet'],
             ['key' => 'activity_log', 'label' => 'Activity Log', 'route' => 'admin.activity-log', 'icon' => 'activity', 'tone' => 'sky'],
             ['key' => 'reports', 'label' => 'Reports', 'route' => 'admin.reports', 'icon' => 'chart', 'tone' => 'emerald'],
@@ -40,7 +44,12 @@ class PortalAccessService
         ],
         'teacher' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'my_hr', 'label' => 'My HR', 'route' => 'my-hr', 'icon' => 'calendar', 'tone' => 'violet'],
+            ['key' => 'tasks', 'label' => 'Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'tone' => 'blue'],
+            ['key' => 'chat', 'label' => 'Chat', 'route' => 'chat', 'icon' => 'chat', 'tone' => 'emerald'],
+            ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
+            ['key' => 'classes', 'label' => 'My Classes', 'route' => 'teacher.classes', 'icon' => 'layers', 'tone' => 'sky'],
             ['key' => 'attendance', 'label' => 'Attendance', 'route' => 'admin.attendance.register', 'icon' => 'check', 'tone' => 'emerald'],
             ['key' => 'diary', 'label' => 'Diary', 'route' => 'admin.diary', 'icon' => 'book', 'tone' => 'violet'],
             ['key' => 'homework', 'label' => 'Homework', 'route' => 'admin.homework', 'icon' => 'pen', 'tone' => 'amber'],
@@ -49,14 +58,25 @@ class PortalAccessService
         ],
         'student' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'courses', 'label' => 'Subjects', 'route' => 'student.courses', 'icon' => 'book', 'tone' => 'violet'],
+            ['key' => 'attendance', 'label' => 'Attendance', 'route' => 'student.attendance', 'icon' => 'check', 'tone' => 'emerald'],
+            ['key' => 'grades', 'label' => 'Results', 'route' => 'student.grades', 'icon' => 'chart', 'tone' => 'rose'],
+            ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
         ],
         'parent' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'children', 'label' => 'My Children', 'route' => 'parent.children', 'icon' => 'users', 'tone' => 'violet'],
+            ['key' => 'fees', 'label' => 'Fees', 'route' => 'parent.fees', 'icon' => 'hash', 'tone' => 'amber'],
+            ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
         ],
         'accounts' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'my_hr', 'label' => 'My HR', 'route' => 'my-hr', 'icon' => 'calendar', 'tone' => 'violet'],
+            ['key' => 'tasks', 'label' => 'Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'tone' => 'blue'],
+            ['key' => 'chat', 'label' => 'Chat', 'route' => 'chat', 'icon' => 'chat', 'tone' => 'emerald'],
+            ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
             ['key' => 'fees', 'label' => 'Fees', 'route' => 'accounts.fees.challans', 'icon' => 'hash', 'tone' => 'amber'],
             ['key' => 'accounting', 'label' => 'Accounts', 'route' => 'accounts.chart', 'icon' => 'book', 'tone' => 'emerald'],
@@ -196,7 +216,10 @@ class PortalAccessService
             ->all();
     }
 
-    private function resolveSelectedPortal(User $user, ?string $preferredPortal = null): ?string
+    /**
+     * The portal an account opens: admin first, otherwise the first portal its roles allow.
+     */
+    public function resolveSelectedPortal(User $user, ?string $preferredPortal = null): ?string
     {
         $resolvedPreferredPortal = $user->hasRole('admin') ? 'admin' : $preferredPortal;
         $portalCandidates = $this->getPortalCandidates($user);
@@ -321,10 +344,13 @@ class PortalAccessService
             ],
         ];
 
-        if ($portal === 'admin') {
-            return [...$dashboardData, ...$this->adminService->getDashboardSummary()];
-        }
-
-        return $dashboardData;
+        return [...$dashboardData, ...match ($portal) {
+            'admin' => $this->adminService->getDashboardSummary(),
+            'teacher' => app(TeacherService::class)->getTeacherDashboard($user),
+            'student' => app(StudentService::class)->getStudentDashboard($user),
+            'parent' => app(ParentService::class)->getParentDashboard($user),
+            'accounts' => app(AccountsService::class)->getAccountsDashboard($user),
+            default => [],
+        }];
     }
 }

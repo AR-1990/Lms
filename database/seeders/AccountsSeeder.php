@@ -51,6 +51,8 @@ class AccountsSeeder extends Seeder
         ['2200', 'Salaries Payable', 'Liability', '2000', 's'],
         ['2300', 'Student Advances', 'Liability', '2000', 's'],
         ['2400', 'Tax Payable', 'Liability', '2000', 's'],
+        ['2410', 'EOBI Payable', 'Liability', '2000', 's'],
+        ['2420', 'Provident Fund Payable', 'Liability', '2000', 's'],
         ['2500', 'Security Deposits', 'Liability', '2000', ''],
         ['3000', 'Equity', 'Equity', null, 'gs'],
         ['3100', 'Owner\'s Capital', 'Equity', '3000', ''],

@@ -12,8 +12,16 @@ class SystemSetting extends Model
 
     protected $fillable = [
         'school_name',
+        'school_tagline',
         'school_address',
         'school_phone',
+        'admissions_phone',
+        'whatsapp_number',
+        'contact_email',
+        'admissions_email',
+        'office_hours',
+        'visiting_hours',
+        'footer_text',
         'country_id',
         'region_id',
         'currency_id',

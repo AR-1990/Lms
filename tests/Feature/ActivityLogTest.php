@@ -121,8 +121,8 @@ class ActivityLogTest extends TestCase
 
     public function test_web_sign_in_sign_out_and_failed_attempts_are_logged(): void
     {
-        $this->post('/login', ['role' => 'admin', 'username' => 'admin@lms.test', 'password' => 'wrong-pass']);
-        $this->post('/login', ['role' => 'admin', 'username' => 'admin@lms.test', 'password' => 'password']);
+        $this->post('/login', ['username' => 'admin@lms.test', 'password' => 'wrong-pass']);
+        $this->post('/login', ['username' => 'admin@lms.test', 'password' => 'password']);
         $this->post('/logout');
 
         $actions = ActivityLog::where('module', 'auth')->orderBy('id')->pluck('action')->all();
@@ -149,7 +149,7 @@ class ActivityLogTest extends TestCase
 
     public function test_activity_log_api_filters_and_shows_changes(): void
     {
-        $this->post('/login', ['role' => 'admin', 'username' => 'nobody@lms.test', 'password' => 'wrong-pass']);
+        $this->post('/login', ['username' => 'nobody@lms.test', 'password' => 'wrong-pass']);
         $this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/lookups', ['type' => 'religion', 'name' => 'Bahai'])->assertCreated();
         $created = ActivityLog::where('action', 'created')->sole();
 

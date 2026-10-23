@@ -19,43 +19,16 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            $registerErpPublicRoutes = static function (string $prefix, string $name, string $file): void {
-                Route::middleware(['api', ForceJsonResponse::class])
-                    ->prefix($prefix)
-                    ->name($name)
-                    ->group(base_path($file));
-            };
-
-            $registerErpProtectedRoutes = static function (string $file): void {
-                Route::middleware(['api', ForceJsonResponse::class, 'auth:sanctum'])
-                    ->prefix('api/erp')
-                    ->name('erp.')
-                    ->group(base_path($file));
-            };
-
-            $registerErpPublicRoutes('api', 'api.', 'routes/auth.php');
-            $registerErpProtectedRoutes('routes/erp-access.php');
-            $registerErpProtectedRoutes('routes/erp-core.php');
-            $registerErpProtectedRoutes('routes/erp-academics.php');
-            $registerErpProtectedRoutes('routes/erp-ledger.php');
-            $registerErpProtectedRoutes('routes/erp-hr.php');
-            $registerErpProtectedRoutes('routes/erp-students.php');
-            $registerErpProtectedRoutes('routes/erp-cards.php');
-            $registerErpProtectedRoutes('routes/erp-attendance.php');
-            $registerErpProtectedRoutes('routes/erp-diary.php');
-            $registerErpProtectedRoutes('routes/erp-exams.php');
-            $registerErpProtectedRoutes('routes/erp-performance.php');
-            $registerErpProtectedRoutes('routes/erp-admin.php');
-            $registerErpProtectedRoutes('routes/erp-teacher.php');
-            $registerErpProtectedRoutes('routes/erp-student.php');
-            $registerErpProtectedRoutes('routes/erp-parent.php');
-            $registerErpProtectedRoutes('routes/erp-accounts.php');
+            // Exports first: their fixed paths (e.g. id-cards/print) must win over API wildcards.
+            Route::group([], base_path('routes/export.php'));
+            Route::middleware('api')->prefix('api')->group(base_path('routes/api.php'));
         },
     )
+    // Channel auth at /api/broadcasting/auth: the web session and mobile Sanctum tokens both work.
+    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => CheckRole::class,

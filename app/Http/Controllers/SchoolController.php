@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\CalendarEvent;
 use App\Models\Lookup;
 use App\Models\SchoolClass;
@@ -9,11 +10,13 @@ use App\Models\User;
 use App\Models\WebsitePost;
 use App\Services\ActivityLogger;
 use App\Services\AdmissionService;
+use App\Services\AnnouncementService;
 use App\Services\CalendarService;
 use App\Services\CardService;
 use App\Services\LookupService;
 use App\Services\PortalAccessService;
 use App\Services\WebsiteContentService;
+use App\Services\WebsitePageService;
 use App\Support\ApiResponseHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +33,8 @@ class SchoolController extends Controller
         private ActivityLogger $activityLogger,
         private WebsiteContentService $websiteService,
         private CalendarService $calendarService,
+        private AnnouncementService $announcementService,
+        private WebsitePageService $pageService,
     ) {}
 
     /**
@@ -38,7 +43,9 @@ class SchoolController extends Controller
     public function home(): View
     {
         $stats = $this->websiteService->stats()->map(fn ($stat): array => ['icon' => $stat->icon, 'target' => $stat->value, 'suffix' => $stat->suffix, 'label' => $stat->label]);
-        $announcements = $this->websiteService->ticker()->map(fn (WebsitePost $post): array => ['tag' => $post->category?->name ?? 'Notice', 'text' => $post->title]);
+        $announcements = $this->announcementService->publicAnnouncements(5)->map(fn (Announcement $announcement): array => ['tag' => $announcement->category?->name ?? 'Notice', 'text' => $announcement->title])
+            ->concat($this->websiteService->ticker()->map(fn (WebsitePost $post): array => ['tag' => $post->category?->name ?? 'Notice', 'text' => $post->title]))
+            ->take(6);
         $testimonials = $this->websiteService->testimonials()->map(fn ($item): array => ['name' => $item->name, 'role' => $item->role_title, 'quote' => $item->quote, 'initials' => $item->initials()]);
         $upcomingEvents = $this->calendarService->upcomingPublic()->map(fn (CalendarEvent $event): array => [
             'day' => $event->starts_on->format('d'),
@@ -50,23 +57,26 @@ class SchoolController extends Controller
         $feeEstimates = $this->websiteService->feeEstimates();
         $estimatorConcessions = $this->websiteService->estimatorConcessions();
 
-        return view('pages.home', compact('stats', 'announcements', 'upcomingEvents', 'testimonials', 'feeEstimates', 'estimatorConcessions'));
+        $page = $this->pageService->page('home');
+        $classes = SchoolClass::where('is_active', true)->orderBy('level_order')->get(['id', 'name']);
+
+        return view('pages.home', compact('page', 'classes', 'stats', 'announcements', 'upcomingEvents', 'testimonials', 'feeEstimates', 'estimatorConcessions'));
     }
 
     /**
      * About Us Page: Vision, Mission, Leadership, Values
      */
-    public function about()
+    public function about(): View
     {
-        return view('pages.about');
+        return view('pages.about', ['page' => $this->pageService->page('about')]);
     }
 
     /**
      * Academics Page: Curriculum, Wings, STEM & Co-Curricular
      */
-    public function academics()
+    public function academics(): View
     {
-        return view('pages.academics');
+        return view('pages.academics', ['page' => $this->pageService->page('academics')]);
     }
 
     /**
@@ -74,15 +84,15 @@ class SchoolController extends Controller
      */
     public function admissions(): View
     {
-        return view('pages.admissions', ['classes' => SchoolClass::where('is_active', true)->orderBy('level_order')->get(['id', 'name'])]);
+        return view('pages.admissions', ['page' => $this->pageService->page('admissions'), 'classes' => SchoolClass::where('is_active', true)->orderBy('level_order')->get(['id', 'name'])]);
     }
 
     /**
      * Campus & Facilities Page: Labs, Library, Sports, Safety
      */
-    public function campus()
+    public function campus(): View
     {
-        return view('pages.campus');
+        return view('pages.campus', ['page' => $this->pageService->page('campus')]);
     }
 
     /**
@@ -90,7 +100,17 @@ class SchoolController extends Controller
      */
     public function news(): View
     {
-        $articles = $this->websiteService->publishedPosts()->get()->map(fn (WebsitePost $post): array => [
+        $notices = $this->announcementService->publicAnnouncements()->map(fn (Announcement $announcement): array => [
+            'id' => $announcement->id,
+            'category' => $announcement->category?->name ?? 'Notice',
+            'title' => $announcement->title,
+            'excerpt' => $announcement->summary,
+            'date' => $announcement->publish_at?->format('F d, Y'),
+            'read_time' => null,
+            'image' => $announcement->cover_image_path ? asset('storage/'.$announcement->cover_image_path) : asset('images/hero-campus.jpg'),
+            'featured' => $announcement->is_pinned,
+        ]);
+        $articles = $notices->concat($this->websiteService->publishedPosts()->get()->map(fn (WebsitePost $post): array => [
             'id' => $post->id,
             'category' => $post->category?->name,
             'title' => $post->title,
@@ -99,11 +119,13 @@ class SchoolController extends Controller
             'read_time' => $post->read_minutes ? $post->read_minutes.' min read' : null,
             'image' => $post->imageUrl() ?? asset('images/hero-campus.jpg'),
             'featured' => $post->is_featured,
-        ])->all();
+        ]))->all();
 
         $calendar = $this->calendarService->upcomingPublic();
 
-        return view('pages.news', compact('articles', 'calendar'));
+        $page = $this->pageService->page('news');
+
+        return view('pages.news', compact('page', 'articles', 'calendar'));
     }
 
     /**
@@ -111,15 +133,15 @@ class SchoolController extends Controller
      */
     public function contact(LookupService $lookupService): View
     {
-        return view('pages.contact', ['faqs' => $this->websiteService->faqs(), 'topics' => $lookupService->options('contact_topic')]);
+        return view('pages.contact', ['page' => $this->pageService->page('contact'), 'faqs' => $this->websiteService->faqs(), 'topics' => $lookupService->options('contact_topic')]);
     }
 
     /**
      * LMS & Portals Gateway Hub (Ready for upcoming LMS & Accounts modules)
      */
-    public function portal()
+    public function portal(): View
     {
-        return view('pages.portal');
+        return view('pages.portal', ['page' => $this->pageService->page('portal')]);
     }
 
     /**
@@ -131,13 +153,7 @@ class SchoolController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $role = $request->query('role', 'student');
-
-        if (! in_array($role, $this->portalAccessService->getPortalKeys(), true)) {
-            $role = 'student';
-        }
-
-        return view('pages.login', compact('role'));
+        return view('pages.login', ['page' => $this->pageService->page('login')]);
     }
 
     /**
@@ -146,7 +162,6 @@ class SchoolController extends Controller
     public function handleLogin(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'string', Rule::in($this->portalAccessService->getPortalKeys())],
             'username' => 'required|string|max:100',
             'password' => 'required|string|min:4',
         ]);
@@ -161,7 +176,7 @@ class SchoolController extends Controller
 
             return back()
                 ->withErrors(['username' => 'These credentials do not match our records.'])
-                ->onlyInput('username', 'role');
+                ->onlyInput('username');
         }
 
         if (! $account->is_active) {
@@ -173,28 +188,29 @@ class SchoolController extends Controller
 
             return back()
                 ->withErrors(['username' => 'This account has been disabled. Please contact the school office.'])
-                ->onlyInput('username', 'role');
+                ->onlyInput('username');
         }
 
-        $request->session()->regenerate();
-        $request->session()->put('portal', $validated['role']);
-
         $user = Auth::user()->load('roles');
+        // The account's own roles pick its portal; there is no portal picker on the sign-in page.
+        $portal = $this->portalAccessService->resolveSelectedPortal($user);
 
-        if (! $this->portalAccessService->canAccessPortal($user, $validated['role'])) {
-            $this->activityLogger->record('auth', 'login_failed', "{$user->name} was refused the {$validated['role']} portal", $user, actor: $user);
+        if ($portal === null) {
+            $this->activityLogger->record('auth', 'login_failed', "{$user->name} has no portal assigned", $user, actor: $user);
 
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return back()
-                ->withErrors(['role' => 'This account is not registered for the selected portal.'])
-                ->onlyInput('username', 'role');
+                ->withErrors(['username' => 'This account has no portal yet. Please contact the school office.'])
+                ->onlyInput('username');
         }
 
+        $request->session()->regenerate();
+        $request->session()->put('portal', $portal);
         $user->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->saveQuietly();
-        $this->activityLogger->record('auth', 'login', "{$user->name} signed in to the {$validated['role']} portal", $user);
+        $this->activityLogger->record('auth', 'login', "{$user->name} signed in to the {$portal} portal", $user);
 
         return redirect()->intended(route('dashboard'));
     }

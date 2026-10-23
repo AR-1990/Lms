@@ -477,94 +477,14 @@ function initInquiryForms() {
 }
 
 /**
- * 11. Interactive Luxury Login Portal Engine
+ * 11. Sign-in page: show/hide password and a "Signing in" state
  */
 function initLoginPage() {
     const loginForm = document.getElementById('portalLoginForm');
     if (!loginForm) return;
 
-    const roleChips = document.querySelectorAll('.role-chip');
-    const roleInput = document.getElementById('loginRoleInput');
-    const usernameLabel = document.getElementById('loginUsernameLabel');
-    const usernameInput = document.getElementById('loginUsernameInput');
     const passwordInput = document.getElementById('loginPasswordInput');
     const togglePasswordBtn = document.getElementById('togglePasswordBtn');
-    const roleDescEl = document.getElementById('loginRoleDescription');
-    const demoBtns = document.querySelectorAll('.demo-chip-btn');
-
-    const roleConfig = {
-        student: {
-            label: 'Student Email / Roll No',
-            placeholder: 'e.g. student@lms.test',
-            desc: 'Access class schedule, video lectures, homework submissions, and quiz reports.',
-            demoUser: 'student@lms.test',
-            demoPass: 'password'
-        },
-        parent: {
-            label: 'Parent Email / Mobile',
-            placeholder: 'e.g. parent@lms.test',
-            desc: 'Real-time attendance alerts, fee challans, online payment & report cards.',
-            demoUser: 'parent@lms.test',
-            demoPass: 'password'
-        },
-        teacher: {
-            label: 'Faculty Email / ID',
-            placeholder: 'e.g. teacher@lms.test',
-            desc: 'Digital gradebook, attendance register, lesson planning & student communications.',
-            demoUser: 'teacher@lms.test',
-            demoPass: 'password'
-        },
-        accounts: {
-            label: 'Accounts Email',
-            placeholder: 'e.g. accounts@lms.test',
-            desc: 'Fee reconciliations, ledger journals, staff payroll & institutional audit reports.',
-            demoUser: 'accounts@lms.test',
-            demoPass: 'password'
-        }
-    };
-
-    // Role Tab Switching
-    function setRole(roleKey) {
-        if (!roleConfig[roleKey]) return;
-
-        roleChips.forEach(chip => {
-            if (chip.getAttribute('data-role') === roleKey) {
-                chip.classList.add('active');
-            } else {
-                chip.classList.remove('active');
-            }
-        });
-
-        if (roleInput) roleInput.value = roleKey;
-
-        const config = roleConfig[roleKey];
-        if (usernameLabel) usernameLabel.innerText = config.label;
-        if (usernameInput) usernameInput.placeholder = config.placeholder;
-        if (roleDescEl) roleDescEl.innerText = config.desc;
-    }
-
-    roleChips.forEach(chip => {
-        chip.addEventListener('click', function () {
-            const role = this.getAttribute('data-role');
-            setRole(role);
-        });
-    });
-
-    // Sync labels/placeholders with the active role from the server query string.
-    const initialRole = roleInput ? roleInput.value : 'student';
-    setRole(initialRole);
-    // Demo Autofill Buttons
-    demoBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
-            const role = this.getAttribute('data-fill-role');
-            setRole(role);
-            const config = roleConfig[role];
-            if (usernameInput) usernameInput.value = config.demoUser;
-            if (passwordInput) passwordInput.value = config.demoPass;
-
-            showToast(`Auto-filled demo credentials for ${role.toUpperCase()}`, 'success');
-        });
-    });
 
     // Toggle Password Visibility
     if (togglePasswordBtn && passwordInput) {
@@ -843,3 +763,25 @@ function initMagneticButtons() {
         });
     });
 }
+
+/* News page: filter stories by category. */
+(function () {
+    const bar = document.querySelector('[data-news-filters]');
+
+    if (!bar) {
+        return;
+    }
+
+    bar.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-news-filter]');
+
+        if (!button) {
+            return;
+        }
+
+        bar.querySelectorAll('[data-news-filter]').forEach(function (tab) { tab.classList.toggle('active', tab === button); });
+        document.querySelectorAll('[data-news-category]').forEach(function (card) {
+            card.hidden = button.dataset.newsFilter !== '' && card.dataset.newsCategory !== button.dataset.newsFilter;
+        });
+    });
+})();

@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Enrollment;
+use App\Models\FeeInvoice;
+use App\Models\Guardian;
 use App\Models\Role;
+use App\Models\TeacherAssignment;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -181,115 +185,60 @@ class ErpApiTest extends TestCase
             ->assertJsonPath('errors.first_key', 'permission');
     }
 
-    public function test_teacher_can_access_teacher_dashboard_and_classes(): void
+    public function test_teacher_dashboard_and_classes_come_from_assignments_and_timetable(): void
     {
+        $this->travelTo(now()->startOfWeek()->setTime(9, 0));
         $teacher = User::where('email', 'teacher@lms.test')->first();
 
-        $response = $this->actingAs($teacher, 'sanctum')
-            ->getJson('/api/erp/teacher/dashboard');
+        $this->actingAs($teacher, 'sanctum')
+            ->getJson('/api/erp/teacher/dashboard')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.teacher.name', 'Sarah Jenkins')
+            ->assertJsonPath('data.metrics.sections', 1)
+            ->assertJsonPath('data.metrics.students', Enrollment::where('section_id', TeacherAssignment::value('section_id'))->where('status', 'active')->count())
+            ->assertJsonStructure(['data' => ['teacher', 'metrics', 'today_schedule' => [['period', 'starts_at', 'subject', 'section']]]]);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-            ])
-            ->assertJsonStructure([
-                'data' => [
-                    'teacher',
-                    'metrics',
-                    'today_schedule',
-                ],
-            ]);
-
-        $classesResponse = $this->actingAs($teacher, 'sanctum')
-            ->getJson('/api/erp/teacher/classes');
-
-        $classesResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'course_code',
-                        'title',
-                        'section',
-                    ],
-                ],
-            ]);
+        $this->getJson('/api/erp/teacher/classes')
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['*' => ['id', 'course_code', 'title', 'section', 'students', 'schedule']]])
+            ->assertJsonPath('data.0.title', 'English');
     }
 
-    public function test_student_can_access_student_dashboard_courses_and_grades(): void
+    public function test_student_dashboard_and_results_come_from_the_student_record(): void
     {
         $student = User::where('email', 'student@lms.test')->first();
 
-        $response = $this->actingAs($student, 'sanctum')
-            ->getJson('/api/erp/student/dashboard');
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/erp/student/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.student.name', 'John Doe')
+            ->assertJsonPath('data.student.class', 'Grade 5')
+            ->assertJsonStructure(['data' => ['student', 'academic_summary' => ['attendance_percentage', 'latest_result', 'fee_balance'], 'upcoming_exams']]);
 
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    'student',
-                    'academic_summary',
-                ],
-            ]);
-
-        $gradesResponse = $this->actingAs($student, 'sanctum')
-            ->getJson('/api/erp/student/grades');
-
-        $gradesResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    'gpa',
-                    'grades',
-                ],
-            ]);
+        $this->getJson('/api/erp/student/grades')
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['latest', 'results']]);
     }
 
-    public function test_parent_can_access_parent_dashboard_children_fees_and_notices(): void
+    public function test_parent_sees_only_their_own_children_fees_and_notices(): void
     {
         $parent = User::where('email', 'parent@lms.test')->first();
+        $childIds = Guardian::where('user_id', $parent->id)->first()->students()->pluck('students.id');
 
-        $dashboardResponse = $this->actingAs($parent, 'sanctum')
-            ->getJson('/api/erp/parent/dashboard');
+        $this->actingAs($parent, 'sanctum')
+            ->getJson('/api/erp/parent/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.summary.children', $childIds->count())
+            ->assertJsonPath('data.children.0.name', 'John Doe')
+            ->assertJsonStructure(['data' => ['parent', 'children', 'summary', 'recent_notices']]);
 
-        $dashboardResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    'parent',
-                    'children',
-                    'summary',
-                    'recent_notices',
-                ],
-            ]);
+        $this->getJson('/api/erp/parent/children')->assertOk()->assertJsonCount($childIds->count(), 'data.children');
 
-        $childrenResponse = $this->actingAs($parent, 'sanctum')
-            ->getJson('/api/erp/parent/children');
+        $fees = $this->getJson('/api/erp/parent/fees')->assertOk()->assertJsonStructure(['data' => ['summary', 'ledger', 'meta']])->json('data');
+        $this->assertSame(FeeInvoice::whereIn('student_id', $childIds)->where('status', '!=', 'cancelled')->count(), $fees['meta']['total']);
 
-        $childrenResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    'children',
-                ],
-            ]);
-
-        $feesResponse = $this->actingAs($parent, 'sanctum')
-            ->getJson('/api/erp/parent/fees');
-
-        $feesResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    'summary',
-                    'ledger',
-                ],
-            ]);
-
-        $noticesResponse = $this->actingAs($parent, 'sanctum')
-            ->getJson('/api/erp/parent/notices');
-
-        $noticesResponse->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    'notices',
-                ],
-            ]);
+        $this->getJson('/api/erp/parent/notices')->assertOk()->assertJsonStructure(['data' => ['notices']]);
     }
 
     public function test_custom_role_with_permission_can_access_teacher_classes_route(): void
@@ -308,20 +257,12 @@ class ErpApiTest extends TestCase
         ]);
         $coordinator->syncRoles(['academic-coordinator']);
 
-        $response = $this->actingAs($coordinator, 'sanctum')
-            ->getJson('/api/erp/teacher/classes');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'course_code',
-                        'title',
-                        'section',
-                    ],
-                ],
-            ]);
+        // Allowed in, but with no employee record there are no classes of their own.
+        $this->actingAs($coordinator, 'sanctum')
+            ->getJson('/api/erp/teacher/classes')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data', []);
     }
 
     public function test_admin_can_create_dynamic_custom_role_and_assign_to_user(): void

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\ERP;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AnnouncementResource;
+use App\Services\AnnouncementService;
 use App\Services\ParentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -39,18 +41,18 @@ class ParentController extends Controller
      */
     public function fees(Request $request): JsonResponse
     {
-        $fees = $this->parentService->getFeeLedger($request->user());
+        $fees = $this->parentService->getFeeLedger($request->user(), max(1, $request->integer('page', 1)));
 
         return $this->successResponse($fees, 'Fee ledger retrieved successfully.');
     }
 
     /**
-     * Get notices for the parent portal.
+     * Announcements for the parent and their children (same feed as GET /api/erp/my-announcements).
      */
-    public function notices(Request $request): JsonResponse
+    public function notices(Request $request, AnnouncementService $announcementService): JsonResponse
     {
-        $notices = $this->parentService->getNotices($request->user());
+        $notices = AnnouncementResource::collection($announcementService->feedFor($request->user())->limit(50)->get())->resolve();
 
-        return $this->successResponse($notices, 'Parent notices retrieved successfully.');
+        return $this->successResponse(['notices' => $notices], 'Parent notices retrieved successfully.');
     }
 }

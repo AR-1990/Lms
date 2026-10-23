@@ -1,68 +1,69 @@
 @extends('layouts.dashboard')
 
 @section('title', 'Fees')
-@section('page_heading', 'Fee Ledger')
+@section('page_heading', 'Fee Vouchers')
 
 @section('content')
-@php $summary = $data['summary']; @endphp
+@php
+    $summary = $data['summary'];
+    $meta = $data['meta'];
+@endphp
 
 <section class="dash-page-intro">
     <h1>Fees</h1>
-    <p>Challans, dues, and payment history for your children.</p>
+    <p>Fee vouchers and payments for your children.</p>
 </section>
 
 <section class="dash-stats">
     <article class="dash-stat">
         <span class="dash-stat-label">Outstanding</span>
-        <strong class="dash-stat-value dash-stat-value-sm">{{ $summary['outstanding'] }}</strong>
+        <strong class="dash-stat-value dash-stat-value-sm">Rs {{ number_format($summary['outstanding'] / 100) }}</strong>
     </article>
     <article class="dash-stat">
-        <span class="dash-stat-label">Paid YTD</span>
-        <strong class="dash-stat-value dash-stat-value-sm">{{ $summary['paid_ytd'] }}</strong>
+        <span class="dash-stat-label">Paid So Far</span>
+        <strong class="dash-stat-value dash-stat-value-sm">Rs {{ number_format($summary['paid_total'] / 100) }}</strong>
+    </article>
+    <article class="dash-stat">
+        <span class="dash-stat-label">Open Vouchers</span>
+        <strong class="dash-stat-value">{{ $summary['open_invoices'] }}</strong>
     </article>
     <article class="dash-stat">
         <span class="dash-stat-label">Next Due</span>
-        <strong class="dash-stat-value dash-stat-value-sm">{{ $summary['next_due'] }}</strong>
-    </article>
-    <article class="dash-stat">
-        <span class="dash-stat-label">Open Challans</span>
-        <strong class="dash-stat-value">{{ $summary['open_challans'] }}</strong>
+        <strong class="dash-stat-value dash-stat-value-sm">{{ $summary['next_due_date'] ? \Illuminate\Support\Carbon::parse($summary['next_due_date'])->format('d M Y').' · Rs '.number_format($summary['next_due_amount'] / 100) : '—' }}</strong>
     </article>
 </section>
 
 <section class="dash-panel">
-    <div class="dash-panel-head">
-        <h2>Fee Ledger</h2>
-    </div>
-    <div class="dash-table-wrap">
-        <table class="dash-table">
-            <thead>
-                <tr>
-                    <th>Challan</th>
-                    <th>Student</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Due</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($data['ledger'] as $row)
-                    <tr>
-                        <td>{{ $row['challan'] }}</td>
-                        <td>{{ $row['student'] }}</td>
-                        <td>{{ $row['description'] }}</td>
-                        <td>{{ $row['amount'] }}</td>
-                        <td>{{ $row['due'] }}</td>
-                        <td>
-                            <span class="dash-badge {{ $row['status'] === 'Paid' ? 'dash-badge-ok' : 'dash-badge-warn' }}">
-                                {{ $row['status'] }}
-                            </span>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+    @if ($data['ledger'] === [])
+        <p class="dash-muted">No fee vouchers yet.</p>
+    @else
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead>
+                    <tr><th>Voucher</th><th>Child</th><th>For</th><th>Due</th><th>Total</th><th>Balance</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach ($data['ledger'] as $row)
+                        <tr>
+                            <td>{{ $row['invoice_no'] }}</td>
+                            <td>{{ $row['student'] }}</td>
+                            <td>{{ $row['description'] }}</td>
+                            <td>{{ $row['due_date'] ? \Illuminate\Support\Carbon::parse($row['due_date'])->format('d M Y') : '—' }}</td>
+                            <td>Rs {{ number_format($row['total'] / 100) }}</td>
+                            <td>Rs {{ number_format($row['balance'] / 100) }}</td>
+                            <td><span class="dash-badge {{ $row['status'] === 'paid' ? 'dash-badge-ok' : 'dash-badge-warn' }}">{{ ucfirst(str_replace('_', ' ', $row['status'])) }}</span></td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @if ($meta['last_page'] > 1)
+            <nav class="dash-pager" aria-label="Pages">
+                @if ($meta['current_page'] > 1)<a class="dash-btn dash-btn-ghost" href="{{ route('parent.fees', ['page' => $meta['current_page'] - 1]) }}">&larr; Newer</a>@endif
+                <span class="dash-muted">Page {{ $meta['current_page'] }} of {{ $meta['last_page'] }}</span>
+                @if ($meta['current_page'] < $meta['last_page'])<a class="dash-btn dash-btn-ghost" href="{{ route('parent.fees', ['page' => $meta['current_page'] + 1]) }}">Older &rarr;</a>@endif
+            </nav>
+        @endif
+    @endif
 </section>
 @endsection

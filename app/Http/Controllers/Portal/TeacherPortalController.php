@@ -17,18 +17,4 @@ class TeacherPortalController extends PortalController
             'classes' => $this->teacherService->getAssignedClasses($user),
         ]);
     }
-
-    public function attendance(): View
-    {
-        $user = $this->portalUser();
-
-        return $this->page('dashboards.teacher.attendance', 'teacher', 'attendance', $this->teacherService->getAttendanceRegister($user));
-    }
-
-    public function grades(): View
-    {
-        $user = $this->portalUser();
-
-        return $this->page('dashboards.teacher.grades', 'teacher', 'grades', $this->teacherService->getGradebook($user));
-    }
 }
