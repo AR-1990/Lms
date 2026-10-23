@@ -850,6 +850,7 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     Route::prefix('admin')->group(function () {
         Route::get('dashboard', [AdminController::class, 'dashboard'])->middleware('permission:view-stats')->name('admin.dashboard');
         Route::get('stats', [AdminController::class, 'stats'])->middleware('permission:view-stats')->name('admin.stats');
+        Route::get('finance', [AdminController::class, 'finance'])->middleware('permission:view-stats')->name('admin.finance');
         Route::get('settings', [SystemSettingsController::class, 'show'])->middleware('permission:manage-settings')->name('admin.settings');
         Route::put('settings', [SystemSettingsController::class, 'update'])->middleware('permission:manage-settings')->name('admin.settings.update');
         Route::get('reference/countries', [SystemSettingsController::class, 'countries'])->middleware('permission:manage-settings')->name('admin.reference.countries');

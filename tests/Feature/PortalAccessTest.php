@@ -90,7 +90,7 @@ class PortalAccessTest extends TestCase
             && $data['overview']['total_teachers'] === 1
             && $data['overview']['total_students'] === 1
             && $data['overview']['total_roles'] === 5);
-        $response->assertSeeInOrder(['Total Users', 'data-count-up="5"'], false);
+        $response->assertSeeInOrder(['Role Mix', '5 portal accounts', 'data-count-up="5"'], false);
     }
 
     public function test_admin_dashboard_quote_comes_from_active_daily_quote_options(): void
@@ -126,7 +126,7 @@ class PortalAccessTest extends TestCase
                 && $data['overview']['new_this_month'] === 5
                 && $data['overview']['total_users'] === 7;
         });
-        $response->assertSee('Account Growth');
+        $response->assertSee('5 new this month');
         $response->assertSee('Role Mix');
     }
 

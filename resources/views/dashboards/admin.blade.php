@@ -7,7 +7,6 @@
 @php
     $overview = $data['overview'];
     $status = $data['system_status'];
-    $signups = $data['monthly_signups'];
     $roles = $data['roles_breakdown'];
     $tones = ['orange', 'blue', 'emerald', 'violet', 'rose', 'sky', 'amber'];
     $toneColors = ['orange' => '#d4962a', 'blue' => '#3d6ea6', 'emerald' => '#5b8f62', 'violet' => '#8466ad', 'rose' => '#b85c46', 'sky' => '#2e7d81', 'amber' => '#c9a227'];
@@ -15,7 +14,6 @@
     $hour = now()->hour;
     $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
     $userTotal = max($overview['total_users'], 1);
-    $signupMax = max(max(array_column($signups, 'count')), 1);
 
     $donutStops = [];
     $donutCursor = 0;
@@ -27,19 +25,12 @@
     }
     $donutGradient = $donutStops === [] ? '#e5e7eb 0% 100%' : implode(', ', $donutStops);
 
-    $kpis = [
-        ['label' => 'Total Users', 'value' => $overview['total_users'], 'icon' => 'users', 'tone' => 'orange', 'foot' => '+'.$overview['new_this_month'].' this month'],
-        ['label' => 'Teachers', 'value' => $overview['total_teachers'], 'icon' => 'teacher', 'tone' => 'blue', 'foot' => 'Faculty accounts'],
-        ['label' => 'Students', 'value' => $overview['total_students'], 'icon' => 'student', 'tone' => 'emerald', 'foot' => 'Enrolled learners'],
-        ['label' => 'Roles', 'value' => $overview['total_roles'], 'icon' => 'key', 'tone' => 'violet', 'foot' => 'Access profiles'],
-    ];
-
     $quickActions = [
-        ['label' => 'Add User', 'hint' => 'Create an account', 'icon' => 'user-plus', 'tone' => 'blue', 'url' => route('admin.users.create')],
-        ['label' => 'Roles', 'hint' => 'Access & permissions', 'icon' => 'shield', 'tone' => 'violet', 'url' => route('admin.roles')],
-        ['label' => 'Reports', 'hint' => 'Headcount & KPIs', 'icon' => 'chart', 'tone' => 'emerald', 'url' => route('admin.reports')],
-        ['label' => 'Settings', 'hint' => 'School profile', 'icon' => 'settings', 'tone' => 'rose', 'url' => route('admin.settings')],
-        ['label' => 'Website', 'hint' => 'Open public site', 'icon' => 'globe', 'tone' => 'sky', 'url' => route('home')],
+        ['label' => 'Fee Challans', 'hint' => 'Issue & collect fees', 'icon' => 'hash', 'tone' => 'emerald', 'url' => route('accounts.fees.challans')],
+        ['label' => 'Receipts', 'hint' => 'Payments received', 'icon' => 'check', 'tone' => 'sky', 'url' => route('accounts.fees.receipts')],
+        ['label' => 'Expenses', 'hint' => 'Record & pay bills', 'icon' => 'book', 'tone' => 'rose', 'url' => route('accounts.expenses')],
+        ['label' => 'Payroll', 'hint' => 'Monthly salaries', 'icon' => 'users', 'tone' => 'violet', 'url' => route('admin.hr.payroll')],
+        ['label' => 'Reports', 'hint' => 'Finance, fees, staff', 'icon' => 'chart', 'tone' => 'amber', 'url' => route('admin.reports')],
     ];
 @endphp
 
@@ -55,7 +46,7 @@
         </h1>
         <p class="dash-welcome-sub">
             <span class="dash-pulse-dot" aria-hidden="true"></span>
-            System {{ strtolower($status['status']) }} · here is what is happening across {{ $status['school_name'] }} today.
+            Fees, pending dues and spending across {{ $status['school_name'] }}, live from today's records.
         </p>
         @if ($quote)
             <blockquote class="dash-quote">
@@ -75,28 +66,128 @@
                 <span data-clock-date>{{ now()->format('l, d F') }}</span>
             </span>
         </div>
-        <span class="dash-welcome-stat">
-            <strong>{{ $overview['new_this_month'] }}</strong>
-            new {{ Str::plural('account', $overview['new_this_month']) }} this month
-        </span>
-        <a href="{{ route('admin.users.create') }}" class="dash-btn dash-btn-primary">
-            @include('partials.dashboard-icon', ['name' => 'user-plus'])
-            Add User
+        <a href="{{ route('accounts.fees.challans') }}" class="dash-btn dash-btn-primary">
+            @include('partials.dashboard-icon', ['name' => 'hash'])
+            Fee Challans
         </a>
     </div>
 </section>
 
+<div class="dash-fin" data-finance data-url="{{ route('erp.admin.finance') }}" data-reports="{{ route('admin.reports') }}" data-receipts="{{ route('accounts.fees.receipts') }}" data-expenses="{{ route('accounts.expenses') }}" aria-busy="true">
+    {{-- Headline figures: filled by js/admin-dashboard.js from /api/erp/admin/finance --}}
+    <section class="dash-fin-kpis" aria-label="Money this month">
+        <article class="dash-fin-kpi dash-tone-emerald" data-kpi="collected">
+            <header><span class="dash-fin-kpi-icon">@include('partials.dashboard-icon', ['name' => 'trending-up'])</span><span>Collected this month</span><span class="dash-fin-change" data-kpi-change></span></header>
+            <strong data-kpi-value>—</strong>
+            <p data-kpi-foot>&nbsp;</p>
+            <svg class="dash-fin-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" data-kpi-spark></svg>
+        </article>
+        <article class="dash-fin-kpi dash-tone-amber" data-kpi="pending">
+            <header><span class="dash-fin-kpi-icon">@include('partials.dashboard-icon', ['name' => 'clock'])</span><span>Pending fees</span></header>
+            <strong data-kpi-value>—</strong>
+            <p data-kpi-foot>&nbsp;</p>
+            <div class="dash-fin-meter" aria-hidden="true"><span data-kpi-meter></span></div>
+        </article>
+        <article class="dash-fin-kpi dash-tone-rose" data-kpi="expenses">
+            <header><span class="dash-fin-kpi-icon">@include('partials.dashboard-icon', ['name' => 'book'])</span><span>Spent this month</span><span class="dash-fin-change" data-kpi-change></span></header>
+            <strong data-kpi-value>—</strong>
+            <p data-kpi-foot>&nbsp;</p>
+            <svg class="dash-fin-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" data-kpi-spark></svg>
+        </article>
+        <article class="dash-fin-kpi dash-tone-sky" data-kpi="today">
+            <header><span class="dash-fin-kpi-icon">@include('partials.dashboard-icon', ['name' => 'check'])</span><span>Collected today</span></header>
+            <strong data-kpi-value>—</strong>
+            <p data-kpi-foot>&nbsp;</p>
+            <div class="dash-fin-meter" aria-hidden="true"><span data-kpi-meter></span></div>
+        </article>
+    </section>
+
+    <section class="dash-fin-chips" aria-label="More figures" data-chips></section>
+
+    <section class="dash-panel dash-fin-trend">
+        <div class="dash-panel-head">
+            <div>
+                <h2>Fee collection vs spending</h2>
+                <p>Fees received against expenses and salaries, month by month. Click a legend item to hide it.</p>
+            </div>
+            <div class="dash-fin-toggle" role="group" aria-label="Period">
+                <button type="button" data-months="6">6 months</button>
+                <button type="button" data-months="12" class="is-active">12 months</button>
+            </div>
+        </div>
+        <div class="dash-fin-legend" data-trend-legend></div>
+        <div class="dash-fin-chart" data-trend-chart></div>
+        <div class="dash-fin-net" data-trend-net></div>
+    </section>
+
+    <div class="dash-fin-grid">
+        <section class="dash-panel">
+            <div class="dash-panel-head">
+                <div>
+                    <h2>Pending fees by age</h2>
+                    <p>How long overdue challans have been waiting.</p>
+                </div>
+                <a class="dash-panel-link" href="{{ route('admin.reports') }}?report=fee-defaulters">Defaulters @include('partials.dashboard-icon', ['name' => 'arrow-right'])</a>
+            </div>
+            <div class="dash-fin-donut" data-ageing></div>
+        </section>
+
+        <section class="dash-panel">
+            <div class="dash-panel-head">
+                <div>
+                    <h2>Daily collection</h2>
+                    <p>Fees received each day this month.</p>
+                </div>
+            </div>
+            <div class="dash-fin-chart dash-fin-area" data-daily></div>
+        </section>
+    </div>
+
+    <div class="dash-fin-grid dash-fin-grid-3">
+        <section class="dash-panel">
+            <div class="dash-panel-head"><div><h2>Pending by class</h2><p>Where the money is stuck.</p></div></div>
+            <ul class="dash-fin-bars" data-bars="pending_by_class"></ul>
+        </section>
+        <section class="dash-panel">
+            <div class="dash-panel-head"><div><h2>Paid by</h2><p>Payment methods this month.</p></div></div>
+            <ul class="dash-fin-bars" data-bars="methods"></ul>
+        </section>
+        <section class="dash-panel">
+            <div class="dash-panel-head"><div><h2>Spending by category</h2><p>Expenses this month.</p></div></div>
+            <ul class="dash-fin-bars" data-bars="expense_categories"></ul>
+        </section>
+    </div>
+
+    <div class="dash-fin-grid">
+        <section class="dash-panel">
+            <div class="dash-panel-head">
+                <div><h2>Latest receipts</h2><p>Fees just received.</p></div>
+                <a class="dash-panel-link" href="{{ route('accounts.fees.receipts') }}">All receipts @include('partials.dashboard-icon', ['name' => 'arrow-right'])</a>
+            </div>
+            <ul class="dash-fin-list" data-list="recent_receipts"></ul>
+        </section>
+        <section class="dash-panel">
+            <div class="dash-panel-head">
+                <div><h2>Largest dues</h2><p>Students who owe the most.</p></div>
+                <a class="dash-panel-link" href="{{ route('admin.reports') }}?report=fee-defaulters">Full list @include('partials.dashboard-icon', ['name' => 'arrow-right'])</a>
+            </div>
+            <ul class="dash-fin-list" data-list="top_defaulters"></ul>
+        </section>
+    </div>
+</div>
+
 @include('partials.sticky-notes', ['limit' => 8])
 
-<section class="dash-stats" aria-label="Key metrics">
-    @foreach ($kpis as $kpi)
-        <article class="dash-kpi dash-tone-{{ $kpi['tone'] }}">
-            <span class="dash-kpi-icon">@include('partials.dashboard-icon', ['name' => $kpi['icon']])</span>
-            <span class="dash-kpi-label">{{ $kpi['label'] }}</span>
-            <strong class="dash-kpi-value" data-count-up="{{ $kpi['value'] }}">{{ number_format($kpi['value']) }}</strong>
-            <span class="dash-kpi-foot">{{ $kpi['foot'] }}</span>
-            <span class="dash-kpi-ghost" aria-hidden="true">@include('partials.dashboard-icon', ['name' => $kpi['icon']])</span>
-        </article>
+<section class="dash-quick" aria-label="Quick actions">
+    @foreach ($quickActions as $action)
+        <a href="{{ $action['url'] }}" class="dash-quick-tile dash-tone-{{ $action['tone'] }}">
+            <span class="dash-quick-icon">@include('partials.dashboard-icon', ['name' => $action['icon']])</span>
+            <span class="dash-quick-text">
+                <strong>{{ $action['label'] }}</strong>
+                <span>{{ $action['hint'] }}</span>
+            </span>
+            @include('partials.dashboard-icon', ['name' => 'arrow-right', 'class' => 'dash-quick-arrow'])
+        </a>
     @endforeach
 </section>
 
@@ -104,31 +195,10 @@
     <section class="dash-panel">
         <div class="dash-panel-head">
             <div>
-                <h2>Account Growth</h2>
-                <p>New portal accounts over the last 6 months.</p>
-            </div>
-            <span class="dash-badge dash-badge-brand">
-                @include('partials.dashboard-icon', ['name' => 'trending-up'])
-                {{ $overview['total_users'] }} total
-            </span>
-        </div>
-        <div class="dash-chart-bars" role="img" aria-label="New accounts per month">
-            @foreach ($signups as $month)
-                <div @class(['dash-chart-col', 'is-current' => $loop->last])>
-                    <span class="dash-chart-value">{{ $month['count'] }}</span>
-                    <span class="dash-chart-bar" style="--h: {{ round($month['count'] / $signupMax, 3) }}; --i: {{ $loop->index }}"></span>
-                    <span class="dash-chart-label">{{ $month['label'] }}</span>
-                </div>
-            @endforeach
-        </div>
-    </section>
-
-    <section class="dash-panel">
-        <div class="dash-panel-head">
-            <div>
                 <h2>Role Mix</h2>
-                <p>How accounts are spread across roles.</p>
+                <p>{{ number_format($overview['total_users']) }} portal accounts · {{ $overview['new_this_month'] }} new this month.</p>
             </div>
+            <a href="{{ route('admin.users') }}" class="dash-panel-link">Users @include('partials.dashboard-icon', ['name' => 'arrow-right'])</a>
         </div>
         <div class="dash-donut-wrap">
             <div class="dash-donut" style="--donut: conic-gradient({{ $donutGradient }})">
@@ -149,22 +219,7 @@
             </ul>
         </div>
     </section>
-</div>
 
-<section class="dash-quick" aria-label="Quick actions">
-    @foreach ($quickActions as $action)
-        <a href="{{ $action['url'] }}" class="dash-quick-tile dash-tone-{{ $action['tone'] }}">
-            <span class="dash-quick-icon">@include('partials.dashboard-icon', ['name' => $action['icon']])</span>
-            <span class="dash-quick-text">
-                <strong>{{ $action['label'] }}</strong>
-                <span>{{ $action['hint'] }}</span>
-            </span>
-            @include('partials.dashboard-icon', ['name' => 'arrow-right', 'class' => 'dash-quick-arrow'])
-        </a>
-    @endforeach
-</section>
-
-<div class="dash-grid-2">
     <section class="dash-panel">
         <div class="dash-panel-head">
             <div>
@@ -214,37 +269,9 @@
             </table>
         </div>
     </section>
-
-    <section class="dash-panel">
-        <div class="dash-panel-head">
-            <div>
-                <h2>System Status</h2>
-                <p>Runtime environment.</p>
-            </div>
-            <span class="dash-badge dash-badge-ok">{{ ucfirst($status['status']) }}</span>
-        </div>
-        <ul class="dash-status-list">
-            <li class="dash-tone-sky">
-                <span class="dash-status-icon">@include('partials.dashboard-icon', ['name' => 'clock'])</span>
-                <span>Timezone</span><strong>{{ $status['timezone'] }}</strong>
-            </li>
-            <li class="dash-tone-emerald">
-                <span class="dash-status-icon">@include('partials.dashboard-icon', ['name' => 'trending-up'])</span>
-                <span>Currency</span><strong>{{ $status['currency'] ?? 'Not set' }}</strong>
-            </li>
-            <li class="dash-tone-rose">
-                <span class="dash-status-icon">@include('partials.dashboard-icon', ['name' => 'server'])</span>
-                <span>Laravel</span><strong>{{ $status['laravel_version'] }}</strong>
-            </li>
-            <li class="dash-tone-violet">
-                <span class="dash-status-icon">@include('partials.dashboard-icon', ['name' => 'activity'])</span>
-                <span>PHP</span><strong>{{ $status['php_version'] }}</strong>
-            </li>
-            <li class="dash-tone-orange">
-                <span class="dash-status-icon">@include('partials.dashboard-icon', ['name' => 'key'])</span>
-                <span>API</span><strong>v{{ $status['api_version'] }}</strong>
-            </li>
-        </ul>
-    </section>
 </div>
+@endsection
+
+@section('extra_js')
+<script src="{{ asset('js/admin-dashboard.js') }}?v={{ filemtime(public_path('js/admin-dashboard.js')) }}" defer></script>
 @endsection
