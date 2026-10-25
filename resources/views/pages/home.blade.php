@@ -251,40 +251,47 @@
                     <h3 style="margin-bottom: 0.5rem; font-size: 1.45rem;">{{ $inquiry?->title ?? 'Admission Inquiry' }}</h3>
                     <p style="font-size: 0.925rem; margin-bottom: 1.5rem;">{{ $inquiry?->description }}</p>
 
-                    <form data-ajax-inquiry action="{{ route('inquiry.submit') }}" method="POST">
+                    <form data-ajax-inquiry data-inline-errors action="{{ route('inquiry.submit') }}" method="POST" novalidate>
                         @csrf
                         <div class="form-group">
                             <label class="form-label" for="inqName">Parent / Guardian Name</label>
-                            <input type="text" id="inqName" name="name" class="form-control" placeholder="e.g. Tariq Mehmood" required>
+                            <input type="text" id="inqName" name="parent_name" class="form-control" placeholder="e.g. Tariq Mehmood" autocomplete="name" required>
+                            <p class="contact-error" data-error-for="parent_name" hidden></p>
                         </div>
 
                         <div class="grid-2" style="gap: 1rem;">
                             <div class="form-group">
                                 <label class="form-label" for="inqPhone">WhatsApp / Mobile</label>
-                                <input type="tel" id="inqPhone" name="phone" class="form-control" placeholder="0300-XXXXXXX" required>
+                                <input type="tel" id="inqPhone" name="phone" class="form-control" placeholder="0300 1234567" autocomplete="tel" inputmode="tel" required>
+                                <p class="contact-error" data-error-for="phone" hidden></p>
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="inqEmail">Email Address</label>
-                                <input type="email" id="inqEmail" name="email" class="form-control" placeholder="parent@email.com" required>
+                                <label class="form-label" for="inqEmail">Email Address <span class="contact-optional">optional</span></label>
+                                <input type="email" id="inqEmail" name="email" class="form-control" placeholder="parent@email.com" autocomplete="email">
+                                <p class="contact-error" data-error-for="email" hidden></p>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label" for="inqGrade">Applying For Grade</label>
-                            <select id="inqGrade" name="grade" class="form-control">
+                            <select id="inqGrade" name="class_sought_id" class="form-control">
+                                <option value="">Not sure yet</option>
                                 @foreach ($classes as $class)
-                                    <option value="{{ $class->name }}">{{ $class->name }}</option>
+                                    <option value="{{ $class->id }}">{{ $class->name }}</option>
                                 @endforeach
                             </select>
+                            <p class="contact-error" data-error-for="class_sought_id" hidden></p>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label" for="inqMessage">Your Inquiry or Tour Date</label>
                             <textarea id="inqMessage" name="message" class="form-control" rows="3" placeholder="Tell us any specific requirements or preferred campus tour date..." required></textarea>
+                            <p class="contact-error" data-error-for="message" hidden></p>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
-                            Submit Admission Inquiry
+                        <button type="submit" class="btn btn-primary btn-lg contact-submit">
+                            <span class="contact-submit-text">Submit Admission Inquiry</span>
+                            <span class="contact-spinner" aria-hidden="true"></span>
                         </button>
                     </form>
                 </div>
@@ -364,17 +371,6 @@
         </div>
     </div>
 </section>
-
-<!-- Floating WhatsApp Quick Connect Widget -->
-@if ($settings->whatsapp_number)
-<a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $settings->whatsapp_number) }}" target="_blank" rel="noopener" class="floating-action-btn" aria-label="Chat on WhatsApp">
-    <div class="floating-action-pulse"></div>
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15c-1.49 0-2.95-.4-4.23-1.16l-.3-.18-3.13.82.84-3.05-.2-.31a8.19 8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.28-8.24 2.21 0 4.29.86 5.85 2.43 1.56 1.56 2.42 3.64 2.42 5.86 0 4.54-3.7 8.21-8.27 8.21zm4.53-6.17c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.79.98-.15.17-.3.19-.54.07-.25-.13-1.04-.38-1.99-1.22-.73-.65-1.23-1.46-1.38-1.71-.14-.25-.01-.39.11-.51.11-.11.25-.28.37-.43.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43l-.48-.01c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.42 1.44.54.61.19 1.16.17 1.6.1.49-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.17-.48-.29z"/>
-    </svg>
-    <span>{{ $page->section('whatsapp')?->title ?? 'WhatsApp' }}</span>
-</a>
-@endif
 
 <!-- Reusable Admissions CTA -->
 @include('partials.cta-banner')

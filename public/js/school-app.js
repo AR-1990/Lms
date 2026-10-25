@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 10. Interactive Inquiry Form Submission
     initInquiryForms();
+    initHelpline();
 
     // 11. Interactive Luxury Login Portal Engine
     initLoginPage();
@@ -437,15 +438,39 @@ function initInquiryForms() {
     const forms = document.querySelectorAll('form[data-ajax-inquiry]');
 
     forms.forEach(form => {
+        const inline = form.hasAttribute('data-inline-errors');
+        const card = form.closest('[data-contact]');
+
+        const clearErrors = () => {
+            form.querySelectorAll('[data-error-for]').forEach(error => { error.hidden = true; error.textContent = ''; });
+            form.querySelectorAll('.is-invalid').forEach(field => field.classList.remove('is-invalid'));
+        };
+
+        form.addEventListener('input', event => {
+            const error = form.querySelector('[data-error-for="' + event.target.name + '"]');
+
+            if (error) {
+                error.hidden = true;
+                event.target.classList.remove('is-invalid');
+            }
+        });
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
 
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn ? submitBtn.innerHTML : 'Submit';
 
+            clearErrors();
+
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = 'Sending Inquiry...';
+
+                if (inline) {
+                    submitBtn.classList.add('is-busy');
+                } else {
+                    submitBtn.innerHTML = 'Sending Inquiry...';
+                }
             }
 
             fetch(form.action, {
@@ -456,24 +481,165 @@ function initInquiryForms() {
                 .then(response => response.json().then(body => ({ ok: response.ok, body })))
                 .then(({ ok, body }) => {
                     if (ok) {
-                        showToast(body.message, 'success');
+                        if (card && card.querySelector('[data-contact-done]')) {
+                            card.querySelector('[data-contact-done-text]').textContent = body.message;
+                            form.hidden = true;
+                            card.querySelector('[data-contact-done]').hidden = false;
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        } else {
+                            showToast(body.message, 'success');
+                        }
+
                         form.reset();
+                        form.dispatchEvent(new Event('reset-done'));
                         return;
                     }
 
                     const fields = body.errors && (body.errors.fields || body.errors);
-                    const first = fields && typeof fields === 'object' ? Object.values(fields)[0] : null;
-                    showToast((Array.isArray(first) ? first[0] : null) || body.message || 'Please check the form.', 'error');
+                    let placed = false;
+
+                    if (inline && fields && typeof fields === 'object') {
+                        Object.keys(fields).forEach(name => {
+                            const error = form.querySelector('[data-error-for="' + name + '"]');
+                            const field = form.elements[name];
+
+                            if (error && Array.isArray(fields[name])) {
+                                error.textContent = fields[name][0];
+                                error.hidden = false;
+                                placed = true;
+                            }
+
+                            if (field && field.classList) {
+                                field.classList.add('is-invalid');
+                            }
+                        });
+
+                        const firstInvalid = form.querySelector('.is-invalid');
+                        if (firstInvalid) {
+                            firstInvalid.focus();
+                        }
+                    }
+
+                    if (!placed) {
+                        const first = fields && typeof fields === 'object' ? Object.values(fields)[0] : null;
+                        showToast((Array.isArray(first) ? first[0] : null) || body.message || 'Please check the form.', 'error');
+                    }
                 })
                 .catch(() => showToast('Could not send right now. Please call the school office.', 'error'))
                 .finally(() => {
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalText;
+                        submitBtn.classList.remove('is-busy');
+
+                        if (!inline) {
+                            submitBtn.innerHTML = originalText;
+                        }
                     }
                 });
         });
+
+        if (!card) {
+            return;
+        }
+
+        // Contact page extras: admission details on demand, a character counter and "send another".
+        const toggle = form.querySelector('[data-child-toggle]');
+        const childFields = form.querySelector('[data-child-fields]');
+        const message = form.querySelector('[data-count]');
+        const counter = message ? form.querySelector('[data-count-for="' + message.id + '"]') : null;
+
+        const showChild = open => {
+            childFields.hidden = !open;
+
+            if (!open) {
+                childFields.querySelectorAll('input, select').forEach(field => { field.value = ''; });
+            }
+        };
+
+        const count = () => {
+            if (counter) {
+                counter.textContent = message.value.length + ' / ' + message.maxLength;
+                counter.classList.toggle('is-near', message.value.length > message.maxLength * 0.9);
+            }
+        };
+
+        if (toggle && childFields) {
+            toggle.addEventListener('change', () => showChild(toggle.checked));
+        }
+
+        if (message) {
+            message.addEventListener('input', count);
+        }
+
+        form.addEventListener('reset-done', () => {
+            if (toggle) {
+                toggle.checked = false;
+                showChild(false);
+            }
+
+            count();
+        });
+
+        const again = card.querySelector('[data-contact-again]');
+
+        if (again) {
+            again.addEventListener('click', () => {
+                card.querySelector('[data-contact-done]').hidden = true;
+                form.hidden = false;
+                form.querySelector('input:not([type="hidden"]):not([type="radio"])').focus();
+            });
+        }
     });
+
+    // The map loads only when asked for, so the contact page stays fast and makes no outside calls until then.
+    document.querySelectorAll('[data-map-load]').forEach(button => {
+        button.addEventListener('click', () => {
+            const frame = button.closest('[data-map]').querySelector('iframe');
+            frame.src = frame.dataset.src;
+            button.closest('[data-map]').classList.add('is-loaded');
+        });
+    });
+}
+
+/**
+ * 10b. Admissions helpline: a small round button that opens WhatsApp / call / write-to-us.
+ */
+function initHelpline() {
+    const helpline = document.querySelector('[data-helpline]');
+    if (!helpline) return;
+
+    const toggle = helpline.querySelector('.helpline-toggle');
+    const panel = helpline.querySelector('.helpline-panel');
+    const actions = panel.querySelectorAll('a');
+
+    const setOpen = open => {
+        helpline.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', String(open));
+        panel.setAttribute('aria-hidden', String(!open));
+        actions.forEach(action => { action.tabIndex = open ? 0 : -1; });
+
+        if (open && actions[0]) {
+            actions[0].focus({ preventScroll: true });
+        }
+    };
+
+    toggle.addEventListener('click', () => setOpen(!helpline.classList.contains('is-open')));
+
+    document.addEventListener('click', event => {
+        if (helpline.classList.contains('is-open') && !helpline.contains(event.target)) {
+            setOpen(false);
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && helpline.classList.contains('is-open')) {
+            setOpen(false);
+            toggle.focus();
+        }
+    });
+
+    // One gentle nudge after a while on the page, never a constant pulse.
+    setTimeout(() => helpline.classList.add('is-nudged'), 6000);
 }
 
 /**
@@ -579,7 +745,7 @@ function initNavigationProgress() {
  */
 function initInteractionEffects() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const hosts = '.btn, .nav-link, .drawer-link, .role-chip, .demo-chip-btn, .floating-action-btn, .topbar-link';
+    const hosts = '.btn, .nav-link, .drawer-link, .role-chip, .demo-chip-btn, .helpline-toggle, .contact-quick-card, .topbar-link';
     const noInkTargets = 'input, textarea, select, [contenteditable="true"]';
 
     const removeAfterAnimation = function (element) {

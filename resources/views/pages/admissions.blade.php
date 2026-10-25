@@ -63,27 +63,31 @@
                     <h3 style="margin-bottom: 0.5rem; font-size: 1.45rem;">{{ $form?->title ?? 'Submit Online Application' }}</h3>
                     <p style="font-size: 0.925rem; margin-bottom: 1.5rem;">{{ $form?->description }}</p>
 
-                    <form data-ajax-inquiry action="{{ route('inquiry.submit') }}" method="POST">
+                    <form data-ajax-inquiry data-inline-errors action="{{ route('inquiry.submit') }}" method="POST" novalidate>
                         @csrf
                         <div class="grid-2" style="gap: 1rem;">
                             <div class="form-group">
                                 <label class="form-label" for="admStudentName">Student's Full Name</label>
                                 <input type="text" id="admStudentName" name="child_name" class="form-control" placeholder="e.g. Daniyal Khan" required>
+                                <p class="contact-error" data-error-for="child_name" hidden></p>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="admParentName">Parent / Guardian Name</label>
-                                <input type="text" id="admParentName" name="parent_name" class="form-control" placeholder="e.g. Imran Khan" required>
+                                <input type="text" id="admParentName" name="parent_name" class="form-control" placeholder="e.g. Imran Khan" autocomplete="name" required>
+                                <p class="contact-error" data-error-for="parent_name" hidden></p>
                             </div>
                         </div>
 
                         <div class="grid-2" style="gap: 1rem;">
                             <div class="form-group">
                                 <label class="form-label" for="admPhone">Parent WhatsApp / Phone</label>
-                                <input type="tel" id="admPhone" name="phone" class="form-control" placeholder="0300-XXXXXXX" required>
+                                <input type="tel" id="admPhone" name="phone" class="form-control" placeholder="0300 1234567" autocomplete="tel" inputmode="tel" required>
+                                <p class="contact-error" data-error-for="phone" hidden></p>
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="admEmail">Parent Email Address</label>
-                                <input type="email" id="admEmail" name="email" class="form-control" placeholder="parent@email.com">
+                                <label class="form-label" for="admEmail">Parent Email Address <span class="contact-optional">optional</span></label>
+                                <input type="email" id="admEmail" name="email" class="form-control" placeholder="parent@email.com" autocomplete="email">
+                                <p class="contact-error" data-error-for="email" hidden></p>
                             </div>
                         </div>
 
@@ -99,10 +103,12 @@
                         <div class="form-group">
                             <label class="form-label" for="admMessage">Previous School & Any Special Notes</label>
                             <textarea id="admMessage" name="message" class="form-control" rows="3" placeholder="Previous school name, current grade, and any special inquiries..." required></textarea>
+                            <p class="contact-error" data-error-for="message" hidden></p>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
-                            Submit Admission Application
+                        <button type="submit" class="btn btn-primary btn-lg contact-submit">
+                            <span class="contact-submit-text">Submit Admission Application</span>
+                            <span class="contact-spinner" aria-hidden="true"></span>
                         </button>
                     </form>
                 </div>

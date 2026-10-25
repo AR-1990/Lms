@@ -133,7 +133,12 @@ class SchoolController extends Controller
      */
     public function contact(LookupService $lookupService): View
     {
-        return view('pages.contact', ['page' => $this->pageService->page('contact'), 'faqs' => $this->websiteService->faqs(), 'topics' => $lookupService->options('contact_topic')]);
+        return view('pages.contact', [
+            'page' => $this->pageService->page('contact'),
+            'faqs' => $this->websiteService->faqs(),
+            'topics' => $lookupService->options('contact_topic'),
+            'classes' => SchoolClass::where('is_active', true)->orderBy('level_order')->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -269,7 +274,13 @@ class SchoolController extends Controller
             'class_sought_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->whereNull('deleted_at')],
             'topic_id' => ['nullable', 'integer', Rule::exists('lookups', 'id')->where('type', 'contact_topic')->whereNull('deleted_at')],
             'message' => ['required', 'string', 'max:2000'],
-        ], ['phone.regex' => 'Enter a valid phone number, e.g. 03001234567.']);
+        ], [
+            'parent_name.required' => 'Please tell us your name.',
+            'phone.required' => 'Please give a number we can call you on.',
+            'phone.regex' => 'Enter a valid phone number, e.g. 03001234567.',
+            'email.email' => 'That email address does not look right.',
+            'message.required' => 'Please write a short message.',
+        ]);
 
         $topic = isset($validated['topic_id']) ? Lookup::whereKey($validated['topic_id'])->value('name') : null;
 

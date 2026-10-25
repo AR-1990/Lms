@@ -72,6 +72,29 @@ class WebsiteContentTest extends TestCase
         $this->postJson('/api/inquiry', ['parent_name' => 'No Phone', 'message' => 'Hi'])->assertUnprocessable();
     }
 
+    public function test_every_inquiry_form_sends_the_fields_the_api_expects(): void
+    {
+        $accepted = ['_token', 'parent_name', 'child_name', 'email', 'phone', 'class_sought_id', 'topic_id', 'message'];
+
+        foreach (['/', '/admissions', '/contact'] as $url) {
+            $html = $this->get($url)->assertOk()->assertSee('data-helpline', false)->getContent();
+            preg_match_all('/<form data-ajax-inquiry.*?<\/form>/s', $html, $forms);
+            $this->assertNotEmpty($forms[0], $url);
+
+            foreach ($forms[0] as $form) {
+                preg_match_all('/name="([a-z_]+)"/', $form, $names);
+                $this->assertSame([], array_values(array_diff(array_unique($names[1]), $accepted)), "{$url} sends fields the API ignores");
+                $this->assertEmpty(array_diff(['parent_name', 'phone', 'message'], $names[1]), "{$url} misses a required field");
+            }
+        }
+
+        $this->get('/login')->assertOk()->assertDontSee('data-helpline', false);
+        $this->postJson('/api/inquiry', ['phone' => '0321'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.fields.parent_name.0', 'Please tell us your name.')
+            ->assertJsonPath('errors.fields.message.0', 'Please write a short message.');
+    }
+
     public function test_admin_manages_website_content_and_others_cannot(): void
     {
         $teacher = User::where('email', 'teacher@lms.test')->first();

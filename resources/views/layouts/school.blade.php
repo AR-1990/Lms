@@ -43,6 +43,10 @@
     <!-- Modular Footer Partial -->
     @include('partials.footer')
 
+    @unless (request()->routeIs('login', 'password.*'))
+        @include('partials.helpline')
+    @endunless
+
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="toast-container"></div>
 
