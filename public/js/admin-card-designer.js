@@ -19,6 +19,7 @@
     const DEFAULTS = {
         photo: { width_mm: 20, height_mm: 24 },
         qr_code: { width_mm: 15, height_mm: 15 },
+        school_logo: { width_mm: 9, height_mm: 9 },
         date_sheet: { width_mm: 80, height_mm: 25 },
         signature_line: { width_mm: 24, custom_text: 'Principal', align: 'center' },
         address: { width_mm: 40, height_mm: 10 },
@@ -78,7 +79,7 @@
             }
 
             const item = document.createElement('div');
-            const visual = ['photo', 'qr_code', 'date_sheet'].indexOf(field.field_key) !== -1;
+            const visual = ['photo', 'qr_code', 'school_logo', 'date_sheet'].indexOf(field.field_key) !== -1;
 
             item.className = 'dash-designer-item dash-designer-' + field.field_key + (selected === index ? ' is-selected' : '');
             item.dataset.index = index;
@@ -94,7 +95,7 @@
                 item.style.color = field.color;
             }
 
-            item.innerHTML = (visual ? '<span>' + escapeHtml(field.field_key === 'photo' ? 'Photo' : (field.field_key === 'qr_code' ? 'QR' : 'Date sheet')) + '</span>' : escapeHtml(sampleText(field)))
+            item.innerHTML = (visual ? '<span>' + escapeHtml({ photo: 'Photo', qr_code: 'QR', school_logo: 'Logo' }[field.field_key] || 'Date sheet') + '</span>' : escapeHtml(sampleText(field)))
                 + '<span class="dash-designer-handle" data-handle aria-hidden="true"></span>';
             canvas.appendChild(item);
         });
@@ -194,7 +195,7 @@
 
             if (resizing) {
                 field.width_mm = round(clamp(start.fw + dx, 2, template.width_mm - field.x_mm));
-                field.height_mm = ['photo', 'qr_code', 'date_sheet', 'address', 'instructions'].indexOf(field.field_key) !== -1 ? round(clamp(start.fh + dy, 2, template.height_mm - field.y_mm)) : field.height_mm;
+                field.height_mm = ['photo', 'qr_code', 'school_logo', 'date_sheet', 'address', 'instructions'].indexOf(field.field_key) !== -1 ? round(clamp(start.fh + dy, 2, template.height_mm - field.y_mm)) : field.height_mm;
             } else {
                 field.x_mm = round(clamp(start.fx + dx, 0, template.width_mm - (field.width_mm || 2)));
                 field.y_mm = round(clamp(start.fy + dy, 0, template.height_mm - 2));

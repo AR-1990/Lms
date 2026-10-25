@@ -31,6 +31,7 @@ class FeeSeeder extends Seeder
         ['Transport Fee', 'TRN', '4900', 'monthly', false, false],
         ['Uniform & Books', 'UNB', '4500', 'one_time', false, false],
         ['Late Payment Fine', 'LPF', '4300', 'one_time', false, false],
+        ['Previous Balance', 'OPB', '3300', 'one_time', false, false],
     ];
 
     /**

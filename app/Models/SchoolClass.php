@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Database\Factories\SchoolClassFactory;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SchoolClass extends Model
 {
     /** @use HasFactory<SchoolClassFactory> */
-    use HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
 
     protected $table = 'classes';
 

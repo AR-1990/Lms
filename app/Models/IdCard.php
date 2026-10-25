@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class IdCard extends Model
 {
-    use LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * Workflow: active → lost | revoked | expired; a lost card is reissued as a new card (old one becomes replaced).

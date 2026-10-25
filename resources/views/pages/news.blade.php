@@ -91,13 +91,13 @@
         <div class="grid-3">
             @forelse ($calendar as $event)
                 <div class="card" data-reveal="fade-up" style="padding: 2rem; transition-delay: {{ $loop->index * 0.15 }}s;">
-                    <span class="badge {{ ['badge-amber', 'badge-primary', 'badge-dark'][$loop->index % 3] }}" style="margin-bottom: 1rem;">{{ $event->starts_on->format('d F Y') }}</span>
-                    <h4 style="margin-bottom: 0.75rem;">{{ $event->title }}</h4>
-                    @if ($event->description)
-                        <p style="font-size: 0.9rem; color: #57534e; margin-bottom: 1rem;">{{ $event->description }}</p>
+                    <span class="badge {{ ['badge-amber', 'badge-primary', 'badge-dark'][$loop->index % 3] }}" style="margin-bottom: 1rem;">{{ \Illuminate\Support\Carbon::parse($event['date'])->format('d F Y') }}</span>
+                    <h4 style="margin-bottom: 0.75rem;">{{ $event['title'] }}</h4>
+                    @if ($event['description'])
+                        <p style="font-size: 0.9rem; color: #57534e; margin-bottom: 1rem;">{{ $event['description'] }}</p>
                     @endif
-                    @if ($event->venue)
-                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Venue: {{ $event->venue }}</div>
+                    @if ($event['venue'])
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Venue: {{ $event['venue'] }}</div>
                     @endif
                 </div>
             @empty

@@ -15,6 +15,8 @@
     <p>Fee collections, vouchers and payroll</p>
 </section>
 
+@include('partials.attendance-qr')
+
 @include('partials.sticky-notes', ['limit' => 8])
 
 <section class="dash-stats">

@@ -87,6 +87,8 @@
         initCountUp();
         initDeleteConfirmation();
         initAutoSubmit();
+        initCampusPick();
+        initJumpTo();
         initLiveClock();
     });
 
@@ -395,6 +397,13 @@
             'X-Platform': 'web'
         };
 
+        // Head office looking at one campus: every API call (grids too) is limited to it.
+        const campus = pickedCampus();
+
+        if (campus) {
+            headers['X-Campus-Id'] = campus;
+        }
+
         // File uploads let the browser set the multipart boundary itself.
         if (!isUpload) {
             headers['Content-Type'] = 'application/json';
@@ -415,6 +424,141 @@
             }
 
             return envelope;
+        });
+    }
+
+    const CAMPUS_KEY = 'pinnacle.campus';
+
+    function pickedCampus() {
+        try {
+            return window.localStorage.getItem(CAMPUS_KEY) || '';
+        } catch (error) {
+            return '';
+        }
+    }
+
+    /**
+     * Campus picker in the top bar (head-office users only): remembered per browser, applied by reloading the page.
+     */
+    function initCampusPick() {
+        const select = document.querySelector('[data-campus-pick]');
+
+        if (!select) {
+            return;
+        }
+
+        const current = pickedCampus();
+        select.value = Array.prototype.some.call(select.options, function (option) { return option.value === current; }) ? current : '';
+
+        select.addEventListener('change', function () {
+            try {
+                window.localStorage.setItem(CAMPUS_KEY, select.value);
+            } catch (error) {
+                return;
+            }
+
+            window.location.reload();
+        });
+    }
+
+    /**
+     * "Jump to" search in the top bar: type part of a module or page name, then Enter (or click) to open it.
+     * Ctrl+K or "/" focuses it. The page list is loaded once, on first use.
+     */
+    function initJumpTo() {
+        const box = document.querySelector('[data-jump]');
+
+        if (!box) {
+            return;
+        }
+
+        const input = box.querySelector('[data-jump-input]');
+        const list = box.querySelector('[data-jump-list]');
+        let pages = null;
+        let matches = [];
+        let active = 0;
+
+        function escapeText(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+
+            return div.innerHTML;
+        }
+
+        function render() {
+            const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+            matches = (pages || []).filter(function (page) {
+                const text = (page.group + ' ' + page.label).toLowerCase();
+
+                return words.every(function (word) { return text.indexOf(word) !== -1; });
+            }).slice(0, 12);
+            active = Math.min(active, Math.max(matches.length - 1, 0));
+            list.innerHTML = matches.length ? matches.map(function (page, index) {
+                return '<li role="option" id="dashJump' + index + '" aria-selected="' + (index === active) + '" class="' + (index === active ? 'is-active' : '') + '" data-index="' + index + '"><span>' + escapeText(page.label) + '</span><small>' + escapeText(page.group) + '</small></li>';
+            }).join('') : '<li class="dash-jump-empty">' + (pages ? 'No page matches.' : 'Loading…') + '</li>';
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            input.setAttribute('aria-activedescendant', matches.length ? 'dashJump' + active : '');
+        }
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+        }
+
+        function go(index) {
+            if (matches[index]) {
+                window.location.href = matches[index].url;
+            }
+        }
+
+        let loading = false;
+
+        function open() {
+            if (pages === null && !loading) {
+                loading = true;
+                api('GET', box.dataset.url).then(function (envelope) {
+                    pages = envelope.data || [];
+                }).catch(function () {
+                    pages = [];
+                }).finally(render);
+            }
+
+            render();
+        }
+
+        input.addEventListener('focus', open);
+        input.addEventListener('input', function () { active = 0; open(); });
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                active = (active + (event.key === 'ArrowDown' ? 1 : -1) + matches.length) % Math.max(matches.length, 1);
+                render();
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                go(active);
+            } else if (event.key === 'Escape') {
+                input.blur();
+                close();
+            }
+        });
+        input.addEventListener('blur', function () { window.setTimeout(close, 150); });
+        list.addEventListener('mousedown', function (event) {
+            const item = event.target.closest('[data-index]');
+
+            if (item) {
+                event.preventDefault();
+                go(Number(item.dataset.index));
+            }
+        });
+        document.addEventListener('keydown', function (event) {
+            const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
+
+            if ((event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) || (event.key === '/' && !typing)) {
+                event.preventDefault();
+                input.focus();
+                input.select();
+            }
         });
     }
 

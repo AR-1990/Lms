@@ -12,6 +12,7 @@
         .decor { position: absolute; left: 0; top: 0; }
         .item { position: absolute; line-height: 1.2; }
         .item img { width: 100%; height: 100%; }
+        .item img.logo { width: auto; height: auto; max-width: 100%; max-height: 100%; }
         .photo { border: 0.6mm solid #ffffff; background: #e5e7eb; }
         .photo-frame { position: absolute; border: 0.35mm solid #c9a227; }
         .signature { border-top: 0.25mm solid #374151; padding-top: 0.6mm; text-align: center; }
@@ -39,6 +40,8 @@
                     @if ($field->field_key === 'photo')
                         <div class="photo-frame" style="left: {{ $field->x_mm - 0.9 }}mm; top: {{ $field->y_mm - 0.9 }}mm; width: {{ $field->width_mm + 1.1 }}mm; height: {{ $field->height_mm + 1.1 }}mm;"></div>
                         <div class="item photo" style="{{ $box }}">@if ($value)<img src="{{ $value }}" alt="">@endif</div>
+                    @elseif ($field->field_key === 'school_logo')
+                        @if ($value)<div class="item" style="{{ $box }} text-align: center;"><img class="logo" src="{{ $value }}" alt=""></div>@endif
                     @elseif ($field->field_key === 'qr_code')
                         @if ($value)<div class="item" style="{{ $box }}"><img src="{{ $value }}" alt=""></div>@endif
                     @elseif ($field->field_key === 'signature_line')

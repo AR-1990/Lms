@@ -132,6 +132,7 @@ class ResultService
                 $marks = Mark::where('enrollment_id', $card->enrollment_id)->whereIn('exam_subject_id', $card->exam->subjects->pluck('id'))->get()->keyBy('exam_subject_id');
 
                 return [
+                    'exam_id' => $card->exam_id,
                     'exam' => $card->exam->name,
                     'term' => $card->exam->term?->name,
                     'percentage' => $card->percentage,
@@ -150,10 +151,10 @@ class ResultService
             })->all();
     }
 
-    public function reportCardsPdf(Exam $exam, ?int $sectionId): Response
+    public function reportCardsPdf(Exam $exam, ?int $sectionId, ?int $studentId = null): Response
     {
         $exam = $this->examService->find($exam);
-        $cards = ReportCard::where('exam_id', $exam->id)->when($sectionId, fn ($query, int $id) => $query->where('section_id', $id))
+        $cards = ReportCard::where('exam_id', $exam->id)->when($sectionId, fn ($query, int $id) => $query->where('section_id', $id))->when($studentId, fn ($query, int $id) => $query->where('student_id', $id))
             ->with(['student:id,first_name,last_name,admission_no', 'enrollment:id,roll_no,section_id', 'enrollment.section:id,name'])
             ->orderBy('section_id')->orderBy('position_in_section')->get();
 

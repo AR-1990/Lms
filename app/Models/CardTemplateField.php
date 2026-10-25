@@ -19,7 +19,7 @@ class CardTemplateField extends Model
      */
     public const KEYS = [
         'photo', 'full_name', 'father_name', 'admission_no', 'roll_no', 'class_section', 'employee_code', 'designation', 'department',
-        'blood_group', 'date_of_birth', 'emergency_phone', 'address', 'valid_until', 'card_no', 'school_name', 'qr_code',
+        'blood_group', 'date_of_birth', 'emergency_phone', 'address', 'valid_until', 'card_no', 'school_name', 'school_logo', 'qr_code',
         'exam_name', 'exam_roll_no', 'date_sheet', 'instructions', 'signature_line', 'custom_text',
     ];
 

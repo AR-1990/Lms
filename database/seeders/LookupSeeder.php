@@ -43,6 +43,7 @@ class LookupSeeder extends Seeder
         'inquiry_source' => ['Website', 'Walk-in', 'Phone Call', 'Referral', 'Social Media', 'Newspaper'],
         'inquiry_status_reason' => ['Fee Concern', 'Distance', 'Joined Another School', 'No Seat Available', 'Not Interested'],
         'admission_rejection_reason' => ['Did Not Pass Test', 'Age Criteria', 'Incomplete Documents', 'Seats Full'],
+        'exit_clearance_area' => ['Accounts', 'Library', 'IT', 'Administration'],
         'conduct' => ['Excellent', 'Very Good', 'Good', 'Satisfactory'],
         'withdrawal_reason' => ['Relocation', 'Financial', 'Transfer to Another School', 'Graduated', 'Medical', 'Other'],
         'employment_type' => ['Permanent', 'Contract', 'Visiting', 'Intern', 'Probation'],

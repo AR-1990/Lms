@@ -124,6 +124,17 @@
             </div>
             @include('dashboards.partials.field', ['name' => 'roll_no', 'label' => 'Roll no', 'id' => 'enrolRollNo'])
             @include('dashboards.partials.field', ['name' => 'parent_password', 'label' => 'Parent login password', 'type' => 'password', 'hint' => 'optional — login by phone', 'id' => 'enrolParentPassword', 'wide' => true])
+            @include('dashboards.partials.field', ['name' => 'student_password', 'label' => 'Student login password', 'type' => 'password', 'hint' => 'optional — login by admission no', 'id' => 'enrolStudentPassword', 'wide' => true])
+            <label class="dash-switch dash-field-wide">
+                <input type="checkbox" name="issue_first_challan" checked>
+                <span class="dash-switch-track" aria-hidden="true"><span class="dash-switch-thumb"></span></span>
+                <span>Make this month's fee challan now</span>
+            </label>
+            <label class="dash-switch dash-field-wide">
+                <input type="checkbox" name="issue_id_card" checked>
+                <span class="dash-switch-track" aria-hidden="true"><span class="dash-switch-thumb"></span></span>
+                <span>Issue the student ID card (when a student card design exists)</span>
+            </label>
         </div>
         <p class="dash-field-error" data-error-for="fees" hidden></p>
         <p class="dash-form-error" data-form-error hidden></p>

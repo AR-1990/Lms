@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class SystemSettingsService
@@ -43,6 +45,27 @@ class SystemSettingsService
         return $this->formatSettings($this->getSettingsRecord());
     }
 
+    /**
+     * The school logo for pages, PDFs and the mobile app; the browser keeps it for a week (the URL changes with each upload).
+     */
+    public function logoResponse(): Response
+    {
+        $path = SystemSetting::query()->value('logo_path');
+        abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, null, ['Cache-Control' => 'public, max-age=604800']);
+    }
+
+    /**
+     * Full path of the logo file for PDFs, or null when none is uploaded.
+     */
+    public function logoFile(): ?string
+    {
+        $path = SystemSetting::query()->value('logo_path');
+
+        return $path !== null && Storage::disk('local')->exists($path) ? Storage::disk('local')->path($path) : null;
+    }
+
     public function updateSettings(array $validatedData, ?UploadedFile $logo = null): array
     {
         $this->ensureReferenceData();
@@ -66,9 +89,12 @@ class SystemSettingsService
         ];
 
         if ($logo instanceof UploadedFile) {
-            $payload['logo_binary'] = file_get_contents($logo->getRealPath()) ?: null;
-            $payload['logo_mime_type'] = $logo->getMimeType();
-            $payload['logo_file_name'] = $logo->getClientOriginalName();
+            $old = $settings->logo_path;
+            $payload['logo_path'] = $logo->storeAs('branding', 'logo-'.now()->format('YmdHis').'.'.($logo->extension() ?: 'png'), 'local');
+
+            if ($old !== null && $old !== $payload['logo_path']) {
+                Storage::disk('local')->delete($old);
+            }
         }
 
         $settings->fill($payload);
@@ -199,11 +225,7 @@ class SystemSettingsService
             'footer_text' => $settings->footer_text,
             'timezone' => $settings->region?->timezone ?? config('app.timezone'),
             'logo' => [
-                'file_name' => $settings->logo_file_name,
-                'mime_type' => $settings->logo_mime_type,
-                'data_uri' => filled($settings->logo_binary) && filled($settings->logo_mime_type)
-                    ? 'data:'.$settings->logo_mime_type.';base64,'.base64_encode($settings->logo_binary)
-                    : null,
+                'url' => $settings->logo_path ? route('school-logo', ['v' => basename($settings->logo_path)]) : null,
             ],
             'country' => $settings->country === null ? null : [
                 'id' => $settings->country->id,

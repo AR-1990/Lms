@@ -66,6 +66,26 @@ class WebsitePageService
     /**
      * @return Collection<int, WebsitePage>
      */
+    /**
+     * A page with its sections, cards and image links, as the admin editor and the public site API return it.
+     *
+     * @return array<string, mixed>
+     */
+    public function present(WebsitePage $page): array
+    {
+        $item = fn (WebsiteSectionItem $item): array => [...$item->attributesToArray(), 'image_url' => $item->imageUrl()];
+
+        return [
+            ...$page->attributesToArray(),
+            'hero_image_url' => WebsitePage::imageUrl($page->hero_image_path),
+            'sections' => $page->sections->map(fn (WebsiteSection $section): array => [
+                ...$section->attributesToArray(),
+                'image_url' => $section->imageUrl(),
+                'items' => $section->items->map(fn (WebsiteSectionItem $card): array => [...$item($card), 'children' => $card->children->map($item)->all()])->all(),
+            ])->all(),
+        ];
+    }
+
     public function pages(): Collection
     {
         return WebsitePage::query()->withCount('sections')->orderBy('id')->get(['id', 'slug', 'name', 'is_published', 'updated_at']);

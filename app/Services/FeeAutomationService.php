@@ -110,6 +110,12 @@ class FeeAutomationService
             ->unique('student_id');
         $summary['new'] = $newlyOverdue->count();
 
+        // Each family is reminded once, the morning after the due date.
+        (clone $overdue)->whereDate('due_date', $today->copy()->subDay()->toDateString())->with('student:id,first_name,middle_name,last_name')->get(['id', 'invoice_no', 'student_id', 'balance', 'due_date'])
+            ->each(fn (FeeInvoice $invoice) => $this->notificationService->notifyEvent('fee_overdue', $this->notificationService->familyUserIds([$invoice->student_id])->all(), [
+                'student_name' => $invoice->student?->fullName(), 'invoice_no' => $invoice->invoice_no, 'amount' => 'Rs '.number_format($invoice->balance / 100), 'due_date' => $invoice->due_date->format('d M Y'),
+            ], $invoice, route('family.child', $invoice->student_id)));
+
         $names = $newlyOverdue->take(5)->map(fn (FeeInvoice $invoice): string => $invoice->student?->fullName().($invoice->enrollment?->schoolClass ? ' ('.$invoice->enrollment->schoolClass->name.')' : ''))->implode(', ');
         $body = 'Rs '.number_format($summary['amount'] / 100).' is unpaid after the due date.'
             .($summary['new'] > 0 ? " Overdue since yesterday: {$names}".($summary['new'] > 5 ? ' and '.($summary['new'] - 5).' more' : '').'.' : '');

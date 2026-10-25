@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['campus_id', 'request_no', 'department_id', 'request_date', 'needed_by', 'purpose', 'estimated_total', 'status', 'approval_request_id'])]
 class PurchaseRequest extends Model
 {
-    use LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * Workflow: pending → approved | rejected. Only a pending request can be edited.

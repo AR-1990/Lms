@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ERP;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApprovalRequestResource;
 use App\Models\ApprovalRequest;
+use App\Services\ApprovalInboxService;
 use App\Services\ApprovalService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,14 @@ class ApprovalController extends Controller
     use ApiResponse;
 
     public function __construct(private ApprovalService $approvalService) {}
+
+    /**
+     * Everything waiting for this user's decision across all modules, each with its approve / reject call.
+     */
+    public function inbox(Request $request, ApprovalInboxService $inboxService): JsonResponse
+    {
+        return $this->successResponse($inboxService->inbox($request->user()), 'Approvals inbox retrieved.');
+    }
 
     public function index(Request $request): JsonResponse
     {

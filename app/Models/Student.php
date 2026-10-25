@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Database\Factories\StudentFactory;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\DB;
 class Student extends Model
 {
     /** @use HasFactory<StudentFactory> */
-    use HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * @var array<int, string>

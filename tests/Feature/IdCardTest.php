@@ -7,9 +7,12 @@ use App\Models\Employee;
 use App\Models\IdCard;
 use App\Models\Section;
 use App\Models\Student;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class IdCardTest extends TestCase
@@ -207,7 +210,7 @@ class IdCardTest extends TestCase
             $this->assertSame(1, CardTemplate::where('card_type', $type)->where('is_default', true)->count(), $type);
         }
 
-        $this->assertSame(['classic', 'elegant', 'wave'], CardTemplate::where('card_type', 'student')->where('is_system', true)->orderBy('theme')->pluck('theme')->all());
+        $this->assertSame(['classic', 'elegant', 'modern', 'wave'], CardTemplate::where('card_type', 'student')->where('is_system', true)->orderBy('theme')->pluck('theme')->all());
 
         $wave = CardTemplate::where('card_type', 'admit_card')->where('theme', 'wave')->first();
         $this->actingAs($this->admin, 'sanctum')
@@ -227,6 +230,24 @@ class IdCardTest extends TestCase
         // An A6 admit card's front and back are stacked on one A4 page instead of running off it.
         $preview = $this->actingAs($this->admin)->get('/api/erp/card-templates/'.$wave->id.'/preview')->assertOk();
         $this->assertSame(1, substr_count($preview->getContent(), '/Type /Page') - substr_count($preview->getContent(), '/Type /Pages'));
+    }
+
+    public function test_new_id_cards_use_the_modern_design_with_the_school_logo(): void
+    {
+        Storage::fake('local');
+        $student = Student::first();
+        $this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/id-cards/issue', ['holder_type' => 'student', 'holder_ids' => [$student->id]])->assertCreated();
+        $card = IdCard::firstOrFail();
+        $this->assertSame('modern', $card->template->theme);
+        $this->assertTrue($card->template->fields->contains('field_key', 'school_logo'));
+
+        $withoutLogo = $this->actingAs($this->admin)->get('/api/erp/id-cards/print?'.http_build_query(['ids' => [$card->id]]))->assertOk()->getContent();
+        $logo = UploadedFile::fake()->image('logo.png', 120, 120);
+        Storage::disk('local')->putFileAs('settings', $logo, 'logo.png');
+        SystemSetting::query()->update(['logo_path' => 'settings/logo.png']);
+        $withLogo = $this->actingAs($this->admin)->get('/api/erp/id-cards/print?'.http_build_query(['ids' => [$card->id]]))->assertOk()->getContent();
+
+        $this->assertGreaterThan(substr_count($withoutLogo, '/Subtype /Image'), substr_count($withLogo, '/Subtype /Image'));
     }
 
     public function test_system_templates_and_templates_with_cards_cannot_be_deleted(): void

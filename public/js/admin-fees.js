@@ -429,9 +429,14 @@
             window.history.replaceState(null, '', window.location.pathname);
         }
 
+        detail.querySelector('[data-print-receipt]').addEventListener('click', function () {
+            ui.openFile(resourceUrl + '/' + detail.dataset.id + '/pdf', 'Preparing the receipt…').catch(function () {});
+        });
+
         function openReceipt(row) {
             ui.api('GET', resourceUrl + '/' + row.id).then(function (envelope) {
                 renderReceipt(envelope.data);
+                detail.dataset.id = envelope.data.id;
                 detail.showModal();
             });
         }

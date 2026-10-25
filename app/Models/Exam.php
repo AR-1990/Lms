@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['campus_id', 'exam_term_id', 'class_id', 'name', 'exam_type_id', 'grading_scale_id', 'fee_head_id', 'exam_fee_amount', 'fee_due_date', 'require_fee_clearance', 'min_attendance_percent', 'instructions', 'status', 'marks_entry_deadline', 'published_at', 'published_by'])]
 class Exam extends Model
 {
-    use LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     public const STATUSES = ['draft', 'scheduled', 'admit_cards_issued', 'marks_entry', 'review', 'published'];
 

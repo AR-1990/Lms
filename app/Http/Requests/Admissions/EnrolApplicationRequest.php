@@ -25,6 +25,9 @@ class EnrolApplicationRequest extends FormRequest
             'section_id' => ['nullable', 'integer', Rule::exists('sections', 'id')->whereNull('deleted_at')],
             'roll_no' => ['nullable', 'string', 'max:20'],
             'parent_password' => ['nullable', 'string', 'min:8'],
+            'student_password' => ['nullable', 'string', 'min:8'],
+            'issue_first_challan' => ['sometimes', 'boolean'],
+            'issue_id_card' => ['sometimes', 'boolean'],
         ];
     }
 

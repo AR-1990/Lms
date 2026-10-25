@@ -193,6 +193,20 @@ class ExamController extends Controller
     }
 
     /**
+     * One child's admit card (when eligible) or published report card, for exam staff or the child's family.
+     */
+    public function studentPdf(Request $request, Exam $exam, Student $student, string $document): Response
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission('manage-exams') || in_array($student->id, Student::ownIdsFor($user), true), 404);
+        abort_if($document === 'report-card' && $exam->status !== 'published', 404, 'This result is not published yet.');
+
+        return $document === 'report-card'
+            ? $this->resultService->reportCardsPdf($exam, null, $student->id)
+            : $this->examService->admitCardsPdf($exam, null, $student->id);
+    }
+
+    /**
      * Published results of one student — staff, the student, or their parent.
      */
     public function studentResults(Request $request, Student $student): JsonResponse

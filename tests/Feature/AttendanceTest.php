@@ -14,6 +14,7 @@ use App\Models\StudentAttendance;
 use App\Models\Subject;
 use App\Models\TimetableSlot;
 use App\Models\User;
+use App\Models\UserNotification;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -101,6 +102,7 @@ class AttendanceTest extends TestCase
         $this->actingAs($parent, 'sanctum')->postJson('/api/erp/leave-requests', ['student_id' => $other->id, 'from_date' => '2026-10-22', 'to_date' => '2026-10-22', 'reason' => 'x'])->assertForbidden();
 
         $this->actingAs($this->teacher, 'sanctum')->postJson("/api/erp/leave-requests/{$leave['id']}/decision", ['decision' => 'approved'])->assertOk()->assertJsonPath('data.status', 'approved');
+        $this->assertTrue(UserNotification::where('user_id', $parent->id)->where('event_key', 'leave_decided')->where('title', 'like', 'Leave approved%')->exists());
 
         $sheet = $this->actingAs($this->teacher, 'sanctum')->getJson('/api/erp/attendance/sheet?section_id='.$this->grade5A->id.'&date=2026-10-22')->json('data.rows');
         $this->assertSame('leave', collect($sheet)->firstWhere('student_id', $john->id)['status']);

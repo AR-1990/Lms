@@ -15,6 +15,8 @@
     <p>{{ $student ? collect([trim(($student['class'] ?? '').' '.($student['section'] ?? '')), $student['roll_no'] ? 'Roll '.$student['roll_no'] : null, $student['admission_no']])->filter()->implode(' · ') : 'Your account is not linked to a student record yet. Please contact the school office.' }}</p>
 </section>
 
+@include('partials.attendance-qr')
+
 @include('partials.sticky-notes', ['limit' => 8])
 
 @if ($student)

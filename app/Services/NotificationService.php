@@ -19,8 +19,9 @@ use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Delivers a message to users: the in-app bell (web + mobile) plus email / SMS / push / WhatsApp rows in
- * the delivery log. Email is sent on the queue; SMS, push and WhatsApp are logged as failed until a
- * provider is chosen (PLAN.md §27).
+ * the delivery log. Email and push (Firebase, once configured; every bell item is also pushed to the
+ * user's phones) are sent on the queue; SMS and WhatsApp are logged as failed until a provider is chosen
+ * (PLAN.md §27).
  */
 class NotificationService
 {
@@ -37,6 +38,7 @@ class NotificationService
         }
 
         $now = now();
+        $channels = in_array('in_app', $channels, true) && app(PushService::class)->isConfigured() ? array_values(array_unique([...$channels, 'push'])) : $channels;
 
         if (in_array('in_app', $channels, true)) {
             foreach (array_chunk($userIds, 500) as $chunk) {
@@ -79,6 +81,7 @@ class NotificationService
     private function log(string $channel, array $userIds, string $eventKey, string $subject, string $body, ?int $templateId): void
     {
         $users = User::whereIn('id', $userIds)->with('devices:id,user_id,push_token,is_active')->get(['id', 'email', 'phone']);
+        $queued = $channel === 'email' || ($channel === 'push' && app(PushService::class)->isConfigured());
 
         foreach ($users as $user) {
             $recipient = match ($channel) {
@@ -94,11 +97,11 @@ class NotificationService
             $log = NotificationLog::create([
                 'channel' => $channel, 'recipient' => $recipient, 'user_id' => $user->id, 'message_template_id' => $templateId, 'event_key' => $eventKey,
                 'subject' => mb_substr($subject, 0, 255), 'body' => $body,
-                'status' => $channel === 'email' ? 'queued' : 'failed',
-                'error' => $channel === 'email' ? null : 'No '.$channel.' provider is configured yet.',
+                'status' => $queued ? 'queued' : 'failed',
+                'error' => $queued ? null : 'No '.$channel.' provider is configured yet.',
             ]);
 
-            if ($channel === 'email') {
+            if ($queued) {
                 SendNotificationMessage::dispatch($log->id)->afterCommit();
             }
         }

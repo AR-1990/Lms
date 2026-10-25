@@ -8,6 +8,8 @@ use App\Models\AdmissionInquiry;
 use App\Models\AdmissionInterview;
 use App\Models\AdmissionStatusHistory;
 use App\Models\AdmissionTest;
+use App\Models\CardTemplate;
+use App\Models\Enrollment;
 use App\Models\FeeInvoice;
 use App\Models\FeePayment;
 use App\Models\Student;
@@ -389,6 +391,19 @@ class AdmissionService
                 if ($primary !== null && $primary->user_id === null) {
                     $this->studentService->createParentLogin($primary, $data['parent_password']);
                 }
+            }
+
+            if (filled($data['student_password'] ?? null)) {
+                $this->studentService->createStudentLogin($student, $data['student_password']);
+            }
+
+            // This month's tuition challan, so the family does not wait for the next monthly run.
+            if (($data['issue_first_challan'] ?? true) && $enrollmentId !== null) {
+                $this->invoiceService->monthly(Enrollment::with(['student', 'academicSession'])->findOrFail($enrollmentId), now());
+            }
+
+            if (($data['issue_id_card'] ?? true) && CardTemplate::where('card_type', 'student')->where('is_active', true)->exists()) {
+                app(CardService::class)->issue(['holder_type' => 'student', 'holder_ids' => [$student->id]]);
             }
 
             return $this->studentService->find($student);

@@ -5,7 +5,7 @@
     <div class="dash-table-wrap">
         <table class="dash-table">
             <thead>
-                <tr><th>Name</th><th>Class</th><th>Roll No</th><th>Attendance</th><th>Last Result</th><th>Bus</th><th>Fee Due</th></tr>
+                <tr><th>Name</th><th>Class</th><th>Roll No</th><th>Attendance</th><th>Last Result</th><th>Bus</th><th>Fee Due</th><th class="dash-col-actions"><span class="dash-visually-hidden">Open</span></th></tr>
             </thead>
             <tbody>
                 @foreach ($children as $child)
@@ -28,6 +28,7 @@
                                 {{ $child['fee_balance'] > 0 ? 'Rs '.number_format($child['fee_balance'] / 100) : 'Paid' }}
                             </span>
                         </td>
+                        <td class="dash-col-actions"><a class="dash-btn dash-btn-ghost dash-btn-sm" href="{{ route('family.child', $child['id']) }}">Open</a></td>
                     </tr>
                 @endforeach
             </tbody>

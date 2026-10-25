@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Fees\ReceivePaymentRequest;
 use App\Http\Resources\FeePaymentResource;
 use App\Models\FeePayment;
+use App\Services\FeeInvoiceService;
 use App\Services\FeePaymentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
 
 class FeePaymentController extends Controller
 {
@@ -40,6 +42,17 @@ class FeePaymentController extends Controller
     public function show(FeePayment $feePayment): JsonResponse
     {
         return $this->successResponse(new FeePaymentResource($this->paymentService->find($feePayment)), 'Receipt retrieved.');
+    }
+
+    /**
+     * Receipt PDF for fee staff, or for the student / parent it belongs to.
+     */
+    public function pdf(Request $request, FeePayment $feePayment, FeeInvoiceService $invoiceService): Response
+    {
+        $visible = $invoiceService->visibleStudentIds($request->user());
+        abort_if($visible !== null && ! in_array($feePayment->student_id, $visible, true), 404);
+
+        return $this->paymentService->pdf($feePayment, $request->user());
     }
 
     public function reverse(Request $request, FeePayment $feePayment): JsonResponse

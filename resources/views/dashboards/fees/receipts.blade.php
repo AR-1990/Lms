@@ -128,6 +128,7 @@
             <h3 id="receiptTitle" data-detail-title>Receipt</h3>
             <p data-detail-subtitle></p>
         </div>
+        <button type="button" class="dash-btn dash-btn-ghost" data-print-receipt>@include('partials.dashboard-icon', ['name' => 'printer']) Print</button>
         <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
     </div>
     <div class="dash-detail-body" data-detail-body></div>

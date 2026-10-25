@@ -70,6 +70,17 @@ class AdminPortalController extends PortalController
         return $this->page('dashboards.admin.website-pages', 'admin', 'website', ['tones' => WebsiteSectionItem::TONES]);
     }
 
+    /**
+     * Everything waiting for this user's decision; the list loads from /api/erp/approvals/inbox.
+     */
+    public function inbox(): View
+    {
+        $user = $this->portalUser();
+        $portal = collect(['admin', 'accounts', 'teacher'])->first(fn (string $role): bool => $user->hasRole($role)) ?? 'admin';
+
+        return $this->page('dashboards.admin.inbox', $portal, 'inbox');
+    }
+
     public function approvals(): View
     {
         return $this->page('dashboards.admin.approvals', 'admin', 'approvals');
@@ -78,6 +89,11 @@ class AdminPortalController extends PortalController
     public function campuses(): View
     {
         return $this->page('dashboards.admin.campuses', 'admin', 'campuses');
+    }
+
+    public function imports(): View
+    {
+        return $this->page('dashboards.admin.imports', 'admin', 'imports');
     }
 
     public function numbering(): View

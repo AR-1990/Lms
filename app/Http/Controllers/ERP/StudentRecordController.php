@@ -62,9 +62,19 @@ class StudentRecordController extends Controller
     /**
      * Session-by-session record: class, how the year ended, results, attendance and fees.
      */
-    public function history(Student $student): JsonResponse
+    public function history(Request $request, Student $student): JsonResponse
     {
+        abort_unless($request->user()->hasPermission('manage-students') || in_array($student->id, Student::ownIdsFor($request->user()), true), 404);
+
         return $this->successResponse($this->studentService->history($student), 'Student history retrieved.');
+    }
+
+    public function studentLogin(Request $request, Student $student): JsonResponse
+    {
+        $validated = $request->validate(['password' => ['required', 'string', 'min:8']]);
+        $student = $this->studentService->createStudentLogin($student, $validated['password']);
+
+        return $this->successResponse(new StudentResource($this->studentService->find($student)), "Login created. {$student->fullName()} signs in with {$student->admission_no}.", 201);
     }
 
     public function changeStatus(Request $request, Student $student): JsonResponse

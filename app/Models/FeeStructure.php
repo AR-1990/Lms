@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['campus_id', 'academic_session_id', 'class_id', 'name', 'is_active'])]
 class FeeStructure extends Model
 {
-    use LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     protected string $activityModule = 'fee_structures';
 

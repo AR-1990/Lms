@@ -441,6 +441,7 @@ class FeeInvoiceService
             'invoices' => $invoices,
             'rules' => $rules,
             'settings' => SystemSetting::query()->first(['school_name', 'school_address', 'school_phone']),
+            'logo' => app(SystemSettingsService::class)->logoFile(),
             'bank' => BankAccount::with('bank:id,name')->where('is_default_for_fees', true)->first(['id', 'bank_id', 'branch', 'account_title', 'account_number', 'iban']),
         ])->setPaper('a4', 'landscape')->stream($filename);
     }
@@ -555,6 +556,13 @@ class FeeInvoiceService
             }
 
             $this->applyAdvance($invoice);
+
+            if ($student !== null && $invoice->balance > 0) {
+                $notifications = app(NotificationService::class);
+                $notifications->notifyEvent('challan_issued', $notifications->familyUserIds([$student->id])->all(), [
+                    'student_name' => $student->fullName(), 'invoice_no' => $invoice->invoice_no, 'amount' => $this->money($invoice->balance), 'due_date' => $invoice->due_date->format('d M Y'),
+                ], $invoice, route('family.child', $student));
+            }
 
             return $invoice;
         });

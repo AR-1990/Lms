@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class CardTemplate extends Model
 {
-    use LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * Card kinds. ID cards and admit cards are filled from student / employee / exam data;
@@ -41,7 +42,7 @@ class CardTemplate extends Model
      *
      * @var array<string, string>
      */
-    public const THEMES = ['classic' => 'Classic bands', 'wave' => 'Curved wave', 'elegant' => 'Elegant diagonal'];
+    public const THEMES = ['classic' => 'Classic bands', 'wave' => 'Curved wave', 'elegant' => 'Elegant diagonal', 'modern' => 'Modern angled header'];
 
     /**
      * Sizes each card type may use; student and employee ID cards are always vertical CR80.
@@ -63,12 +64,12 @@ class CardTemplate extends Model
      * @var array<string, array<int, string>>
      */
     public const KEYS_FOR_TYPE = [
-        'student' => ['photo', 'full_name', 'father_name', 'admission_no', 'roll_no', 'class_section', 'blood_group', 'date_of_birth', 'emergency_phone', 'address', 'valid_until', 'card_no', 'school_name', 'qr_code', 'signature_line', 'custom_text'],
-        'employee' => ['photo', 'full_name', 'father_name', 'employee_code', 'designation', 'department', 'blood_group', 'date_of_birth', 'emergency_phone', 'address', 'valid_until', 'card_no', 'school_name', 'qr_code', 'signature_line', 'custom_text'],
-        'admit_card' => ['photo', 'full_name', 'father_name', 'admission_no', 'class_section', 'exam_name', 'exam_roll_no', 'date_sheet', 'instructions', 'school_name', 'signature_line', 'custom_text'],
-        'invitation' => ['school_name', 'signature_line', 'custom_text'],
-        'event_pass' => ['school_name', 'signature_line', 'custom_text'],
-        'visitor' => ['school_name', 'card_no', 'signature_line', 'custom_text'],
+        'student' => ['photo', 'full_name', 'father_name', 'admission_no', 'roll_no', 'class_section', 'blood_group', 'date_of_birth', 'emergency_phone', 'address', 'valid_until', 'card_no', 'school_name', 'school_logo', 'qr_code', 'signature_line', 'custom_text'],
+        'employee' => ['photo', 'full_name', 'father_name', 'employee_code', 'designation', 'department', 'blood_group', 'date_of_birth', 'emergency_phone', 'address', 'valid_until', 'card_no', 'school_name', 'school_logo', 'qr_code', 'signature_line', 'custom_text'],
+        'admit_card' => ['photo', 'full_name', 'father_name', 'admission_no', 'class_section', 'exam_name', 'exam_roll_no', 'date_sheet', 'instructions', 'school_name', 'school_logo', 'signature_line', 'custom_text'],
+        'invitation' => ['school_name', 'school_logo', 'signature_line', 'custom_text'],
+        'event_pass' => ['school_name', 'school_logo', 'signature_line', 'custom_text'],
+        'visitor' => ['school_name', 'school_logo', 'card_no', 'signature_line', 'custom_text'],
     ];
 
     protected string $activityModule = 'id_cards';
@@ -111,6 +112,21 @@ class CardTemplate extends Model
         $ring = min($w, $h);
 
         $shapes = match ($this->theme) {
+            // Angled header the photo overlaps, gold edge, light sheen and a deep footer; plain bands on the back.
+            'modern' => $side === 'front'
+                ? '<rect width="'.$n($w).'" height="'.$n($h).'" fill="#ffffff"/>'
+                    .'<circle cx="'.$n($w * 0.5).'" cy="'.$n($h * 0.66).'" r="'.$n($ring * 0.42).'" fill="'.$p.'" fill-opacity="0.03"/>'
+                    .'<polygon points="0,0 '.$n($w).',0 '.$n($w).','.$n($h * 0.22).' 0,'.$n($h * 0.31).'" fill="'.$p.'"/>'
+                    .'<polygon points="'.$n($w * 0.42).',0 '.$n($w).',0 '.$n($w).','.$n($h * 0.15).'" fill="#ffffff" fill-opacity="0.08"/>'
+                    .'<polygon points="0,'.$n($h * 0.31).' '.$n($w).','.$n($h * 0.22).' '.$n($w).','.$n($h * 0.22 + 0.9).' 0,'.$n($h * 0.31 + 0.9).'" fill="'.$gold.'"/>'
+                    .'<rect y="'.$n($h * 0.31 + 0.9).'" width="1.1" height="'.$n($h * 0.69 - 0.9 - $foot).'" fill="'.$p.'" fill-opacity="0.85"/>'
+                    .'<rect y="'.$n($h - $foot - 0.6).'" width="'.$n($w).'" height="0.6" fill="'.$gold.'"/>'
+                    .'<rect y="'.$n($h - $foot).'" width="'.$n($w).'" height="'.$n($foot).'" fill="'.$p.'"/>'
+                : '<rect width="'.$n($w).'" height="'.$n($h).'" fill="#ffffff"/>'
+                    .'<rect width="'.$n($w).'" height="'.$n($band).'" fill="'.$p.'"/>'
+                    .'<rect y="'.$n($band).'" width="'.$n($w).'" height="0.6" fill="'.$gold.'"/>'
+                    .'<polygon points="'.$n($w).','.$n($h * 0.62).' '.$n($w).','.$n($h - $foot).' '.$n($w * 0.45).','.$n($h - $foot).'" fill="'.$p.'" fill-opacity="0.05"/>'
+                    .'<rect y="'.$n($h - $foot).'" width="'.$n($w).'" height="'.$n($foot).'" fill="'.$p.'"/>',
             'wave' => '<rect width="'.$n($w).'" height="'.$n($h).'" fill="#ffffff"/>'
                 .'<path d="M0 '.$n($h * 0.62).' C'.$n($w * 0.35).' '.$n($h * 0.52).' '.$n($w * 0.65).' '.$n($h * 0.72).' '.$n($w).' '.$n($h * 0.6).' V'.$n($h).' H0 Z" fill="'.$p.'" fill-opacity="0.035"/>'
                 .'<path d="M0 0 H'.$n($w).' V'.$n($band * 1.3).' C'.$n($w * 0.7).' '.$n($band * 0.95).' '.$n($w * 0.35).' '.$n($band * 1.5).' 0 '.$n($band * 1.18).' Z" fill="'.$p.'" fill-opacity="0.22"/>'

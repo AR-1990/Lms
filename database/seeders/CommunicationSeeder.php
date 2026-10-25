@@ -37,6 +37,15 @@ class CommunicationSeeder extends Seeder
             ['Absent alert (SMS)', 'sms', 'absent_alert', null, '{school_name}: {student_name} ({class_section}) was absent on {date}.'],
             ['Result published (bell)', 'in_app', 'result_published', 'Result published: {exam_name}', 'The {exam_name} result of {student_name} is now available in the portal.'],
             ['Result published (email)', 'email', 'result_published', '{exam_name} result — {student_name}', "Dear parent,\n\nThe {exam_name} result of {student_name} has been published. Please sign in to the portal to view the report card.\n\n{school_name}"],
+            ['Fee challan issued (bell)', 'in_app', 'challan_issued', 'New fee challan: {student_name}', 'Challan {invoice_no} of {amount} is due by {due_date}. Download it from the portal.'],
+            ['Fee challan issued (SMS)', 'sms', 'challan_issued', null, '{school_name}: challan {invoice_no} for {student_name}, {amount}, due {due_date}.'],
+            ['Fee payment received (bell)', 'in_app', 'payment_received', 'Payment received: {amount}', 'Thank you. Receipt {receipt_no} for {student_name} ({amount}, {date}) is in the portal.'],
+            ['Fee payment received (SMS)', 'sms', 'payment_received', null, '{school_name}: received {amount} for {student_name} on {date}. Receipt {receipt_no}.'],
+            ['Fee overdue (bell)', 'in_app', 'fee_overdue', 'Fee overdue: {student_name}', 'Challan {invoice_no} ({amount}) was due on {due_date} and is still unpaid. Please pay soon to avoid a late fine.'],
+            ['Fee overdue (SMS)', 'sms', 'fee_overdue', null, '{school_name}: {student_name} fee {amount} (challan {invoice_no}) was due on {due_date}. Please pay to avoid a late fine.'],
+            ['Diary published (bell)', 'in_app', 'diary_published', 'Diary for {date}: {class_section}', '{entries} — open the diary in the portal.'],
+            ['Leave decided (bell)', 'in_app', 'leave_decided', 'Leave {decision}: {student_name}', 'The leave request for {from} to {to} was {decision}.'],
+            ['Admit card ready (bell)', 'in_app', 'admit_card_ready', 'Admit card ready: {exam_name}', 'The {exam_name} admit card of {student_name} (roll no {exam_roll_no}) can be downloaded from the portal.'],
         ] as [$name, $channel, $event, $subject, $body]) {
             MessageTemplate::updateOrCreate(['name' => $name], ['channel' => $channel, 'event_key' => $event, 'subject' => $subject, 'body' => $body, 'is_active' => true]);
         }

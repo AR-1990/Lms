@@ -13,6 +13,7 @@ use App\Http\Controllers\Portal\CollaborationPortalController;
 use App\Http\Controllers\Portal\CommunicationPortalController;
 use App\Http\Controllers\Portal\ExamsPortalController;
 use App\Http\Controllers\Portal\ExpensesPortalController;
+use App\Http\Controllers\Portal\FamilyPortalController;
 use App\Http\Controllers\Portal\FeesPortalController;
 use App\Http\Controllers\Portal\HrPortalController;
 use App\Http\Controllers\Portal\InventoryPortalController;
@@ -46,14 +47,18 @@ Route::post('/login', [SchoolController::class, 'handleLogin'])->middleware('thr
 // Forgot / reset password pages; their forms post to /api/forgot-password and /api/reset-password.
 Route::get('/forgot-password', [SchoolController::class, 'forgotPassword'])->name('password.request');
 Route::get('/reset-password/{token}', [SchoolController::class, 'resetPassword'])->name('password.reset');
+Route::get('/kiosk/{token}', [SchoolController::class, 'kiosk'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('kiosk.show');
 Route::get('/verify/{token}', [SchoolController::class, 'verifyCard'])->where('token', '[A-Za-z0-9]{20,64}')->middleware('throttle:30,1')->name('cards.verify');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [SchoolController::class, 'logout'])->name('logout');
     Route::get('/my-id-card', [CardsPortalController::class, 'mine'])->name('my-id-card');
+    Route::get('/family', [FamilyPortalController::class, 'home'])->name('family.home');
+    Route::get('/family/students/{student}', [FamilyPortalController::class, 'child'])->name('family.child');
     Route::get('/notices', [CommunicationPortalController::class, 'notices'])->name('notices');
     Route::get('/my-hr', [CollaborationPortalController::class, 'myHr'])->name('my-hr');
+    Route::get('/approvals-inbox', [AdminPortalController::class, 'inbox'])->name('approvals.inbox');
     Route::get('/chat', [CollaborationPortalController::class, 'chat'])->middleware('permission:use-chat')->name('chat');
     Route::get('/admin/chat-monitor', [CollaborationPortalController::class, 'chatMonitor'])->middleware('permission:monitor-chat')->name('admin.chat-monitor');
     Route::prefix('tasks')->name('tasks.')->middleware('permission:use-tasks')->group(function () {
@@ -96,6 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/activity-log', [AdminPortalController::class, 'activityLog'])->middleware('permission:view-activity-log')->name('activity-log');
         Route::get('/campuses', [AdminPortalController::class, 'campuses'])->middleware('permission:manage-campuses')->name('campuses');
         Route::get('/numbering', [AdminPortalController::class, 'numbering'])->middleware('permission:manage-numbering')->name('numbering');
+        Route::get('/imports', [AdminPortalController::class, 'imports'])->middleware('permission:manage-students,manage-hr,manage-fees')->name('imports');
         Route::middleware('permission:manage-students')->group(function () {
             Route::get('/students', [StudentsPortalController::class, 'students'])->name('students');
             Route::get('/students/promotion', [StudentsPortalController::class, 'promotion'])->name('students.promotion');
@@ -145,6 +151,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/assignments', [HrPortalController::class, 'assignments'])->name('assignments');
                 Route::get('/departments', [HrPortalController::class, 'departments'])->name('departments');
                 Route::get('/designations', [HrPortalController::class, 'designations'])->name('designations');
+                Route::get('/exits', [HrPortalController::class, 'exits'])->name('exits');
+                Route::get('/shifts', [HrPortalController::class, 'shifts'])->name('shifts');
             });
             Route::middleware('permission:manage-recruitment')->group(function () {
                 Route::get('/candidates', [HrPortalController::class, 'candidates'])->name('candidates');
@@ -177,9 +185,11 @@ Route::middleware('auth')->group(function () {
             });
             Route::get('/staff', [AttendancePortalController::class, 'staff'])->middleware('permission:manage-staff-attendance')->name('staff');
             Route::get('/scan', [AttendancePortalController::class, 'scan'])->middleware('permission:record-attendance,manage-staff-attendance')->name('scan');
+            Route::get('/kiosks', [AttendancePortalController::class, 'kiosks'])->middleware('permission:manage-staff-attendance')->name('kiosks');
         });
         Route::prefix('exams')->name('exams.')->group(function () {
             Route::get('/marks', [ExamsPortalController::class, 'marks'])->middleware('permission:submit-grades,manage-exams')->name('marks');
+            Route::get('/online-tests', [ExamsPortalController::class, 'onlineTests'])->middleware('permission:submit-grades,manage-exams')->name('online-tests');
             Route::middleware('permission:manage-exams')->group(function () {
                 Route::get('/', [ExamsPortalController::class, 'exams'])->name('index');
                 foreach (['terms', 'scales', 'halls', 'skills', 'rules'] as $setupType) {
@@ -221,6 +231,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/courses', [StudentPortalController::class, 'courses'])->middleware('permission:view-courses')->name('courses');
         Route::get('/attendance', [StudentPortalController::class, 'attendance'])->middleware('permission:view-attendance')->name('attendance');
         Route::get('/grades', [StudentPortalController::class, 'grades'])->middleware('permission:view-grades')->name('grades');
+        Route::get('/online-tests', [StudentPortalController::class, 'onlineTests'])->middleware('permission:view-grades')->name('online-tests');
     });
 
     Route::prefix('parent')->name('parent.')->group(function () {

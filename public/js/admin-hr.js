@@ -84,7 +84,7 @@
 
     const EMPLOYEE_FIELDS = {
         first_name: 'text', middle_name: 'text', last_name: 'text', father_or_spouse_name: 'text', gender_id: 'int', date_of_birth: 'text',
-        cnic: 'text', phone: 'text', email: 'text', department_id: 'int', designation_id: 'int', employment_type_id: 'int', joining_date: 'text',
+        cnic: 'text', phone: 'text', email: 'text', department_id: 'int', designation_id: 'int', work_shift_id: 'int', employment_type_id: 'int', joining_date: 'text',
         probation_end_date: 'text', city: 'text', bank_id: 'int', bank_account_no: 'text', ntn: 'text', current_address: 'text', is_teaching_staff: 'bool'
     };
 
@@ -151,6 +151,28 @@
                 { data: 'is_teaching', searchable: false, render: display(function (value) { return value ? '<span class="dash-badge dash-badge-brand">Teaching</span>' : '<span class="dash-badge">Non-teaching</span>'; }) }
             ],
             fields: { name: 'text', department_id: 'int', grade_id: 'int', is_teaching: 'bool', is_active: 'bool' }
+        },
+
+        shifts: {
+            titles: { create: 'Add shift', edit: 'Edit shift' },
+            order: [[0, 'asc']],
+            canDelete: function (row) { return row.employees_count > 0 ? 'Has staff' : true; },
+            columns: [
+                { data: 'name', render: display(function (value, row) { return titleCell(value, row.is_default ? 'Default — staff without a shift follow it' : ''); }) },
+                { data: 'starts_at', searchable: false, render: display(function (value, row) { return esc(String(value).slice(0, 5) + ' – ' + String(row.ends_at).slice(0, 5)); }) },
+                { data: 'grace_minutes', searchable: false, className: 'dash-col-num', render: display(function (value) { return esc(value + ' min'); }) },
+                { data: 'employees_count', searchable: false, className: 'dash-col-num dash-hide-md' },
+                { data: 'is_active', searchable: false, render: display(function (value) { return value ? '<span class="dash-badge dash-badge-ok">Active</span>' : '<span class="dash-badge">Off</span>'; }) }
+            ],
+            fields: { name: 'text', starts_at: 'text', ends_at: 'text', grace_minutes: 'int', is_default: 'bool', is_active: 'bool' },
+            defaults: { starts_at: '08:00', ends_at: '14:30', grace_minutes: 10, is_active: true },
+            payload: function (form) {
+                const body = kit.readForm(form, SCREENS.shifts.fields);
+                body.starts_at = String(body.starts_at || '').slice(0, 5);
+                body.ends_at = String(body.ends_at || '').slice(0, 5);
+
+                return body;
+            }
         },
 
         assignments: {

@@ -29,6 +29,12 @@ class MessageTemplate extends Model
     public const EVENTS = [
         'absent_alert' => ['Student marked absent', ['student_name', 'class_section', 'date', 'school_name']],
         'result_published' => ['Exam result published', ['student_name', 'exam_name', 'school_name']],
+        'challan_issued' => ['Fee challan issued', ['student_name', 'invoice_no', 'amount', 'due_date', 'school_name']],
+        'payment_received' => ['Fee payment received', ['student_name', 'receipt_no', 'amount', 'date', 'school_name']],
+        'fee_overdue' => ['Fee not paid by the due date', ['student_name', 'invoice_no', 'amount', 'due_date', 'school_name']],
+        'diary_published' => ['Diary / homework published', ['class_section', 'date', 'entries', 'school_name']],
+        'leave_decided' => ['Leave request decided', ['student_name', 'decision', 'from', 'to', 'school_name']],
+        'admit_card_ready' => ['Admit card ready', ['student_name', 'exam_name', 'exam_roll_no', 'school_name']],
     ];
 
     protected string $activityModule = 'announcements';

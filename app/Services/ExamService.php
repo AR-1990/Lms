@@ -219,10 +219,19 @@ class ExamService
                     'issued_at' => $card?->issued_at ?? now(),
                 ];
 
+                $wasEligible = (bool) $card?->is_eligible;
+
                 if ($card === null) {
                     $card = AdmitCard::create([...$attributes, 'exam_id' => $exam->id, 'enrollment_id' => $enrollment->id, 'student_id' => $enrollment->student_id, 'exam_roll_no' => sprintf('E%d-%03d', $exam->id, $position + 1)]);
                 } else {
                     $card->update($attributes);
+                }
+
+                if ($card->is_eligible && ! $wasEligible) {
+                    $notifications = app(NotificationService::class);
+                    $notifications->notifyEvent('admit_card_ready', $notifications->familyUserIds([$enrollment->student_id])->all(), [
+                        'student_name' => $enrollment->student?->fullName(), 'exam_name' => $exam->name, 'exam_roll_no' => $card->exam_roll_no,
+                    ], $card, route('family.child', $enrollment->student_id));
                 }
 
                 $card->is_eligible ? $counts['eligible']++ : $counts['ineligible']++;
@@ -254,11 +263,12 @@ class ExamService
     /**
      * A5 roll number slips with the date sheet for eligible students; every print is logged.
      */
-    public function admitCardsPdf(Exam $exam, ?int $sectionId): Response
+    public function admitCardsPdf(Exam $exam, ?int $sectionId, ?int $studentId = null): Response
     {
         $exam = $this->find($exam);
         $cards = AdmitCard::where('exam_id', $exam->id)->where('is_eligible', true)
             ->when($sectionId, fn (Builder $query, int $id) => $query->whereHas('enrollment', fn (Builder $inner) => $inner->where('section_id', $id)))
+            ->when($studentId, fn (Builder $query, int $id) => $query->where('student_id', $id))
             ->with(['student:id,first_name,last_name,admission_no,photo_path', 'student.guardians', 'enrollment.section:id,name'])
             ->orderBy('exam_roll_no')->get();
 

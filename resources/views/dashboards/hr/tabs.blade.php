@@ -8,6 +8,8 @@
         'admin.hr.openings' => ['Job Openings', 'sparkles', 'manage-recruitment'],
         'admin.hr.departments' => ['Departments', 'building', 'manage-hr'],
         'admin.hr.designations' => ['Designations', 'key', 'manage-hr'],
+        'admin.hr.shifts' => ['Shifts', 'clock', 'manage-hr'],
+        'admin.hr.exits' => ['Staff Exits', 'logout', 'manage-hr'],
         'admin.hr.purchases' => ['Purchase Requests', 'inbox', 'manage-purchases'],
         'admin.hr.leave' => ['Leave', 'calendar', 'manage-leave'],
         'admin.hr.leave-types' => ['Leave Types', 'layers', 'manage-leave'],

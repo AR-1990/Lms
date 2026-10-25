@@ -170,6 +170,14 @@ class AccountsSeeder extends Seeder
             'sort_order' => 999,
         ]);
 
+        // Used only by the data import for advances families had already paid before the system started.
+        PaymentMethod::firstOrCreate(['code' => PaymentMethod::OPENING_ADVANCE], [
+            'name' => 'Opening advance (import)',
+            'account_id' => $accounts['3300']->id,
+            'is_active' => false,
+            'sort_order' => 998,
+        ]);
+
         $hbl = Lookup::where('type', 'bank')->where('name', 'HBL')->value('id');
 
         if ($hbl !== null) {

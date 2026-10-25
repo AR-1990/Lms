@@ -182,8 +182,8 @@
             <div class="settings-card">
                 <div class="settings-preview">
                     <div class="settings-logo">
-                        @if ($settings['logo']['data_uri'])
-                            <img src="{{ $settings['logo']['data_uri'] }}" alt="School logo preview">
+                        @if ($settings['logo']['url'])
+                            <img src="{{ $settings['logo']['url'] }}" alt="School logo preview">
                         @else
                             <span>No logo uploaded yet</span>
                         @endif
@@ -201,5 +201,24 @@
             </div>
         </div>
     </div>
+
+    <div class="settings-divider" aria-hidden="true"></div>
+
+    <div class="settings-section" data-backups data-url="{{ route('erp.admin.backups.index') }}" data-download-url="{{ url('/api/erp/admin/backups') }}">
+        <div class="settings-section-title">
+            <h3>Backups</h3>
+            <p>The whole database is backed up every night at 2:30; the newest {{ \App\Services\BackupService::KEEP }} are kept. Download one now and then to keep a copy off the server.</p>
+        </div>
+        <div class="settings-section-body">
+            <div class="settings-card">
+                <button type="button" class="dash-btn dash-btn-primary" data-backup-now>@include('partials.dashboard-icon', ['name' => 'upload']) Back up now</button>
+                <ul class="dash-list" data-backup-list><li class="dash-muted">Loading…</li></ul>
+            </div>
+        </div>
+    </div>
 </div>
+@endsection
+
+@section('extra_js')
+<script src="{{ asset('js/admin-backups.js') }}?v={{ filemtime(public_path('js/admin-backups.js')) }}" defer></script>
 @endsection

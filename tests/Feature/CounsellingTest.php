@@ -102,12 +102,12 @@ class CounsellingTest extends TestCase
     {
         $id = $this->postJson('/api/erp/counselling-notes', $this->sessionData(['session_date' => '2026-10-20', 'follow_up_on' => '2026-10-24']))->json('data.id');
 
-        $this->getJson('/api/erp/counselling-notes/datatable?follow_up=due')->assertOk()->assertJsonPath('data.recordsFiltered', 1);
+        $this->getJson('/api/erp/counselling-notes/datatable?draw=1&follow_up=due')->assertOk()->assertJsonPath('data.recordsFiltered', 1);
         $this->assertSame(1, app(CounsellingService::class)->sendFollowUpReminders());
         $this->assertTrue(UserNotification::where('user_id', $this->counsellor->user_id)->where('event_key', 'counselling_follow_up')->exists());
 
         $this->postJson("/api/erp/counselling-notes/{$id}/follow-up-done")->assertOk();
-        $this->getJson('/api/erp/counselling-notes/datatable?follow_up=due')->assertJsonPath('data.recordsFiltered', 0);
+        $this->getJson('/api/erp/counselling-notes/datatable?draw=1&follow_up=due')->assertJsonPath('data.recordsFiltered', 0);
 
         $this->putJson("/api/erp/counselling-notes/{$id}", $this->sessionData(['session_date' => '2026-10-20', 'follow_up_on' => '2026-11-03']))->assertOk()->assertJsonPath('data.follow_up_done_at', null);
 

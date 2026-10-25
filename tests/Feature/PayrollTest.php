@@ -200,7 +200,7 @@ class PayrollTest extends TestCase
         $this->assertSame($before->gross + 500000, $after->gross);
         $this->assertSame('12 hours', $after->items->firstWhere('component.code', 'OVERTIME')->note);
         $this->assertSame(100000, $after->items->firstWhere('component.code', 'FINE')->amount);
-        $this->getJson('/api/erp/payroll-adjustments/datatable?month=2026-11')->assertOk()->assertJsonPath('data.recordsFiltered', 2);
+        $this->getJson('/api/erp/payroll-adjustments/datatable?draw=1&month=2026-11')->assertOk()->assertJsonPath('data.recordsFiltered', 2);
 
         $this->postJson("/api/erp/payroll-runs/{$run['id']}/approve")->assertOk();
         $this->putJson("/api/erp/payroll-adjustments/{$bonus}", ['employee_id' => $this->teacher->id, 'month' => '2026-11', 'salary_component_id' => $component('OVERTIME'), 'amount' => 900000])

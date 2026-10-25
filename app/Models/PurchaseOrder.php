@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['campus_id', 'po_no', 'vendor_id', 'purchase_request_id', 'location_id', 'order_date', 'expected_date', 'subtotal', 'tax', 'discount', 'total', 'status', 'approved_by', 'approved_at', 'terms', 'cancel_reason'])]
 class PurchaseOrder extends Model
 {
-    use LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * @var array<int, string>
@@ -66,5 +67,10 @@ class PurchaseOrder extends Model
     public function receipts(): HasMany
     {
         return $this->hasMany(GoodsReceipt::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

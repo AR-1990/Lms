@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Database\Factories\EmployeeFactory;
@@ -16,14 +17,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'campus_id', 'user_id', 'employee_code', 'job_application_id', 'first_name', 'middle_name', 'last_name', 'father_or_spouse_name',
     'gender_id', 'date_of_birth', 'cnic', 'cnic_expiry', 'marital_status_id', 'religion_id', 'blood_group_id', 'nationality_id', 'photo_path',
-    'phone', 'alt_phone', 'email', 'personal_email', 'current_address', 'permanent_address', 'city', 'department_id', 'designation_id',
+    'phone', 'alt_phone', 'email', 'personal_email', 'current_address', 'permanent_address', 'city', 'department_id', 'designation_id', 'work_shift_id',
     'employment_type_id', 'reports_to_id', 'joining_date', 'probation_end_date', 'confirmation_date', 'contract_end_date', 'is_teaching_staff',
     'ntn', 'eobi_no', 'bank_id', 'bank_account_title', 'bank_account_no', 'iban', 'status', 'exit_date',
 ])]
 class Employee extends Model
 {
     /** @use HasFactory<EmployeeFactory> */
-    use HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * Statuses that still count as working at the school.

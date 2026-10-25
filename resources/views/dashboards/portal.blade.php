@@ -9,5 +9,7 @@
     <p>Open a screen from the menu to get started.</p>
 </section>
 
+@include('partials.attendance-qr')
+
 @include('partials.sticky-notes', ['limit' => 8])
 @endsection

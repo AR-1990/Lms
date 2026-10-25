@@ -15,6 +15,8 @@
     <p>{{ collect([$teacher['designation'] ?? null, $teacher['department'] ?? null, $teacher['employee_code'] ?? null])->filter()->implode(' · ') ?: 'Your classes and today\'s periods' }}</p>
 </section>
 
+@include('partials.attendance-qr')
+
 @include('partials.sticky-notes', ['limit' => 8])
 
 <section class="dash-stats">

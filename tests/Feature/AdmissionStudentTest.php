@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\AcademicSession;
 use App\Models\AdmissionApplication;
 use App\Models\AdmissionInquiry;
+use App\Models\CardTemplate;
 use App\Models\FeeInvoice;
 use App\Models\Guardian;
+use App\Models\IdCard;
 use App\Models\Lookup;
 use App\Models\PaymentMethod;
 use App\Models\SchoolClass;
@@ -168,7 +170,7 @@ class AdmissionStudentTest extends TestCase
 
         $section = Section::where('class_id', $this->grade3->id)->where('academic_session_id', $this->session->id)->where('name', 'B')->first();
         $enrolled = $this->actingAs($this->admin, 'sanctum')
-            ->postJson("/api/erp/admission-applications/{$id}/enrol", ['section_id' => $section->id, 'roll_no' => '17', 'parent_password' => 'secret-pass'])
+            ->postJson("/api/erp/admission-applications/{$id}/enrol", ['section_id' => $section->id, 'roll_no' => '17', 'parent_password' => 'secret-pass', 'student_password' => 'student-pass'])
             ->assertCreated()
             ->assertJsonPath('data.full_name', 'Zainab Ahmed')
             ->assertJsonPath('data.enrollments.0.section', 'B')
@@ -178,7 +180,11 @@ class AdmissionStudentTest extends TestCase
         $student = Student::find($enrolled->json('data.id'));
         $this->assertMatchesRegularExpression('/^PIA-2026-\d{5}$/', $student->admission_no);
         $this->assertSame('enrolled', AdmissionApplication::find($id)->status);
-        $this->assertSame(2, FeeInvoice::where('student_id', $student->id)->count());
+        // Registration and admission challans, plus this month's tuition challan made at enrolment.
+        $this->assertSame(3, FeeInvoice::where('student_id', $student->id)->count());
+        $this->assertSame(1, FeeInvoice::where('student_id', $student->id)->where('invoice_type', 'monthly')->whereDate('billing_month', '2026-10-01')->count());
+        $this->assertSame(CardTemplate::where('card_type', 'student')->where('is_active', true)->exists() ? 1 : 0, IdCard::where('holder_type', 'student')->where('holder_id', $student->id)->count());
+        $this->postJson('/api/login', ['email' => $student->admission_no, 'password' => 'student-pass'])->assertOk()->assertJsonPath('data.user.name', 'Zainab Ahmed');
 
         $this->postJson('/api/login', ['email' => '03334445556', 'password' => 'secret-pass'])->assertOk()->assertJsonPath('data.user.name', 'Imran Ahmed');
     }

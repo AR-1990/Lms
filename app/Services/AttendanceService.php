@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AttendanceKiosk;
 use App\Models\Employee;
 use App\Models\Enrollment;
 use App\Models\IdCard;
@@ -11,6 +12,7 @@ use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Models\StudentLeaveRequest;
 use App\Models\User;
+use App\Models\WorkShift;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -229,7 +231,7 @@ class AttendanceService
                 $attendance = StaffAttendance::where('employee_id', $row['employee_id'])->whereDate('date', $date)->first()
                     ?? new StaffAttendance(['employee_id' => $row['employee_id'], 'date' => $date]);
                 $attendance->fill([
-                    'status' => $row['status'],
+                    ...$this->shiftStatus((int) $row['employee_id'], $row['status'], $row['check_in_at'] ?? null),
                     'check_in_at' => $row['check_in_at'] ?? null,
                     'check_out_at' => $row['check_out_at'] ?? null,
                     'remarks' => $row['remarks'] ?? null,
@@ -246,15 +248,17 @@ class AttendanceService
     }
 
     /**
-     * Gate scan of an ID card QR: a student is marked present for today; a staff member is
-     * marked in, and a second scan the same day records the check-out time.
+     * Gate scan of an ID card QR (by a signed-in user, or by a kiosk without sign-in): a student is
+     * marked present for today; a staff member is marked in, and a second scan records the check-out.
      *
      * @return array{name: string|null, holder_type: string, status: string, time: string, action: string}
      *
-     * @throws ValidationException for unknown / inactive cards, holidays, or missing permission
+     * @throws ValidationException for unknown / inactive cards, holidays, another campus's card, or missing permission
      */
-    public function scan(string $code, User $user): array
+    public function scan(string $code, ?User $user, ?AttendanceKiosk $kiosk = null): array
     {
+        $markedBy = $user?->id ?? $kiosk?->created_by;
+        $source = $kiosk !== null ? 'kiosk' : 'qr';
         $token = preg_match('~/verify/([A-Za-z0-9]+)~', $code, $match) ? $match[1] : trim($code);
         $card = IdCard::where('qr_token', $token)->first();
 
@@ -266,29 +270,34 @@ class AttendanceService
         $this->ensureSchoolDay($today);
         $time = now()->format('H:i:s');
 
+        if ($kiosk?->campus_id !== null && ($holderCampus = $card->holder_type === 'employee' ? Employee::whereKey($card->holder_id)->value('campus_id') : Student::whereKey($card->holder_id)->value('campus_id')) !== null && $holderCampus !== $kiosk->campus_id) {
+            throw ValidationException::withMessages(['code' => ['This card belongs to another campus.']]);
+        }
+
         if ($card->holder_type === 'employee') {
-            if (! $user->hasPermission('manage-staff-attendance')) {
+            if ($kiosk === null && ! $user?->hasPermission('manage-staff-attendance')) {
                 throw ValidationException::withMessages(['code' => ['You cannot mark staff attendance.']]);
             }
 
             $employee = Employee::findOrFail($card->holder_id);
 
-            return DB::transaction(function () use ($employee, $today, $time, $user): array {
+            return DB::transaction(function () use ($employee, $today, $time, $markedBy, $source): array {
                 $attendance = StaffAttendance::where('employee_id', $employee->id)->whereDate('date', $today)->first();
 
                 if ($attendance === null) {
-                    StaffAttendance::create(['employee_id' => $employee->id, 'date' => $today, 'status' => 'present', 'check_in_at' => $time, 'source' => 'qr', 'marked_by' => $user->id]);
+                    $status = $this->shiftStatus($employee->id, 'present', $time);
+                    StaffAttendance::create([...$status, 'employee_id' => $employee->id, 'date' => $today, 'check_in_at' => $time, 'source' => $source, 'marked_by' => $markedBy]);
 
-                    return ['name' => $employee->fullName(), 'holder_type' => 'employee', 'status' => 'present', 'time' => substr($time, 0, 5), 'action' => 'checked_in'];
+                    return ['name' => $employee->fullName(), 'holder_type' => 'employee', 'status' => $status['status'], 'time' => substr($time, 0, 5), 'action' => 'checked_in'];
                 }
 
-                $attendance->update(['check_out_at' => $time, 'source' => 'qr']);
+                $attendance->update(['check_out_at' => $time, 'source' => $source]);
 
                 return ['name' => $employee->fullName(), 'holder_type' => 'employee', 'status' => $attendance->status, 'time' => substr($time, 0, 5), 'action' => 'checked_out'];
             });
         }
 
-        if (! $user->hasPermission('record-attendance')) {
+        if ($kiosk === null && ! $user?->hasPermission('record-attendance')) {
             throw ValidationException::withMessages(['code' => ['You cannot mark student attendance.']]);
         }
 
@@ -299,15 +308,80 @@ class AttendanceService
             throw ValidationException::withMessages(['code' => ["{$student->fullName()} has no class section this session."]]);
         }
 
-        return DB::transaction(function () use ($student, $enrollment, $today, $time, $user): array {
+        return DB::transaction(function () use ($student, $enrollment, $today, $time, $markedBy): array {
             $attendance = StudentAttendance::where('enrollment_id', $enrollment->id)->whereDate('date', $today)->first();
 
             if ($attendance === null) {
-                StudentAttendance::create(['enrollment_id' => $enrollment->id, 'student_id' => $student->id, 'section_id' => $enrollment->section_id, 'date' => $today, 'status' => 'present', 'check_in_at' => $time, 'marked_by' => $user->id]);
+                StudentAttendance::create(['enrollment_id' => $enrollment->id, 'student_id' => $student->id, 'section_id' => $enrollment->section_id, 'date' => $today, 'status' => 'present', 'check_in_at' => $time, 'marked_by' => $markedBy]);
             }
 
             return ['name' => $student->fullName(), 'holder_type' => 'student', 'status' => $attendance?->status ?? 'present', 'time' => substr($time, 0, 5), 'action' => $attendance ? 'already_marked' : 'checked_in'];
         });
+    }
+
+    /**
+     * What the gate screen / kiosk says after a scan.
+     *
+     * @param  array{name: string|null, status: string, time: string, action: string}  $result
+     */
+    public function scanMessage(array $result): string
+    {
+        return match (true) {
+            $result['action'] === 'checked_out' => "{$result['name']} checked out at {$result['time']}.",
+            $result['action'] === 'already_marked' => "{$result['name']} is already marked {$result['status']} today.",
+            $result['status'] === 'late' => "{$result['name']} checked in late at {$result['time']}.",
+            default => "{$result['name']} marked present at {$result['time']}.",
+        };
+    }
+
+    /**
+     * Biometric device export: each employee's first punch of a day is the check-in and the last the
+     * check-out; lateness follows their shift. Days already marked by hand keep their status.
+     *
+     * @param  array<int, array{employee_id: int, date: string, times: array<int, string>}>  $days
+     * @return array{saved: int, skipped: int}
+     */
+    public function importPunches(array $days, User $user): array
+    {
+        $counts = ['saved' => 0, 'skipped' => 0];
+
+        DB::transaction(function () use ($days, $user, &$counts): void {
+            foreach ($days as $day) {
+                sort($day['times']);
+                $in = $day['times'][0];
+                $out = count($day['times']) > 1 ? end($day['times']) : null;
+                $attendance = StaffAttendance::where('employee_id', $day['employee_id'])->whereDate('date', $day['date'])->first();
+
+                if ($attendance !== null && $attendance->source === 'manual') {
+                    $counts['skipped']++;
+
+                    continue;
+                }
+
+                $attendance ??= new StaffAttendance(['employee_id' => $day['employee_id'], 'date' => $day['date']]);
+                $attendance->fill([...$this->shiftStatus($day['employee_id'], 'present', $in), 'check_in_at' => $in, 'check_out_at' => $out, 'source' => 'biometric', 'marked_by' => $user->id])->save();
+                $counts['saved']++;
+            }
+        });
+
+        return $counts;
+    }
+
+    /**
+     * Present with a check-in after the shift's grace minutes becomes late (with the minutes); other statuses stay.
+     *
+     * @return array{status: string, late_minutes: int}
+     */
+    private function shiftStatus(int $employeeId, string $status, ?string $checkIn): array
+    {
+        if (! in_array($status, ['present', 'late'], true) || blank($checkIn)) {
+            return ['status' => $status, 'late_minutes' => 0];
+        }
+
+        $shift = WorkShift::for(Employee::findOrFail($employeeId));
+        $late = $shift?->lateMinutes($checkIn) ?? 0;
+
+        return ['status' => $late > 0 ? 'late' : 'present', 'late_minutes' => $late];
     }
 
     /* ---------- Leave requests ---------- */
@@ -360,6 +434,11 @@ class AttendanceService
 
         return DB::transaction(function () use ($leave, $approve, $remarks, $user): StudentLeaveRequest {
             $leave->update(['status' => $approve ? 'approved' : 'rejected', 'reviewed_by' => $user->id, 'reviewed_at' => now(), 'review_remarks' => $remarks]);
+
+            $student = $leave->student()->first(['id', 'first_name', 'middle_name', 'last_name']);
+            $this->notificationService->notifyEvent('leave_decided', $this->notificationService->familyUserIds([$leave->student_id])->all(), [
+                'student_name' => $student?->fullName(), 'decision' => $approve ? 'approved' : 'rejected', 'from' => $leave->from_date?->format('d M'), 'to' => $leave->to_date?->format('d M Y'),
+            ], $leave, route('family.child', $leave->student_id));
 
             return $leave->load(['student:id,first_name,last_name,admission_no', 'requester:id,name', 'reviewer:id,name']);
         });

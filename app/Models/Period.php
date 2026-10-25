@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Database\Factories\PeriodFactory;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Period extends Model
 {
     /** @use HasFactory<PeriodFactory> */
-    use HasFactory, LogsActivity, TracksAuthor;
+    use BelongsToCampus, HasFactory, LogsActivity, TracksAuthor;
 
     use SoftDeletes;
 

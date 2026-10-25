@@ -25,6 +25,7 @@ use App\Models\CounsellingNote;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\DiaryEntry;
+use App\Models\DisciplineRecord;
 use App\Models\Employee;
 use App\Models\Exam;
 use App\Models\ExamHall;
@@ -46,6 +47,7 @@ use App\Models\LeaveType;
 use App\Models\Location;
 use App\Models\Lookup;
 use App\Models\MessageTemplate;
+use App\Models\OnlineTest;
 use App\Models\PaymentMethod;
 use App\Models\PayrollAdjustment;
 use App\Models\PerformanceAlertRule;
@@ -57,8 +59,10 @@ use App\Models\SalaryComponent;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
+use App\Models\StudentAchievement;
 use App\Models\StudentConcession;
 use App\Models\StudentGoal;
+use App\Models\StudentMedicalRecord;
 use App\Models\Subject;
 use App\Models\Task;
 use App\Models\TaskBoard;
@@ -75,6 +79,7 @@ use App\Models\WebsitePost;
 use App\Models\WebsiteSectionItem;
 use App\Models\WebsiteStat;
 use App\Models\WebsiteTestimonial;
+use App\Models\WorkShift;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -105,6 +110,11 @@ class ApprovalService
         AppraisalCriterion::class => [AppraisalService::class, 'deleteCriterion'],
         Asset::class => [AssetService::class, 'delete'],
         CounsellingNote::class => [CounsellingService::class, 'delete'],
+        WorkShift::class => [WorkShiftService::class, 'delete'],
+        DisciplineRecord::class => [StudentCareService::class, 'delete'],
+        OnlineTest::class => [OnlineTestService::class, 'delete'],
+        StudentMedicalRecord::class => [StudentCareService::class, 'delete'],
+        StudentAchievement::class => [StudentCareService::class, 'delete'],
         PayrollAdjustment::class => [PayrollService::class, 'deleteAdjustment'],
         LateFeeRule::class => [FeeAutomationService::class, 'deleteRule'],
         TransportRoute::class => [TransportService::class, 'deleteRoute'],

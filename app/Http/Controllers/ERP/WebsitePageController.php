@@ -32,12 +32,12 @@ class WebsitePageController extends Controller
 
     public function show(WebsitePage $page): JsonResponse
     {
-        return $this->successResponse($this->present($this->pageService->find($page->id)), 'Page retrieved.');
+        return $this->successResponse($this->pageService->present($this->pageService->find($page->id)), 'Page retrieved.');
     }
 
     public function update(SaveWebsitePageRequest $request, WebsitePage $page): JsonResponse
     {
-        return $this->successResponse($this->present($this->pageService->savePage($page, $request->validated())), 'Page saved; the website shows it now.');
+        return $this->successResponse($this->pageService->present($this->pageService->savePage($page, $request->validated())), 'Page saved; the website shows it now.');
     }
 
     public function updateSection(SaveWebsiteSectionRequest $request, WebsiteSection $section): JsonResponse
@@ -74,23 +74,5 @@ class WebsitePageController extends Controller
         };
 
         return $this->successResponse(['url' => $this->pageService->uploadImage($record, $request->file('image'))], 'Picture uploaded.');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function present(WebsitePage $page): array
-    {
-        $item = fn (WebsiteSectionItem $item): array => [...$item->attributesToArray(), 'image_url' => $item->imageUrl()];
-
-        return [
-            ...$page->attributesToArray(),
-            'hero_image_url' => WebsitePage::imageUrl($page->hero_image_path),
-            'sections' => $page->sections->map(fn (WebsiteSection $section): array => [
-                ...$section->attributesToArray(),
-                'image_url' => $section->imageUrl(),
-                'items' => $section->items->map(fn (WebsiteSectionItem $card): array => [...$item($card), 'children' => $card->children->map($item)->all()])->all(),
-            ])->all(),
-        ];
     }
 }

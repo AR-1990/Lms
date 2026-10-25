@@ -140,7 +140,21 @@ class DiaryService
             throw ValidationException::withMessages(['diary' => ['Add at least one entry or a note before publishing.']]);
         }
 
+        $firstTime = $diary->published_at === null;
         $diary->update(['status' => 'published', 'published_at' => $diary->published_at ?? now(), 'published_by' => $diary->published_by ?? $user->id]);
+
+        if ($firstTime) {
+            $section = $diary->section()->with('schoolClass:id,name')->first();
+            $entries = $diary->entries()->with(['entryType:id,name', 'subject:id,name'])->get()
+                ->map(fn (DiaryEntry $entry): string => trim(($entry->entryType?->name ?? 'Note').($entry->subject ? ' — '.$entry->subject->name : '')))
+                ->implode('; ');
+            $notifications = app(NotificationService::class);
+            $notifications->notifyEvent('diary_published', $notifications->familyUserIds(Enrollment::where('section_id', $diary->section_id)->where('status', 'active')->pluck('student_id'))->all(), [
+                'class_section' => trim(($section?->schoolClass?->name ?? '').' '.($section?->name ?? '')),
+                'date' => $diary->diary_date->format('d M Y'),
+                'entries' => $entries !== '' ? $entries : 'A note from the class teacher',
+            ], $diary, route('family.home'));
+        }
 
         return $diary;
     }

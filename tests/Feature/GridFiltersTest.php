@@ -73,4 +73,28 @@ class GridFiltersTest extends TestCase
         $this->assertSame(['Grade 5'], $this->classNames(['date_from' => '2020-01-01', 'date_to' => '2020-01-31']));
         $this->assertNotContains('Grade 5', $this->classNames(['date_from' => '2021-01-01']));
     }
+
+    public function test_the_same_grid_endpoint_gives_mobile_apps_a_paginated_list(): void
+    {
+        $total = SchoolClass::count();
+
+        $response = $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/classes/datatable?per_page=5&page=2')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.meta.current_page', 2)
+            ->assertJsonPath('data.meta.per_page', 5)
+            ->assertJsonPath('data.meta.total', $total)
+            ->assertJsonPath('data.meta.last_page', (int) ceil($total / 5))
+            ->assertJsonStructure(['data' => ['items' => [['id', 'name', 'wing_name', 'sections_count']]]]);
+        $this->assertCount(min(5, $total - 5), $response->json('data.items'));
+
+        $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/classes/datatable?search=Grade+10')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.name', 'Grade 10');
+
+        $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/classes/datatable?draw=1&start=0&length=5')
+            ->assertOk()
+            ->assertJsonPath('data.recordsTotal', $total);
+    }
 }

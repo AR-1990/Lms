@@ -46,7 +46,7 @@ class CardsPortalController extends PortalController
         return $this->page('dashboards.cards.designer', 'admin', 'id_cards', [
             'template' => $cardTemplate,
             'keys' => CardTemplate::KEYS_FOR_TYPE[$cardTemplate->card_type] ?? [],
-            'samples' => collect($cardService->sampleValues($cardTemplate))->except(['qr_code', 'date_sheet', 'photo'])->all(),
+            'samples' => collect($cardService->sampleValues($cardTemplate))->except(['qr_code', 'school_logo', 'date_sheet', 'photo'])->all(),
         ]);
     }
 

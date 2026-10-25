@@ -97,7 +97,7 @@
             <li><span>B-Form</span><strong>{{ $student->b_form_no ?? '—' }}</strong></li>
             <li><span>Admitted on</span><strong>{{ $student->admission_date?->format('d M Y') }}</strong></li>
             <li><span>Address</span><strong>{{ trim(($student->address_line ?? '').' '.($student->city ?? '')) ?: '—' }}</strong></li>
-            <li><span>Student login</span><strong>{{ $student->user ? $student->user->username ?? $student->user->email : 'None' }}</strong></li>
+            <li><span>Student login</span><strong>@if ($student->user){{ $student->user->username ?? $student->user->email }}@elseif (! in_array($student->current_status, \App\Models\Student::LEAVING_STATUSES, true))<button type="button" class="dash-link-btn" data-student-login data-name="{{ $student->fullName() }}">Create login</button>@else None @endif</strong></li>
         </ul>
         @if ($current)
             <form class="dash-inline-form" data-enrollment-form data-enrollment-id="{{ $current->id }}" data-roll-no="{{ $current->roll_no }}" novalidate>
@@ -331,6 +331,8 @@
     </form>
 </dialog>
 
+@include('dashboards.students.care-panel')
+
 @include('dashboards.partials.documents-panel', ['owner' => 'students', 'ownerId' => $student->id, 'documentTypes' => $data['document_types']])
 
 <dialog class="dash-modal dash-form-modal" id="parentLoginModal" aria-labelledby="parentLoginTitle">
@@ -361,4 +363,5 @@
 <script src="{{ asset('js/resource-screen.js') }}?v={{ filemtime(public_path('js/resource-screen.js')) }}" defer></script>
 <script src="{{ asset('js/admin-users.js') }}?v={{ filemtime(public_path('js/admin-users.js')) }}" defer></script>
 <script src="{{ asset('js/admin-students.js') }}?v={{ filemtime(public_path('js/admin-students.js')) }}" defer></script>
+<script src="{{ asset('js/student-care.js') }}?v={{ filemtime(public_path('js/student-care.js')) }}" defer></script>
 @endsection

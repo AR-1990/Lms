@@ -32,6 +32,7 @@ class CardService
     public function __construct(
         private NumberSequenceService $numberSequenceService,
         private ActivityLogger $activityLogger,
+        private SystemSettingsService $settingsService,
     ) {}
 
     /* ---------- Templates ---------- */
@@ -233,6 +234,36 @@ class CardService
     }
 
     /**
+     * The signed-in student's or staff member's own active card as a QR picture, shown on their dashboard
+     * to scan at the gate or kiosk (the same code as on the printed card). Null when no card is issued.
+     *
+     * @return array{card_no: string, holder_type: string, holder_name: string|null, valid_until: string|null, qr: string}|null
+     */
+    public function attendanceQr(User $user): ?array
+    {
+        $card = IdCard::where('status', 'active')
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $inner) => $inner->where('holder_type', 'student')->whereIn('holder_id', Student::where('user_id', $user->id)->select('id')))
+                ->orWhere(fn (Builder $inner) => $inner->where('holder_type', 'employee')->whereIn('holder_id', Employee::where('user_id', $user->id)->select('id'))))
+            ->latest('id')
+            ->first();
+
+        if ($card === null) {
+            return null;
+        }
+
+        $holder = $card->holder_type === 'student' ? Student::find($card->holder_id) : Employee::find($card->holder_id);
+
+        return [
+            'card_no' => $card->card_no,
+            'holder_type' => $card->holder_type,
+            'holder_name' => $holder?->fullName(),
+            'valid_until' => $card->valid_until?->toDateString(),
+            'qr' => $this->qr(route('cards.verify', $card->qr_token)),
+        ];
+    }
+
+    /**
      * Mark a card lost / revoked / expired; a lost card can be reissued at once as a new card.
      *
      * @throws ValidationException when the card is no longer active
@@ -299,6 +330,7 @@ class CardService
     {
         return [
             'school_name' => SystemSetting::query()->value('school_name'),
+            'school_logo' => $this->settingsService->logoFile(),
             'full_name' => $template->card_type === 'employee' ? 'Ayesha Siddiqui' : 'Ali Raza Khan',
             'father_name' => $this->labelled($template->card_type === 'employee' ? 'Father / spouse' : 'Parent', 'Muhammad Raza'),
             'admission_no' => $this->labelled('Adm No', 'PIA-2026-00042'),
@@ -495,6 +527,7 @@ class CardService
             'valid_until' => $this->labelled('Valid till', $card->valid_until?->format('d M Y')),
             'card_no' => $card->card_no,
             'school_name' => $schoolName,
+            'school_logo' => $this->settingsService->logoFile(),
             'photo' => $holder?->photo_path && Storage::disk('public')->exists($holder->photo_path) ? Storage::disk('public')->path($holder->photo_path) : null,
             'qr_code' => $card->template->show_qr ? $this->qr(route('cards.verify', $card->qr_token)) : null,
         ];

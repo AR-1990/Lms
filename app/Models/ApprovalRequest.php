@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['campus_id', 'request_type', 'module', 'subject_type', 'subject_id', 'subject_label', 'reason', 'amount', 'status', 'requested_by', 'requested_at', 'decided_by', 'decided_at', 'decision_note'])]
 class ApprovalRequest extends Model
 {
-    use SoftDeletes;
+    use BelongsToCampus, SoftDeletes;
 
     public const TYPES = ['delete', 'purchase'];
 

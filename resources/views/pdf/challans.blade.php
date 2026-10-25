@@ -12,6 +12,7 @@
         td.copy { vertical-align: top; border: 0.8pt dashed #94a3b8; padding: 5pt 6pt; }
         .copy-name { float: right; padding: 1pt 5pt; border: 0.8pt solid #1d2b45; color: #1d2b45; font-size: 6.6pt; font-weight: bold; text-transform: uppercase; }
         h1 { margin: 0; font-size: 10.5pt; color: #1d2b45; }
+        .logo { height: 9mm; vertical-align: middle; margin-right: 3pt; }
         .muted { color: #6b7280; }
         .small { font-size: 6.6pt; }
         .bank { margin: 4pt 0; padding: 3pt 4pt; background: #f1f5f9; }
@@ -43,7 +44,7 @@
             @foreach (['Bank copy', 'School copy', 'Student copy'] as $copy)
                 <td class="copy">
                     <span class="copy-name">{{ $copy }}</span>
-                    <h1>{{ $settings?->school_name }}</h1>
+                    <h1>@if ($logo)<img class="logo" src="{{ $logo }}" alt=""> @endif{{ $settings?->school_name }}</h1>
                     <div class="muted small">{{ $settings?->school_address }}{{ $settings?->school_phone ? ' · '.$settings->school_phone : '' }}</div>
 
                     @if ($bank)

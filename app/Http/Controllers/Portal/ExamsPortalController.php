@@ -7,6 +7,7 @@ use App\Models\ClassSubject;
 use App\Models\Employee;
 use App\Models\Exam;
 use App\Models\ExamHall;
+use App\Models\ExamSubject;
 use App\Models\ExamTerm;
 use App\Models\FeeHead;
 use App\Models\GradingScale;
@@ -65,6 +66,35 @@ class ExamsPortalController extends PortalController
             'sections' => $this->sections($manager ? null : ($employeeId ?? 0)),
             'assignments' => $manager ? collect() : TeacherAssignment::where('employee_id', $employeeId ?? 0)->get(['section_id', 'subject_id']),
             'is_manager' => $manager,
+        ]);
+    }
+
+    /**
+     * Online MCQ tests: teachers pick one of their section + subject pairs; the exam cell sees every pair.
+     * A test may be linked to that subject's paper of an exam so its scores fill the marks.
+     */
+    public function onlineTests(): View
+    {
+        $user = $this->portalUser();
+        $manager = $user->hasPermission('manage-exams');
+        $employeeId = $manager ? null : (Employee::where('user_id', $user->id)->value('id') ?? 0);
+        $sessionId = $this->sessionService->current()?->id;
+        $sections = $this->sections($employeeId);
+
+        $subjects = $manager
+            ? ClassSubject::query()->join('subjects', 'subjects.id', '=', 'class_subject.subject_id')->where('class_subject.academic_session_id', $sessionId)->orderBy('subjects.name')
+                ->get(['class_subject.class_id', 'subjects.id', 'subjects.name'])
+                ->flatMap(fn ($subject) => $sections->where('class_id', $subject->class_id)->map(fn (Section $section): array => ['section_id' => $section->id, 'id' => $subject->id, 'name' => $subject->name]))
+            : TeacherAssignment::where('employee_id', $employeeId)->join('subjects', 'subjects.id', '=', 'teacher_assignments.subject_id')->orderBy('subjects.name')
+                ->get(['teacher_assignments.section_id', 'subjects.id', 'subjects.name'])
+                ->map(fn ($subject): array => ['section_id' => $subject->section_id, 'id' => $subject->id, 'name' => $subject->name]);
+
+        return $this->page('dashboards.exams.online-tests', $manager ? 'admin' : 'teacher', $manager ? 'exams' : 'online_tests', [
+            'sections' => $sections,
+            'subjects' => $subjects->values(),
+            'papers' => ExamSubject::query()->join('exams', 'exams.id', '=', 'exam_subjects.exam_id')
+                ->whereIn('exams.exam_term_id', ExamTerm::where('academic_session_id', $sessionId)->select('id'))->whereNull('exams.deleted_at')->whereNull('exam_subjects.deleted_at')->orderByDesc('exams.id')
+                ->get(['exam_subjects.id', 'exam_subjects.subject_id', 'exams.class_id', 'exams.name as exam_name', 'exam_subjects.theory_max_marks']),
         ]);
     }
 

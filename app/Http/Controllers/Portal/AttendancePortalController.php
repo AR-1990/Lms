@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Portal;
 
+use App\Models\Campus;
 use App\Models\ClassSubject;
 use App\Models\Employee;
 use App\Models\Period;
@@ -44,6 +45,11 @@ class AttendancePortalController extends PortalController
     public function scan(): View
     {
         return $this->attendancePage('scan');
+    }
+
+    public function kiosks(): View
+    {
+        return $this->page('dashboards.attendance.kiosks', 'admin', 'attendance', ['campuses' => Campus::where('is_active', true)->orderBy('name')->get(['id', 'name'])]);
     }
 
     public function diary(LookupService $lookupService): View

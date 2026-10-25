@@ -87,6 +87,7 @@
             @include('dashboards.partials.field', ['name' => 'email', 'label' => 'Email', 'type' => 'email'])
             @include('dashboards.partials.select', ['name' => 'department_id', 'label' => 'Department', 'options' => $data['departments']])
             @include('dashboards.partials.select', ['name' => 'designation_id', 'label' => 'Designation', 'options' => $data['designations'], 'required' => true])
+            @include('dashboards.partials.select', ['name' => 'work_shift_id', 'label' => 'Shift', 'options' => $data['shifts'], 'empty' => 'Default shift'])
             @include('dashboards.partials.select', ['name' => 'employment_type_id', 'label' => 'Employment type', 'options' => $data['lookups']['employment_type'], 'required' => true])
             @include('dashboards.partials.field', ['name' => 'joining_date', 'label' => 'Joining date', 'type' => 'date', 'required' => true])
             @include('dashboards.partials.field', ['name' => 'probation_end_date', 'label' => 'Probation ends', 'type' => 'date'])

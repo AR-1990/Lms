@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Campus;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\Student;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -119,5 +122,33 @@ class CampusTest extends TestCase
 
         $this->actingAs($teacher, 'sanctum')->getJson('/api/erp/campuses')->assertForbidden();
         $this->actingAs($teacher, 'sanctum')->postJson('/api/erp/campuses', ['name' => 'X', 'code' => 'X'])->assertForbidden();
+    }
+
+    public function test_each_campus_sees_only_its_own_records_and_head_office_can_pick_one(): void
+    {
+        $branch = Campus::factory()->create(['name' => 'Gulberg Branch', 'code' => 'GLB']);
+        $office = Role::create(['name' => 'Campus Office', 'slug' => 'campus-office']);
+        $office->permissions()->attach(Permission::where('slug', 'manage-students')->value('id'));
+        $branchStaff = User::factory()->create(['campus_id' => $branch->id]);
+        $mainStaff = User::factory()->create(['campus_id' => $this->main->id]);
+        $branchStaff->roles()->attach($office->id);
+        $mainStaff->roles()->attach($office->id);
+
+        $this->actingAs($branchStaff);
+        $student = Student::factory()->create(['first_name' => 'Branchkid']);
+        $this->assertSame($branch->id, Student::withoutGlobalScopes()->find($student->id)->campus_id);
+
+        $this->actingAs($branchStaff, 'sanctum')->getJson("/api/erp/students/{$student->id}")->assertOk();
+        $this->actingAs($mainStaff, 'sanctum')->getJson("/api/erp/students/{$student->id}")->assertNotFound();
+        $this->actingAs($mainStaff, 'sanctum')->getJson('/api/erp/students/datatable?search=Branchkid')->assertOk()->assertJsonPath('data.meta.total', 0);
+
+        $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/students/datatable?search=Branchkid')->assertJsonPath('data.meta.total', 1);
+        $this->actingAs($this->admin, 'sanctum')->withHeader('X-Campus-Id', (string) $this->main->id)->getJson('/api/erp/students/datatable?search=Branchkid')->assertJsonPath('data.meta.total', 0);
+        $this->actingAs($this->admin, 'sanctum')->withHeader('X-Campus-Id', (string) $branch->id)->getJson('/api/erp/students/datatable?search=Branchkid')->assertJsonPath('data.meta.total', 1);
+
+        // Branch staff cannot widen their view with the header.
+        $this->actingAs($mainStaff, 'sanctum')->withHeader('X-Campus-Id', (string) $branch->id)->getJson("/api/erp/students/{$student->id}")->assertNotFound();
+
+        $this->actingAs($this->admin)->get('/dashboard')->assertOk()->assertSee('All campuses');
     }
 }

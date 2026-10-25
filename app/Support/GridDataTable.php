@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Yajra\DataTables\EloquentDataTable;
@@ -23,6 +24,65 @@ class GridDataTable extends EloquentDataTable
      * @var array<string, array<int, string>>
      */
     private static array $tableColumns = [];
+
+    /**
+     * Callers that are not a DataTables grid (the mobile apps, any plain API client: no "draw") get the same
+     * query, filters, computed columns and date range as a normal list: ?page, ?per_page (max 100) and ?search,
+     * answered as { items, meta } like every other paginated endpoint. Grids keep the DataTables format.
+     */
+    public function make(bool $mDataSupport = true): JsonResponse
+    {
+        $request = $this->request->getBaseRequest();
+
+        if ($request->has('draw')) {
+            return parent::make($mDataSupport);
+        }
+
+        $perPage = min(max($request->integer('per_page', 15), 1), 100);
+        $page = max($request->integer('page', 1), 1);
+        $request->merge(['start' => ($page - 1) * $perPage, 'length' => $perPage]);
+
+        $search = $request->input('search');
+
+        if (is_string($search) && trim($search) !== '') {
+            $this->plainSearch(trim($search));
+        }
+
+        if (! $request->has('order')) {
+            $this->query->orderByDesc($this->query->getModel()->getQualifiedKeyName());
+        }
+
+        $grid = parent::make($mDataSupport)->getData(true);
+
+        if (! array_key_exists('data', $grid)) {
+            return new JsonResponse($grid, 500);
+        }
+
+        $total = (int) ($grid['recordsFiltered'] ?? 0);
+
+        return new JsonResponse([
+            'items' => $grid['data'],
+            'meta' => ['current_page' => $page, 'per_page' => $perPage, 'total' => $total, 'last_page' => max(1, (int) ceil($total / $perPage))],
+        ]);
+    }
+
+    /**
+     * ?search for plain API callers: any name, title, code, number, email or phone column of the table.
+     */
+    private function plainSearch(string $keyword): void
+    {
+        $table = $this->query->getModel()->getTable();
+        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $keyword).'%';
+        $columns = array_values(array_filter($this->columns($table), fn (string $column): bool => (bool) preg_match('/(^|_)(name|title|code|no|number|email|phone|subject)$/', $column)));
+
+        if ($columns !== []) {
+            $this->query->where(function (Builder $query) use ($columns, $table, $like): void {
+                foreach ($columns as $column) {
+                    $query->orWhere($table.'.'.$column, 'like', $like);
+                }
+            });
+        }
+    }
 
     public function columnSearch(): void
     {

@@ -21,7 +21,7 @@ class TimetableService
     public function forSection(Section $section): Collection
     {
         return TimetableSlot::where('section_id', $section->id)
-            ->with(['subject:id,name,code', 'teacher:id,first_name,last_name,employee_code'])
+            ->with(['subject:id,name,code', 'teacher:id,first_name,last_name,employee_code', 'period:id,name,starts_at,ends_at'])
             ->orderBy('day_of_week')
             ->get();
     }

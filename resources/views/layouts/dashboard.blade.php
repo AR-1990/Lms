@@ -73,6 +73,26 @@
                         <h2 class="dash-header-title">@yield('page_heading', 'Dashboard')</h2>
                         <svg class="dash-scribble" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5.5C18 2 30 7 46 4.5S78 2 92 4.8 112 6 118 3"/></svg>
                     </div>
+                    <div class="dash-jump" data-jump data-url="{{ url('/api/erp/jump-to') }}">
+                        <label class="dash-jump-box">
+                            @include('partials.dashboard-icon', ['name' => 'search'])
+                            <span class="dash-visually-hidden">Jump to a page</span>
+                            <input type="search" placeholder="Jump to…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="dashJumpList" data-jump-input>
+                            <kbd aria-hidden="true">Ctrl K</kbd>
+                        </label>
+                        <ul class="dash-jump-list" id="dashJumpList" role="listbox" data-jump-list hidden></ul>
+                    </div>
+                    @if (($navigation['campuses'] ?? collect())->count() > 1)
+                        <label class="dash-select dash-campus-pick">
+                            <span class="dash-visually-hidden">Campus</span>
+                            <select data-campus-pick>
+                                <option value="">All campuses</option>
+                                @foreach ($navigation['campuses'] as $campus)
+                                    <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    @endif
                     <span class="dash-header-meta">
                         @include('partials.dashboard-icon', ['name' => 'calendar'])
                         {{ now()->format('l, d M Y') }}

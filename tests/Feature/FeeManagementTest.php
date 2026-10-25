@@ -325,7 +325,7 @@ class FeeManagementTest extends TestCase
         $this->generate()->assertCreated();
 
         $this->actingAs($this->admin, 'sanctum')
-            ->getJson('/api/erp/fees/invoices/datatable?draw=1&columns[0][data]=payer_name&columns[0][name]=payer_name&columns[0][searchable]=true&search[value]=John')
+            ->getJson('/api/erp/fees/invoices/datatable?draw=1&columns[0][data]=payer_name&columns[0][name]=payer_name&columns[0][searchable]=true&search[value]='.urlencode($this->john->fullName()))
             ->assertOk()
             ->assertJsonPath('data.recordsFiltered', 1)
             ->assertJsonPath('data.data.0.student_id', $this->john->id);

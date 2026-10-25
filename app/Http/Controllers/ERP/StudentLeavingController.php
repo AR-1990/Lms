@@ -36,6 +36,8 @@ class StudentLeavingController extends Controller
 
     public function certificatePdf(Request $request, Student $student): Response
     {
+        abort_unless($request->user()->hasPermission('manage-students') || in_array($student->id, Student::ownIdsFor($request->user()), true), 404);
+
         return $this->leavingService->certificatePdf($student, $request->user());
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class FeePayment extends Model
 {
-    use LogsActivity, TracksAuthor;
+    use BelongsToCampus, LogsActivity, TracksAuthor;
 
     protected string $activityModule = 'fee_payments';
 
@@ -58,6 +59,11 @@ class FeePayment extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(AdmissionApplication::class, 'admission_application_id');
+    }
+
+    public function paidBy(): BelongsTo
+    {
+        return $this->belongsTo(Guardian::class, 'paid_by_guardian_id');
     }
 
     public function receivedBy(): BelongsTo

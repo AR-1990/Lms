@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class FeeInvoice extends Model
 {
-    use LogsActivity, TracksAuthor;
+    use BelongsToCampus, LogsActivity, TracksAuthor;
 
     /**
      * @var array<int, string>

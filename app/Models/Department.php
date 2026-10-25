@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Database\Factories\DepartmentFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Department extends Model
 {
     /** @use HasFactory<DepartmentFactory> */
-    use HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
 
     protected string $activityModule = 'departments';
 

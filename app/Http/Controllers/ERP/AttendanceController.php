@@ -89,13 +89,8 @@ class AttendanceController extends Controller
     {
         $code = $request->validate(['code' => ['required', 'string', 'max:255']])['code'];
         $result = $this->attendanceService->scan($code, $request->user());
-        $message = match ($result['action']) {
-            'checked_out' => "{$result['name']} checked out at {$result['time']}.",
-            'already_marked' => "{$result['name']} is already marked {$result['status']} today.",
-            default => "{$result['name']} marked present at {$result['time']}.",
-        };
 
-        return $this->successResponse($result, $message);
+        return $this->successResponse($result, $this->attendanceService->scanMessage($result));
     }
 
     /* ---------- Leave requests ---------- */

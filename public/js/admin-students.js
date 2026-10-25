@@ -232,6 +232,8 @@
                 form.reset();
                 kit.clearErrors(form);
                 dialog.dataset.guardianId = login.dataset.parentLogin;
+                dialog.dataset.mode = 'parent';
+                dialog.querySelector('#parentLoginTitle').textContent = 'Parent login';
                 dialog.querySelector('[data-parent-login-name]').textContent = login.dataset.name + ' will sign in with their phone number.';
                 dialog.showModal();
             }
@@ -243,10 +245,28 @@
             event.preventDefault();
             const form = event.target;
 
-            kit.submitForm(form, 'POST', profile.dataset.guardiansUrl + '/' + loginDialog.dataset.guardianId + '/portal-account', { password: form.elements.password.value })
+            const url = loginDialog.dataset.mode === 'student'
+                ? studentUrl + '/portal-account'
+                : profile.dataset.guardiansUrl + '/' + loginDialog.dataset.guardianId + '/portal-account';
+
+            kit.submitForm(form, 'POST', url, { password: form.elements.password.value })
                 .then(reload)
                 .catch(function () {});
         });
+
+        const studentLogin = document.querySelector('[data-student-login]');
+
+        if (studentLogin) {
+            studentLogin.addEventListener('click', function () {
+                const form = loginDialog.querySelector('form');
+                form.reset();
+                kit.clearErrors(form);
+                loginDialog.dataset.mode = 'student';
+                loginDialog.querySelector('#parentLoginTitle').textContent = 'Student login';
+                loginDialog.querySelector('[data-parent-login-name]').textContent = studentLogin.dataset.name + ' will sign in with their admission number.';
+                loginDialog.showModal();
+            });
+        }
 
         const enrollmentForm = document.querySelector('[data-enrollment-form]');
 
@@ -670,7 +690,7 @@
         enrolForm.addEventListener('submit', function (event) {
             event.preventDefault();
 
-            const body = kit.readForm(enrolForm, { admission_date: 'text', section_id: 'int', roll_no: 'text', parent_password: 'text' });
+            const body = kit.readForm(enrolForm, { admission_date: 'text', section_id: 'int', roll_no: 'text', parent_password: 'text', student_password: 'text', issue_first_challan: 'bool', issue_id_card: 'bool' });
 
             Object.keys(body).forEach(function (key) {
                 if (body[key] === null) {

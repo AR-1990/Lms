@@ -29,4 +29,18 @@
         authEndpoint: settings.dataset.authUrl,
         auth: { headers: { 'X-CSRF-TOKEN': csrf ? csrf.content : '', 'Accept': 'application/json' } }
     });
+
+    // Hosting without a WebSocket server: stop retrying after a couple of failed rounds instead of filling the console.
+    const pusher = window.PinnacleRealtime.echo.connector && window.PinnacleRealtime.echo.connector.pusher;
+    let misses = 0;
+
+    if (pusher) {
+        pusher.connection.bind('state_change', function (states) {
+            if (states.current === 'connected') {
+                misses = 0;
+            } else if ((states.current === 'unavailable' || states.current === 'failed') && ++misses >= 2) {
+                pusher.disconnect();
+            }
+        });
+    }
 })();

@@ -110,6 +110,16 @@ class IdCardController extends Controller
         return $this->successResponse(IdCardResource::collection($this->cardService->ownCards($request->user())->latest('id')->get())->resolve(), 'Your ID cards.');
     }
 
+    /**
+     * My attendance QR (dashboard and mobile app): the code on my printed ID card.
+     */
+    public function myQr(Request $request): JsonResponse
+    {
+        $qr = $this->cardService->attendanceQr($request->user());
+
+        return $this->successResponse($qr, $qr === null ? 'No ID card has been issued to you yet.' : 'Your attendance QR.');
+    }
+
     public function downloadMine(Request $request, int $idCard): Response
     {
         $card = $this->cardService->ownCards($request->user())->findOrFail($idCard);

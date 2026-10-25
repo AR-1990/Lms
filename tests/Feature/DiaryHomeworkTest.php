@@ -9,6 +9,7 @@ use App\Models\Lookup;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\User;
+use App\Models\UserNotification;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -74,6 +75,7 @@ class DiaryHomeworkTest extends TestCase
         $this->actingAs($this->parent, 'sanctum')->getJson("/api/erp/diary/students/{$this->john->id}?from=2026-10-01&to=2026-10-31")->assertOk()->assertJsonCount(0, 'data');
 
         $this->actingAs($this->teacher, 'sanctum')->postJson("/api/erp/diaries/{$page['id']}/publish")->assertOk()->assertJsonPath('data.status', 'published');
+        $this->assertTrue(UserNotification::where('user_id', $this->parent->id)->where('event_key', 'diary_published')->exists());
 
         $this->actingAs($this->parent, 'sanctum')
             ->getJson("/api/erp/diary/students/{$this->john->id}?from=2026-10-01&to=2026-10-31")

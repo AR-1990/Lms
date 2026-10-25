@@ -176,6 +176,8 @@
     </div>
 </div>
 
+@include('partials.attendance-qr')
+
 @include('partials.sticky-notes', ['limit' => 8])
 
 <section class="dash-quick" aria-label="Quick actions">

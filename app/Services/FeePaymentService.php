@@ -10,9 +10,13 @@ use App\Models\FeeRefund;
 use App\Models\JournalEntry;
 use App\Models\PaymentMethod;
 use App\Models\Student;
+use App\Models\SystemSetting;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 
 /**
@@ -73,18 +77,37 @@ class FeePaymentService
     }
 
     /**
+     * A5 receipt for the counter, the parent portal and the mobile app; every print is logged.
+     */
+    public function pdf(FeePayment $payment, User $user): Response
+    {
+        $payment->load([
+            'student:id,admission_no,first_name,middle_name,last_name', 'student.currentEnrollment.schoolClass:id,name', 'student.currentEnrollment.section:id,name',
+            'application:id,application_no,first_name,last_name', 'paymentMethod:id,name', 'paidBy:id,name', 'receivedBy:id,name',
+            'allocations.invoice:id,invoice_no,invoice_type,billing_month',
+        ]);
+        $this->activityLogger->record('fee_payments', 'printed', "{$user->name} printed receipt {$payment->receipt_no}", $payment);
+
+        return Pdf::loadView('pdf.receipt', [
+            'payment' => $payment,
+            'settings' => SystemSetting::query()->first(['school_name', 'school_address', 'school_phone']),
+            'logo' => app(SystemSettingsService::class)->logoFile(),
+        ])->setPaper('a5')->stream("receipt-{$payment->receipt_no}.pdf");
+    }
+
+    /**
      * Receive money from a student (or an applicant before enrolment) and post it.
      *
      * @param  array<string, mixed>  $data
-     * @param  bool  $fromDeposit  paid from the student's security deposit (the system method, which the counter cannot pick)
+     * @param  bool  $systemMethod  an inactive system method (deposit adjustment, opening advance) the counter cannot pick
      *
      * @throws ValidationException
      */
-    public function receive(array $data, bool $fromDeposit = false): FeePayment
+    public function receive(array $data, bool $systemMethod = false): FeePayment
     {
         $method = PaymentMethod::findOrFail($data['payment_method_id']);
 
-        if (! $fromDeposit) {
+        if (! $systemMethod) {
             $this->checkMethodDetails($method, $data);
         }
 
@@ -163,6 +186,13 @@ class FeePaymentService
             $payerName = $student?->fullName() ?? $application->fullName();
             $entry = $this->journalService->record('RV', $data['received_on'], "Fee receipt {$payment->receipt_no} — {$payerName}", $lines, $payment);
             $payment->forceFill(['journal_entry_id' => $entry->id])->saveQuietly();
+
+            if ($student !== null) {
+                $notifications = app(NotificationService::class);
+                $notifications->notifyEvent('payment_received', $notifications->familyUserIds([$student->id])->all(), [
+                    'student_name' => $student->fullName(), 'receipt_no' => $payment->receipt_no, 'amount' => $this->money($amount), 'date' => $payment->received_on->format('d M Y'),
+                ], $payment, route('family.child', $student));
+            }
 
             return $this->find($payment);
         });

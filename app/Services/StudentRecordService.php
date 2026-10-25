@@ -399,6 +399,37 @@ class StudentRecordService
     }
 
     /**
+     * Student portal / mobile app login: signs in with the admission number.
+     *
+     * @throws ValidationException when the student already has a login or is no longer studying
+     */
+    public function createStudentLogin(Student $student, string $password): Student
+    {
+        if ($student->user_id !== null) {
+            throw ValidationException::withMessages(['student' => ['This student already has a portal login.']]);
+        }
+
+        if (in_array($student->current_status, Student::LEAVING_STATUSES, true)) {
+            throw ValidationException::withMessages(['student' => ['A student who has left cannot get a login.']]);
+        }
+
+        return DB::transaction(function () use ($student, $password): Student {
+            $user = $this->userService->createUser([
+                'name' => $student->fullName(),
+                'username' => $student->admission_no,
+                'email' => 'student-'.$student->id.'@students.invalid',
+                'password' => $password,
+                'campus_id' => $student->campus_id,
+            ], ['student']);
+
+            $student->forceFill(['user_id' => $user->id])->saveQuietly();
+            $this->activityLogger->record('students', 'portal_account_created', (auth()->user()?->name ?? 'System')." created a student login for {$student->fullName()} ({$student->admission_no})", $student);
+
+            return $student;
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     private function resolveGuardian(array $data): Guardian

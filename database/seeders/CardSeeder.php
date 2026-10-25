@@ -6,7 +6,7 @@ use App\Models\CardTemplate;
 use Illuminate\Database\Seeder;
 
 /**
- * Built-in system templates in three looks (classic, wave, elegant) for every card type: vertical
+ * Built-in system templates in four looks (classic, wave, elegant, modern) for every card type: vertical
  * student and staff ID cards (CR80), A6 admit cards, an A5 invitation, an event pass and a visitor
  * card. They cannot be deleted; schools restyle them in the card designer. Seeding only adds
  * templates that are missing (matched by name), so design changes are kept.
@@ -52,6 +52,58 @@ class CardSeeder extends Seeder
         ['front', 'custom_text', 'STAFF IDENTITY CARD', 2, 10.4, 50, null, 5.4, 'bold', '#fde68a', 'center'],
         ['front', 'designation', null, 2, 50.5, 50, null, 7, 'bold', '#a16207', 'center'],
         ['front', 'employee_code', null, 3.5, 56.5, 32, null, 6, 'normal', null, 'left'],
+    ];
+
+    /**
+     * Modern ID back: rules of use, the gate-attendance note, emergency contact, logo and signature.
+     *
+     * @var array<int, array<int, mixed>>
+     */
+    private const ID_BACK_MODERN = [
+        ['back', 'school_name', null, 2, 1.6, 50, null, 6, 'bold', '#ffffff', 'center'],
+        ['back', 'custom_text', 'TERMS OF USE', 4, 10, 46, null, 6.5, 'bold', 'PRIMARY', 'left'],
+        ['back', 'custom_text', 'This card is not transferable. Carry it at all times on campus and show it when asked.', 4, 14.5, 46, null, 5.6, 'normal', '#374151', 'left'],
+        ['back', 'custom_text', 'Scan the QR on the front at the gate kiosk to mark attendance.', 4, 23, 46, null, 5.6, 'bold', '#a16207', 'left'],
+        ['back', 'emergency_phone', null, 4, 31, 46, null, 6.5, 'bold', null, 'left'],
+        ['back', 'address', null, 4, 36, 46, 12, 5.8, 'normal', '#374151', 'left'],
+        ['back', 'school_logo', null, 4, 58, 11, 11, 8, 'normal', null, 'left'],
+        ['back', 'signature_line', 'Principal', 27, 63, 23, null, 5.8, 'normal', null, 'center'],
+    ];
+
+    /**
+     * Modern ID front: logo and school in the angled header, the photo overlapping its edge, and a large
+     * QR for the gate kiosk. ROLE is replaced with the card's role line.
+     *
+     * @var array<int, array<int, mixed>>
+     */
+    private const MODERN_FRONT = [
+        ['front', 'school_logo', null, 2.5, 2.4, 8.5, 8.5, 8, 'normal', null, 'left'],
+        ['front', 'school_name', null, 12, 2.4, 40, null, 6.2, 'bold', '#ffffff', 'left'],
+        ['front', 'custom_text', 'ROLE', 12, 8.3, 40, null, 4.8, 'bold', '#fde68a', 'left'],
+        ['front', 'photo', null, 16, 14.5, 22, 26, 8, 'normal', null, 'left'],
+        ['front', 'full_name', null, 2, 43, 50, null, 9.5, 'bold', 'PRIMARY', 'center'],
+        ['front', 'qr_code', null, 34.5, 53, 17, 17, 8, 'normal', null, 'left'],
+        ['front', 'custom_text', 'Scan at gate', 34.5, 70.6, 17, null, 4.5, 'normal', '#6b7280', 'center'],
+        ['front', 'father_name', null, 3.5, 68, 31, null, 5.3, 'normal', null, 'left'],
+        ['front', 'blood_group', null, 3.5, 59, 31, null, 5.3, 'normal', null, 'left'],
+        ['front', 'valid_until', null, 3.5, 63.5, 31, null, 5.3, 'normal', '#6b7280', 'left'],
+        ['front', 'card_no', null, 2, 80.6, 50, null, 5.5, 'bold', '#ffffff', 'center'],
+    ];
+
+    /**
+     * @var array<int, array<int, mixed>>
+     */
+    private const MODERN_STUDENT = [
+        ['front', 'class_section', null, 2, 48.3, 50, null, 7, 'bold', '#a16207', 'center'],
+        ['front', 'admission_no', null, 3.5, 54.5, 31, null, 5.3, 'normal', null, 'left'],
+    ];
+
+    /**
+     * @var array<int, array<int, mixed>>
+     */
+    private const MODERN_STAFF = [
+        ['front', 'designation', null, 2, 48.3, 50, null, 7, 'bold', '#a16207', 'center'],
+        ['front', 'employee_code', null, 3.5, 54.5, 31, null, 5.3, 'normal', null, 'left'],
     ];
 
     /**
@@ -125,9 +177,11 @@ class CardSeeder extends Seeder
 
         // [type, name, size, theme, band colour, back text, fields]
         $designs = [
+            ['student', 'Student ID — Modern Navy (system)', 'cr80_portrait', 'modern', '#1d2b45', $idBack, [...self::MODERN_FRONT, ...self::MODERN_STUDENT, ...self::ID_BACK_MODERN]],
             ['student', 'Student ID Card (system)', 'cr80_portrait', 'classic', '#1d2b45', $idBack, [...self::ID_FRONT, ...self::STUDENT_FRONT]],
             ['student', 'Student ID — Wave Emerald (system)', 'cr80_portrait', 'wave', '#065f46', $idBack, [...self::ID_FRONT, ...self::STUDENT_FRONT]],
             ['student', 'Student ID — Elegant Maroon (system)', 'cr80_portrait', 'elegant', '#7f1d1d', $idBack, [...self::ID_FRONT, ...self::STUDENT_FRONT]],
+            ['employee', 'Staff ID — Modern Teal (system)', 'cr80_portrait', 'modern', '#134e4a', $staffBack, [...self::MODERN_FRONT, ...self::MODERN_STAFF, ...self::ID_BACK_MODERN]],
             ['employee', 'Staff ID Card (system)', 'cr80_portrait', 'classic', '#1d2b45', $staffBack, [...self::ID_FRONT, ...self::STAFF_FRONT]],
             ['employee', 'Staff ID — Wave Royal Blue (system)', 'cr80_portrait', 'wave', '#1e3a8a', $staffBack, [...self::ID_FRONT, ...self::STAFF_FRONT]],
             ['employee', 'Staff ID — Elegant Teal (system)', 'cr80_portrait', 'elegant', '#134e4a', $staffBack, [...self::ID_FRONT, ...self::STAFF_FRONT]],
@@ -163,6 +217,7 @@ class CardSeeder extends Seeder
 
             foreach ($fields as $position => $field) {
                 $field[9] = $field[9] === 'PRIMARY' ? $color : $field[9];
+                $field[2] = $field[2] === 'ROLE' ? ($type === 'student' ? 'STUDENT IDENTITY CARD' : 'STAFF IDENTITY CARD') : $field[2];
                 $template->fields()->create([
                     ...array_combine(['side', 'field_key', 'custom_text', 'x_mm', 'y_mm', 'width_mm', 'height_mm', 'font_size', 'font_weight', 'color', 'align'], $field),
                     'sort_order' => $position,

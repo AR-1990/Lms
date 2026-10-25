@@ -15,6 +15,7 @@ use App\Models\PayrollRun;
 use App\Models\Role;
 use App\Models\SalaryComponent;
 use App\Models\Section;
+use App\Models\WorkShift;
 use App\Services\AcademicSessionService;
 use App\Services\LookupService;
 use Illuminate\Database\Eloquent\Collection;
@@ -29,7 +30,12 @@ class HrPortalController extends PortalController
 
     public function employees(): View
     {
-        return $this->screen('employees');
+        return $this->screen('employees', ['shifts' => WorkShift::where('is_active', true)->orderBy('name')->get(['id', 'name'])]);
+    }
+
+    public function shifts(): View
+    {
+        return $this->screen('shifts');
     }
 
     public function assignments(AcademicSessionService $sessionService): View
@@ -131,6 +137,15 @@ class HrPortalController extends PortalController
     {
         return $this->screen('payroll-run', [
             'run' => $payrollRun->load('approver:id,name'),
+            'payment_methods' => PaymentMethod::where('is_active', true)->whereNotNull('account_id')->orderBy('sort_order')->get(['id', 'name']),
+        ]);
+    }
+
+    public function exits(): View
+    {
+        return $this->screen('exits', [
+            'staff' => $this->staff(),
+            'exit_reasons' => $this->lookupService->options('exit_reason'),
             'payment_methods' => PaymentMethod::where('is_active', true)->whereNotNull('account_id')->orderBy('sort_order')->get(['id', 'name']),
         ]);
     }

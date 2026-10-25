@@ -53,6 +53,7 @@ class SaveEmployeeRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:100'],
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')->whereNull('deleted_at')],
             'designation_id' => ['required', 'integer', Rule::exists('designations', 'id')->whereNull('deleted_at')],
+            'work_shift_id' => ['nullable', 'integer', Rule::exists('work_shifts', 'id')->whereNull('deleted_at')],
             'employment_type_id' => ['required', 'integer', Rule::exists('lookups', 'id')->where('type', 'employment_type')->whereNull('deleted_at')],
             'reports_to_id' => ['nullable', 'integer', Rule::notIn(array_filter([$employee?->id])), Rule::exists('employees', 'id')->whereNull('deleted_at')],
             'joining_date' => ['required', 'date_format:Y-m-d'],

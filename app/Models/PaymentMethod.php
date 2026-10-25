@@ -22,6 +22,11 @@ class PaymentMethod extends Model
      */
     public const DEPOSIT_ADJUSTMENT = 'DEPOSIT';
 
+    /**
+     * System method behind imported opening advances (Dr Opening Balance Equity, Cr Student Advances).
+     */
+    public const OPENING_ADVANCE = 'OPENING';
+
     protected string $activityModule = 'payment_methods';
 
     /**

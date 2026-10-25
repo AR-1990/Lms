@@ -283,6 +283,7 @@ class StudentLeavingService
             'lastEnrollment' => $student->enrollments->first(),
             'firstEnrollment' => $student->enrollments->last(),
             'settings' => SystemSetting::query()->first(['school_name', 'school_tagline', 'school_address', 'school_phone']),
+            'logo' => app(SystemSettingsService::class)->logoFile(),
         ])->setPaper('a4')->stream('slc-'.$student->slc_no.'.pdf');
     }
 

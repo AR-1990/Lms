@@ -29,4 +29,12 @@ class StudentPortalController extends PortalController
 
         return $this->page('dashboards.student.grades', 'student', 'grades', $this->studentService->getGrades($user));
     }
+
+    /**
+     * Online tests: the list, the attempt screen and the review all run on /api/erp/my-online-tests.
+     */
+    public function onlineTests(): View
+    {
+        return $this->page('dashboards.student.online-tests', 'student', 'online_tests');
+    }
 }

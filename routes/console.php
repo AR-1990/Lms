@@ -4,6 +4,7 @@ use App\Models\AcademicSession;
 use App\Models\ExamTerm;
 use App\Models\UserDevice;
 use App\Services\AnnouncementService;
+use App\Services\BackupService;
 use App\Services\ChatService;
 use App\Services\CounsellingService;
 use App\Services\FeeAutomationService;
@@ -62,6 +63,16 @@ Schedule::command('chat:sync-departments')->dailyAt('01:30');
 // Fees: late fines on overdue challans after midnight; the month's challans on the day set under Fees → Late Fees & Automation.
 Schedule::call(fn () => app(FeeAutomationService::class)->applyLateFees())->name('fees:late-fines')->dailyAt('00:30');
 Schedule::call(fn () => app(FeeAutomationService::class)->autoGenerate())->name('fees:auto-challans')->dailyAt('06:00');
+// Hosting without a supervisor: the one cron entry (schedule:run) also works through the database queue
+// (emails, broadcasts) every minute. Where a queue:work process already runs, this finds nothing to do.
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->name('queue:drain')->everyMinute()->withoutOverlapping();
+
+// Nightly database backup (newest 14 kept); "php artisan backup:run" makes one now.
+Artisan::command('backup:run', function (): void {
+    $this->info('Backup '.app(BackupService::class)->run()['file'].' created.');
+})->purpose('Back up the database to storage/app/private/backups');
+Schedule::command('backup:run')->name('backup:nightly')->dailyAt('02:30')->withoutOverlapping();
+
 // Admins and accounts staff get a morning reminder of students who have not paid by the due date.
 Schedule::call(fn () => app(FeeAutomationService::class)->overdueAlert())->name('fees:overdue-alerts')->dailyAt('09:00');
 

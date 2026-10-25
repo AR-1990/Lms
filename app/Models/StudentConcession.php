@@ -56,4 +56,9 @@ class StudentConcession extends Model
     {
         return ($this->concessionType?->name ?? 'Concession').' for student #'.$this->student_id;
     }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

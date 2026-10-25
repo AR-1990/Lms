@@ -55,7 +55,7 @@ class StudentsPortalController extends PortalController
      */
     private function screen(string $screen, string $active, array $data = []): View
     {
-        $lookups = collect(['gender', 'guardian_relation', 'occupation', 'religion', 'nationality', 'blood_group', 'withdrawal_reason', 'conduct', 'inquiry_source', 'admission_rejection_reason', 'bank'])
+        $lookups = collect(['gender', 'guardian_relation', 'occupation', 'religion', 'nationality', 'blood_group', 'withdrawal_reason', 'conduct', 'medical_condition', 'discipline_category', 'achievement_category', 'inquiry_source', 'admission_rejection_reason', 'bank'])
             ->mapWithKeys(fn (string $type): array => [$type => $this->lookupService->options($type)]);
 
         return $this->page("dashboards.students.{$screen}", 'admin', $active, [

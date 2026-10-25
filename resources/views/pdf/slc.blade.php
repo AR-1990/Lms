@@ -8,6 +8,7 @@
         body { font-family: DejaVu Serif, serif; font-size: 10.5pt; color: #1f2937; }
         .frame { border: 2.5pt double #1d2b45; padding: 14mm 14mm 10mm; min-height: 245mm; }
         .head { text-align: center; }
+        .logo { height: 22mm; margin-bottom: 4pt; }
         .school { margin: 0; font-size: 19pt; letter-spacing: 0.5pt; color: #1d2b45; }
         .tagline { margin: 2pt 0 0; font-size: 9pt; color: #6b7280; font-style: italic; }
         .address { margin: 3pt 0 0; font-size: 8.5pt; color: #6b7280; }
@@ -34,6 +35,7 @@
 @endphp
 <div class="frame">
     <div class="head">
+        @if ($logo)<img class="logo" src="{{ $logo }}" alt="">@endif
         <h1 class="school">{{ $settings?->school_name }}</h1>
         @if ($settings?->school_tagline)<p class="tagline">{{ $settings->school_tagline }}</p>@endif
         <p class="address">{{ $settings?->school_address }}{{ $settings?->school_phone ? ' · '.$settings->school_phone : '' }}</p>

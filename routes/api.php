@@ -13,7 +13,9 @@ use App\Http\Controllers\ERP\ApprovalController;
 use App\Http\Controllers\ERP\AssetController;
 use App\Http\Controllers\ERP\AttachmentController;
 use App\Http\Controllers\ERP\AttendanceController;
+use App\Http\Controllers\ERP\AttendanceKioskController;
 use App\Http\Controllers\ERP\AuthController;
+use App\Http\Controllers\ERP\BackupController;
 use App\Http\Controllers\ERP\BankAccountController;
 use App\Http\Controllers\ERP\CalendarController;
 use App\Http\Controllers\ERP\CampusController;
@@ -26,8 +28,10 @@ use App\Http\Controllers\ERP\DesignationController;
 use App\Http\Controllers\ERP\DeviceController;
 use App\Http\Controllers\ERP\DiaryController;
 use App\Http\Controllers\ERP\EmployeeController;
+use App\Http\Controllers\ERP\EmployeeExitController;
 use App\Http\Controllers\ERP\ExamController;
 use App\Http\Controllers\ERP\ExpenseController;
+use App\Http\Controllers\ERP\FamilyController;
 use App\Http\Controllers\ERP\FeeAutomationController;
 use App\Http\Controllers\ERP\FeeInvoiceController;
 use App\Http\Controllers\ERP\FeePaymentController;
@@ -35,10 +39,12 @@ use App\Http\Controllers\ERP\FeeSetupController;
 use App\Http\Controllers\ERP\FiscalYearController;
 use App\Http\Controllers\ERP\HomeworkController;
 use App\Http\Controllers\ERP\IdCardController;
+use App\Http\Controllers\ERP\ImportController;
 use App\Http\Controllers\ERP\InventoryController;
 use App\Http\Controllers\ERP\JobApplicationController;
 use App\Http\Controllers\ERP\JobOpeningController;
 use App\Http\Controllers\ERP\JournalEntryController;
+use App\Http\Controllers\ERP\JumpToController;
 use App\Http\Controllers\ERP\LeaveController;
 use App\Http\Controllers\ERP\LoanController;
 use App\Http\Controllers\ERP\LookupController;
@@ -46,6 +52,7 @@ use App\Http\Controllers\ERP\MarksController;
 use App\Http\Controllers\ERP\MyHrController;
 use App\Http\Controllers\ERP\NotificationController;
 use App\Http\Controllers\ERP\NumberSequenceController;
+use App\Http\Controllers\ERP\OnlineTestController;
 use App\Http\Controllers\ERP\ParentController;
 use App\Http\Controllers\ERP\PaymentMethodController;
 use App\Http\Controllers\ERP\PayrollController;
@@ -59,6 +66,7 @@ use App\Http\Controllers\ERP\RoleController;
 use App\Http\Controllers\ERP\SchoolClassController;
 use App\Http\Controllers\ERP\SectionController;
 use App\Http\Controllers\ERP\StickyNoteController;
+use App\Http\Controllers\ERP\StudentCareController;
 use App\Http\Controllers\ERP\StudentController;
 use App\Http\Controllers\ERP\StudentLeavingController;
 use App\Http\Controllers\ERP\StudentRecordController;
@@ -74,6 +82,8 @@ use App\Http\Controllers\ERP\VendorController;
 use App\Http\Controllers\ERP\VoucherTypeController;
 use App\Http\Controllers\ERP\WebsiteContentController;
 use App\Http\Controllers\ERP\WebsitePageController;
+use App\Http\Controllers\ERP\WorkShiftController;
+use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -85,6 +95,20 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Public website forms (the Blade page sends its CSRF token with the request).
+// Public website content for the mobile apps (the same data as the website pages; no sign-in).
+Route::prefix('site')->name('site.')->middleware([ForceJsonResponse::class, 'throttle:60,1'])->group(function () {
+    Route::get('/', [PublicSiteController::class, 'index'])->name('index');
+    Route::get('news', [PublicSiteController::class, 'news'])->name('news');
+    Route::get('contact', [PublicSiteController::class, 'contact'])->name('contact');
+    Route::get('pages/{slug}', [PublicSiteController::class, 'page'])->where('slug', '[a-z0-9-]+')->name('pages.show');
+});
+
+// Attendance kiosk at the gate (no sign-in; the secret link is the permission).
+Route::prefix('kiosk/{token}')->name('kiosk.')->middleware(ForceJsonResponse::class)->where(['token' => '[A-Za-z0-9]{40}'])->group(function () {
+    Route::get('/', [AttendanceKioskController::class, 'show'])->middleware('throttle:30,1')->name('show-api');
+    Route::post('scan', [AttendanceKioskController::class, 'scan'])->middleware('throttle:240,1')->name('scan');
+});
+
 Route::post('inquiry', [SchoolController::class, 'submitInquiry'])->middleware([ForceJsonResponse::class, 'throttle:10,1'])->name('inquiry.submit');
 
 // Sign in / out and password reset for the mobile apps and API clients. Accounts are only created by the school
@@ -102,6 +126,9 @@ Route::middleware(ForceJsonResponse::class)->name('api.')->group(function () {
 
 // ERP API (/api/erp/...): signed in with the web session or a Sanctum token, then checked per permission.
 Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->name('erp.')->group(function () {
+    // "Jump to" search: the pages this user may open.
+    Route::get('jump-to', JumpToController::class)->name('jump-to');
+
     // ---------- Access ----------
     Route::middleware('permission:manage-roles')->group(function () {
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
@@ -128,6 +155,7 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     Route::put('devices/push-token', [DeviceController::class, 'updatePushToken'])->name('devices.push-token');
     Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
 
+    Route::get('approvals/inbox', [ApprovalController::class, 'inbox'])->name('approvals.inbox');
     Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index');
     Route::get('approvals/datatable', [ApprovalController::class, 'datatable'])->name('approvals.datatable');
 
@@ -279,6 +307,18 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     // Employees and recruitment (PLAN.md §12–13); leave, payroll and loans (§14); employee self-service (my-hr).
 
     Route::middleware('permission:manage-hr')->group(function () {
+        // Staff exits: clearance by area, final settlement (PV), experience letter (routes/export.php).
+        Route::get('employee-exits/datatable', [EmployeeExitController::class, 'datatable'])->name('employee-exits.datatable');
+        Route::post('employee-exits', [EmployeeExitController::class, 'store'])->name('employee-exits.store');
+        Route::get('employee-exits/{employee_exit}', [EmployeeExitController::class, 'show'])->name('employee-exits.show');
+        Route::post('employee-exits/{employee_exit}/preview', [EmployeeExitController::class, 'preview'])->name('employee-exits.preview');
+        Route::post('employee-exits/{employee_exit}/settle', [EmployeeExitController::class, 'settle'])->name('employee-exits.settle');
+        Route::post('employee-exits/{employee_exit}/cancel', [EmployeeExitController::class, 'cancel'])->name('employee-exits.cancel');
+        Route::put('exit-clearances/{exit_clearance}', [EmployeeExitController::class, 'clear'])->name('exit-clearances.update');
+
+        Route::get('work-shifts/datatable', [WorkShiftController::class, 'datatable'])->name('work-shifts.datatable');
+        Route::apiResource('work-shifts', WorkShiftController::class)->except('index');
+
         Route::get('departments/datatable', [DepartmentController::class, 'datatable'])->name('departments.datatable');
         Route::apiResource('departments', DepartmentController::class);
 
@@ -394,7 +434,11 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
 
     Route::middleware('permission:manage-students')->group(function () {
         Route::get('students/datatable', [StudentRecordController::class, 'datatable'])->name('students.datatable');
-        Route::get('students/{student}/history', [StudentRecordController::class, 'history'])->name('students.history');
+        Route::post('students/{student}/records/{type}', [StudentCareController::class, 'store'])->where('type', 'medical|discipline|achievements')->name('students.records.store');
+        Route::put('student-records/{type}/{id}', [StudentCareController::class, 'update'])->where('type', 'medical|discipline|achievements')->whereNumber('id')->name('student-records.update');
+        Route::delete('student-records/{type}/{id}', [StudentCareController::class, 'destroy'])->where('type', 'medical|discipline|achievements')->whereNumber('id')->name('student-records.destroy');
+        Route::post('students/{student}/certificates', [StudentCareController::class, 'issueCertificate'])->name('students.certificates.store');
+        Route::post('students/{student}/portal-account', [StudentRecordController::class, 'studentLogin'])->name('students.portal-account');
         Route::post('students/{student}/leaving-certificate', [StudentLeavingController::class, 'issueCertificate'])->name('students.leaving-certificate');
         Route::post('students/{student}/status', [StudentRecordController::class, 'changeStatus'])->name('students.status');
         Route::put('enrollments/{enrollment}', [StudentRecordController::class, 'updateEnrollment'])->name('enrollments.update');
@@ -475,6 +519,11 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         });
     });
 
+    // Staff with manage-students, or the child's own family (portal and mobile app).
+    Route::get('students/{student}/history', [StudentRecordController::class, 'history'])->name('students.history');
+    Route::get('students/{student}/records', [StudentCareController::class, 'index'])->name('students.records.index');
+    Route::get('family/students', [FamilyController::class, 'index'])->name('family.students.index');
+    Route::get('family/students/{student}', [FamilyController::class, 'show'])->name('family.students.show');
     Route::get('students/{student}/clearance', [StudentLeavingController::class, 'clearance'])->middleware('permission:manage-students,issue-refunds')->name('students.clearance');
 
     // ---------- Cards ----------
@@ -521,6 +570,13 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::delete('timetable-slots/{timetable_slot}', [TimetableController::class, 'destroy'])->name('timetable-slots.destroy');
     });
 
+    Route::middleware('permission:manage-staff-attendance')->group(function () {
+        Route::get('attendance-kiosks/datatable', [AttendanceKioskController::class, 'datatable'])->name('attendance-kiosks.datatable');
+        Route::post('attendance-kiosks', [AttendanceKioskController::class, 'store'])->name('attendance-kiosks.store');
+        Route::put('attendance-kiosks/{attendance_kiosk}', [AttendanceKioskController::class, 'update'])->name('attendance-kiosks.update');
+        Route::post('attendance-kiosks/{attendance_kiosk}/renew', [AttendanceKioskController::class, 'renew'])->name('attendance-kiosks.renew');
+    });
+    Route::get('my-attendance-qr', [IdCardController::class, 'myQr'])->name('my-attendance-qr');
     Route::post('attendance/scan', [AttendanceController::class, 'scan'])->middleware(['permission:record-attendance,manage-staff-attendance', 'throttle:120,1'])->name('attendance.scan');
 
     Route::middleware('permission:record-attendance')->group(function () {
@@ -567,11 +623,21 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
 
     Route::get('exams/results/students/{student}', [ExamController::class, 'studentResults'])->name('exams.results.student');
 
+    // Online MCQ tests: students attempt their own section's tests (checked in the service).
+    Route::get('my-online-tests', [OnlineTestController::class, 'mine'])->name('online-tests.mine');
+    Route::post('online-tests/{online_test}/start', [OnlineTestController::class, 'start'])->name('online-tests.start');
+    Route::post('online-tests/{online_test}/submit', [OnlineTestController::class, 'submit'])->middleware('throttle:20,1')->name('online-tests.submit');
+    Route::get('online-tests/{online_test}/review', [OnlineTestController::class, 'review'])->name('online-tests.review');
+
     Route::middleware('permission:submit-grades,manage-exams')->group(function () {
         Route::get('marks', [MarksController::class, 'sheet'])->name('marks.sheet');
         Route::post('marks', [MarksController::class, 'store'])->name('marks.store');
         Route::get('exams/list', [ExamController::class, 'index'])->name('exams.list');
         Route::get('exams/{exam}/summary', [ExamController::class, 'show'])->name('exams.summary');
+        Route::get('online-tests/datatable', [OnlineTestController::class, 'datatable'])->name('online-tests.datatable');
+        Route::post('online-tests/{online_test}/status', [OnlineTestController::class, 'changeStatus'])->name('online-tests.status');
+        Route::get('online-tests/{online_test}/results', [OnlineTestController::class, 'results'])->name('online-tests.results');
+        Route::apiResource('online-tests', OnlineTestController::class)->except('index');
     });
 
     Route::middleware('permission:manage-exams')->group(function () {
@@ -817,6 +883,10 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     });
 
     // ---------- Reports centre (PLAN.md phase 17e): each report checks its module's permission ----------
+    // CSV import of students, staff and opening fee balances (each type checks its own permission).
+    Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
+    Route::post('imports/{type}', [ImportController::class, 'store'])->where('type', '[a-z_]+')->middleware('throttle:20,1')->name('imports.store');
+
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/{report}', [ReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
 
@@ -883,6 +953,8 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::get('finance', [AdminController::class, 'finance'])->middleware('permission:view-stats')->name('admin.finance');
         Route::get('settings', [SystemSettingsController::class, 'show'])->middleware('permission:manage-settings')->name('admin.settings');
         Route::put('settings', [SystemSettingsController::class, 'update'])->middleware('permission:manage-settings')->name('admin.settings.update');
+        Route::get('backups', [BackupController::class, 'index'])->middleware('permission:manage-settings')->name('admin.backups.index');
+        Route::post('backups', [BackupController::class, 'store'])->middleware(['permission:manage-settings', 'throttle:5,1'])->name('admin.backups.store');
         Route::get('reference/countries', [SystemSettingsController::class, 'countries'])->middleware('permission:manage-settings')->name('admin.reference.countries');
         Route::get('reference/regions', [SystemSettingsController::class, 'regions'])->middleware('permission:manage-settings')->name('admin.reference.regions');
         Route::get('reference/currencies', [SystemSettingsController::class, 'currencies'])->middleware('permission:manage-settings')->name('admin.reference.currencies');

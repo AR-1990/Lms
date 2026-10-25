@@ -39,6 +39,11 @@ class Section extends Model
         return $this->belongsTo(AcademicSession::class);
     }
 
+    public function classTeacher(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'class_teacher_id');
+    }
+
     public function activityLabel(): string
     {
         return trim(($this->schoolClass?->name ?? 'Class').' '.$this->name);

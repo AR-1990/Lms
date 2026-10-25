@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCampus;
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
 use Database\Factories\ExpenseFactory;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Expense extends Model
 {
     /** @use HasFactory<ExpenseFactory> */
-    use HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
+    use BelongsToCampus, HasFactory, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**
      * @var array<int, string>
@@ -68,5 +69,10 @@ class Expense extends Model
     public function total(): int
     {
         return $this->amount + $this->tax_amount;
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

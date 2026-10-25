@@ -8,6 +8,7 @@ use App\Services\SystemSettingsService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class SystemSettingsController extends Controller
 {
@@ -29,6 +30,14 @@ class SystemSettingsController extends Controller
             $this->systemSettingsService->updateSettings($request->validated(), $request->file('logo')),
             'System settings updated successfully.',
         );
+    }
+
+    /**
+     * Public school logo image (website, PDFs, mobile app).
+     */
+    public function logo(): Response
+    {
+        return $this->systemSettingsService->logoResponse();
     }
 
     public function countries(Request $request): JsonResponse

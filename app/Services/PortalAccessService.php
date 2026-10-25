@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Campus;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,7 @@ class PortalAccessService
     private const NAVIGATION_LINKS = [
         'admin' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'inbox', 'label' => 'Approvals Inbox', 'route' => 'approvals.inbox', 'icon' => 'inbox', 'tone' => 'amber'],
             ['key' => 'users', 'label' => 'Users', 'route' => 'admin.users', 'icon' => 'users', 'tone' => 'blue'],
             ['key' => 'roles', 'label' => 'Roles', 'route' => 'admin.roles', 'icon' => 'shield', 'tone' => 'violet'],
             ['key' => 'students', 'label' => 'Students', 'route' => 'admin.students', 'icon' => 'student', 'tone' => 'blue'],
@@ -31,6 +33,7 @@ class PortalAccessService
             ['key' => 'lookups', 'label' => 'Lookups', 'route' => 'admin.lookups', 'icon' => 'layers', 'tone' => 'amber'],
             ['key' => 'campuses', 'label' => 'Campuses', 'route' => 'admin.campuses', 'icon' => 'building', 'tone' => 'emerald'],
             ['key' => 'numbering', 'label' => 'Numbering', 'route' => 'admin.numbering', 'icon' => 'hash', 'tone' => 'blue'],
+            ['key' => 'imports', 'label' => 'Data Import', 'route' => 'admin.imports', 'icon' => 'upload', 'tone' => 'violet'],
             ['key' => 'id_cards', 'label' => 'ID Cards', 'route' => 'admin.cards.index', 'icon' => 'key', 'tone' => 'amber'],
             ['key' => 'assets', 'label' => 'Assets', 'route' => 'admin.assets.index', 'icon' => 'server', 'tone' => 'sky'],
             ['key' => 'inventory', 'label' => 'Inventory', 'route' => 'admin.inventory.index', 'icon' => 'inbox', 'tone' => 'amber'],
@@ -48,6 +51,7 @@ class PortalAccessService
         'teacher' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
             ['key' => 'my_hr', 'label' => 'My HR', 'route' => 'my-hr', 'icon' => 'calendar', 'tone' => 'violet'],
+            ['key' => 'inbox', 'label' => 'Approvals Inbox', 'route' => 'approvals.inbox', 'icon' => 'inbox', 'tone' => 'amber'],
             ['key' => 'tasks', 'label' => 'Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'tone' => 'blue'],
             ['key' => 'chat', 'label' => 'Chat', 'route' => 'chat', 'icon' => 'chat', 'tone' => 'emerald'],
             ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
@@ -57,19 +61,23 @@ class PortalAccessService
             ['key' => 'diary', 'label' => 'Diary', 'route' => 'admin.diary', 'icon' => 'book', 'tone' => 'violet'],
             ['key' => 'homework', 'label' => 'Homework', 'route' => 'admin.homework', 'icon' => 'pen', 'tone' => 'amber'],
             ['key' => 'marks', 'label' => 'Marks Entry', 'route' => 'admin.exams.marks', 'icon' => 'chart', 'tone' => 'rose'],
+            ['key' => 'online_tests', 'label' => 'Online Tests', 'route' => 'admin.exams.online-tests', 'icon' => 'pen', 'tone' => 'violet'],
             ['key' => 'performance', 'label' => 'Performance', 'route' => 'admin.performance.overview', 'icon' => 'trending-up', 'tone' => 'emerald'],
         ],
         'student' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
+            ['key' => 'family', 'label' => 'My School Day', 'route' => 'family.home', 'icon' => 'calendar', 'tone' => 'sky'],
             ['key' => 'courses', 'label' => 'Subjects', 'route' => 'student.courses', 'icon' => 'book', 'tone' => 'violet'],
             ['key' => 'attendance', 'label' => 'Attendance', 'route' => 'student.attendance', 'icon' => 'check', 'tone' => 'emerald'],
             ['key' => 'grades', 'label' => 'Results', 'route' => 'student.grades', 'icon' => 'chart', 'tone' => 'rose'],
+            ['key' => 'online_tests', 'label' => 'Online Tests', 'route' => 'student.online-tests', 'icon' => 'pen', 'tone' => 'violet'],
             ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
         ],
         'parent' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
             ['key' => 'children', 'label' => 'My Children', 'route' => 'parent.children', 'icon' => 'users', 'tone' => 'violet'],
+            ['key' => 'family', 'label' => 'Child Overview', 'route' => 'family.home', 'icon' => 'calendar', 'tone' => 'sky'],
             ['key' => 'fees', 'label' => 'Fees', 'route' => 'parent.fees', 'icon' => 'hash', 'tone' => 'amber'],
             ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
             ['key' => 'my_id_card', 'label' => 'My ID Card', 'route' => 'my-id-card', 'icon' => 'key', 'tone' => 'amber'],
@@ -77,6 +85,7 @@ class PortalAccessService
         'accounts' => [
             ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'grid', 'tone' => 'orange'],
             ['key' => 'my_hr', 'label' => 'My HR', 'route' => 'my-hr', 'icon' => 'calendar', 'tone' => 'violet'],
+            ['key' => 'inbox', 'label' => 'Approvals Inbox', 'route' => 'approvals.inbox', 'icon' => 'inbox', 'tone' => 'amber'],
             ['key' => 'tasks', 'label' => 'Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'tone' => 'blue'],
             ['key' => 'chat', 'label' => 'Chat', 'route' => 'chat', 'icon' => 'chat', 'tone' => 'emerald'],
             ['key' => 'notices', 'label' => 'Notices', 'route' => 'notices', 'icon' => 'megaphone', 'tone' => 'rose'],
@@ -139,11 +148,66 @@ class PortalAccessService
     {
         $roleSlug = $this->resolveNavigationRoleSlug($user, $portal);
 
+        $seesAllCampuses = $user->campus_id === null || $user->hasPermission('manage-campuses');
+
         return [
             'role_slug' => $roleSlug,
             'role_label' => $this->getNavigationRoleLabel($roleSlug),
             'links' => $this->getNavigationLinks($user, $roleSlug, $active),
+            // Head office picks which campus to look at (sent as X-Campus-Id); campus staff are fixed to theirs.
+            'campuses' => $seesAllCampuses ? Campus::where('is_active', true)->orderBy('name')->get(['id', 'name']) : collect(),
         ];
+    }
+
+    /**
+     * "Jump to" search: every page (named GET web route without parameters) the user may open, grouped by
+     * module. Read from the routes themselves so new screens appear without a list to keep up to date;
+     * labels come from the menu where a page is in it. Student / parent / teacher pages are only offered to
+     * users with that role.
+     *
+     * @return array<int, array{label: string, group: string, url: string}>
+     */
+    public function jumpTargets(User $user): array
+    {
+        $menu = collect(self::NAVIGATION_LINKS)->flatten(1)->unique('route')->pluck('label', 'route');
+        // admin.*, accounts.* and the role portals are areas, not modules: the module is the next part of the name.
+        $areas = ['admin' => null, 'accounts' => 'Accounts', 'student' => null, 'parent' => null, 'teacher' => null];
+        $groupFor = function (array $segments) use ($menu, $areas): string {
+            $module = implode('.', array_slice($segments, 0, array_key_exists($segments[0], $areas) ? 2 : 1));
+
+            return $menu[$module] ?? $menu->first(fn (string $label, string $route): bool => Str::startsWith($route, $module.'.'))
+                ?? $areas[$segments[0]] ?? Str::headline(Str::afterLast($module, '.'));
+        };
+
+        return collect(Route::getRoutes()->getRoutes())
+            ->filter(function ($route) use ($user): bool {
+                $name = (string) $route->getName();
+                $middleware = $route->gatherMiddleware();
+                $rolePortal = Str::before($name, '.');
+
+                return $name !== '' && in_array('GET', $route->methods(), true) && ! str_contains($route->uri(), '{') && ! str_starts_with($route->uri(), 'api/')
+                    && in_array('auth', $middleware, true) && ! in_array($name, ['portal', 'school-logo'], true) && ! str_contains($route->getActionName(), 'RedirectController')
+                    && (! in_array($rolePortal, ['student', 'parent', 'teacher'], true) || $user->hasRole($rolePortal))
+                    && collect($middleware)->filter(fn ($item): bool => is_string($item) && str_starts_with($item, 'permission:'))
+                        ->every(fn (string $item): bool => $user->hasPermission(Str::after($item, 'permission:')));
+            })
+            ->map(function ($route) use ($menu, $areas, $groupFor): array {
+                $segments = explode('.', $route->getName());
+                $group = $groupFor($segments);
+                $skip = array_key_exists($segments[0], $areas) ? 2 : 1;
+                $rest = array_values(array_diff(array_slice($segments, $skip), ['index']));
+                $rest = $rest === [] && count($segments) > 1 && end($segments) !== 'index' ? [end($segments)] : $rest;
+
+                return [
+                    'label' => isset($menu[$route->getName()]) && $menu[$route->getName()] !== $group ? $menu[$route->getName()] : ($rest !== [] ? Str::headline(implode(' ', $rest)) : $group),
+                    'group' => $group,
+                    'url' => url($route->uri()),
+                ];
+            })
+            ->unique(fn (array $page): string => $page['group'].'|'.$page['label'])
+            ->sortBy(['group', 'label'])
+            ->values()
+            ->all();
     }
 
     /**

@@ -210,7 +210,7 @@ class PromotionTest extends TestCase
         $this->assertSame(['challans' => 0, 'billed' => 0, 'paid' => 0, 'waived' => 0, 'balance' => 0], $history[0]['fees']);
 
         $teacher = User::where('email', 'teacher@lms.test')->first();
-        $this->actingAs($teacher, 'sanctum')->getJson("/api/erp/students/{$enrollment->student_id}/history")->assertForbidden();
+        $this->actingAs($teacher, 'sanctum')->getJson("/api/erp/students/{$enrollment->student_id}/history")->assertNotFound();
     }
 
     public function test_concessions_and_transport_follow_the_student_and_undo_puts_everything_back(): void

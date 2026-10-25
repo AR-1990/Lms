@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SystemSettingsTest extends TestCase
@@ -39,6 +40,8 @@ class SystemSettingsTest extends TestCase
         $region = Region::query()->where('slug', 'dubai')->first();
         $currency = Currency::query()->where('code', 'AED')->first();
 
+        Storage::fake('local');
+
         $response = $this->actingAs($admin, 'sanctum')
             ->putJson('/api/erp/admin/settings', [
                 'school_name' => 'Pinnacle Gulf Campus',
@@ -59,8 +62,9 @@ class SystemSettingsTest extends TestCase
 
         $this->assertNotNull($settings);
         $this->assertSame('Pinnacle Gulf Campus', $settings->school_name);
-        $this->assertNotNull($settings->logo_binary);
-        $this->assertSame('image/png', $settings->logo_mime_type);
+        Storage::disk('local')->assertExists($settings->logo_path);
+        $response->assertJsonPath('data.logo.url', route('school-logo', ['v' => basename($settings->logo_path)]));
+        $this->get('/school-logo')->assertOk()->assertHeader('content-type', 'image/png');
 
         $this->actingAs($admin, 'sanctum')
             ->getJson('/api/erp/admin/dashboard')
