@@ -2870,3 +2870,47 @@ h1, h2, h3, h4,
         font-size: 0.8rem;
     }
 }
+
+/* ==============================================================================
+   Sign-in messages and the forgot / reset password card
+   ============================================================================== */
+.login-alert {
+    margin-bottom: 1.25rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid #f3c4b8;
+    border-left: 4px solid #b4402f;
+    border-radius: var(--radius-md, 8px);
+    background: #fdf1ee;
+    color: #8a2e20;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.login-alert-ok {
+    border-color: #bfe0c8;
+    border-left-color: #2f7a4a;
+    background: #eef8f1;
+    color: #22603a;
+}
+
+.login-alert[hidden] {
+    display: none;
+}
+
+.login-single {
+    grid-template-columns: minmax(0, 520px);
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 1rem;
+}
+
+.login-single .login-form-panel {
+    border-radius: var(--radius-xl, 16px);
+    box-shadow: var(--shadow-xl, 0 24px 44px -18px rgba(29, 43, 69, 0.34));
+}
+
+@media (max-width: 560px) {
+    .login-single .login-form-panel {
+        padding: 2rem 1.25rem;
+    }
+}

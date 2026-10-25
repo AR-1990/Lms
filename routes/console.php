@@ -2,6 +2,7 @@
 
 use App\Models\AcademicSession;
 use App\Models\ExamTerm;
+use App\Models\UserDevice;
 use App\Services\AnnouncementService;
 use App\Services\ChatService;
 use App\Services\CounsellingService;
@@ -11,7 +12,9 @@ use App\Services\TaskService;
 use App\Services\TransportService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+use Laravel\Sanctum\PersonalAccessToken;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -54,3 +57,11 @@ Artisan::command('chat:sync-departments', function (ChatService $chatService) {
 Schedule::call(fn () => app(TransportService::class)->sendExpiryAlerts())->name('transport:expiry-alerts')->dailyAt('08:00');
 Schedule::call(fn () => app(CounsellingService::class)->sendFollowUpReminders())->name('counselling:follow-up-reminders')->dailyAt('07:30');
 Schedule::command('chat:sync-departments')->dailyAt('01:30');
+
+// Mobile tokens unused for SANCTUM_IDLE_DAYS no longer work (AppServiceProvider); remove them and their devices.
+Schedule::call(function (): void {
+    $stale = PersonalAccessToken::whereRaw('coalesce(last_used_at, created_at) < ?', [now()->subDays((int) config('sanctum.idle_days', 60))])->pluck('id');
+    UserDevice::whereIn('personal_access_token_id', $stale)->update(['is_active' => false]);
+    PersonalAccessToken::whereIn('id', $stale)->delete();
+    DB::table('password_reset_tokens')->where('created_at', '<', now()->subDay())->delete();
+})->name('auth:prune-idle-tokens')->dailyAt('03:00');

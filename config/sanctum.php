@@ -55,6 +55,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Idle Days (Pinnacle)
+    |--------------------------------------------------------------------------
+    |
+    | Mobile app tokens do not expire on a fixed date; a token that has not been
+    | used for this many days stops working and is pruned nightly, so a lost or
+    | unused phone is signed out. Web portal sessions are not affected.
+    |
+    */
+
+    'idle_days' => (int) env('SANCTUM_IDLE_DAYS', 60),
+
+    /*
+    |--------------------------------------------------------------------------
     | Token Prefix
     |--------------------------------------------------------------------------
     |

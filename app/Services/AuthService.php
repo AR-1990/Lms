@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\Role;
 use App\Models\User;
 use App\Models\UserDevice;
 use App\Support\ValidationHelper;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -15,6 +15,7 @@ class AuthService
     public function __construct(
         private PortalAccessService $portalAccessService,
         private ActivityLogger $activityLogger,
+        private UserService $userService,
     ) {}
 
     /**
@@ -65,31 +66,44 @@ class AuthService
     }
 
     /**
-     * Register a new user and assign default/specified role.
+     * Email a reset link to the account behind an email, username or phone. The answer never says whether the
+     * account exists; accounts without an email (or disabled ones) get nothing and must ask the school office.
      */
-    public function register(array $data, string $roleSlug = 'student', string $deviceName = 'mobile-or-web'): array
+    public function sendResetLink(string $identifier): void
     {
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
+        $user = User::findForLogin($identifier);
 
-        $role = Role::where('slug', $roleSlug)->first();
+        if ($user === null || ! $user->is_active || blank($user->email)) {
+            $this->activityLogger->record('auth', 'password_reset_failed', "Password reset asked for \"{$identifier}\" (no active account with an email)");
 
-        if ($role) {
-            $user->assignRole($role);
+            return;
         }
 
-        $token = $user->createToken($deviceName)->plainTextToken;
-        $payload = $this->buildAuthenticatedPayload($user->fresh(), $deviceName);
+        // The email goes out on the queue, so the answer is instant either way (and does not hint the account exists).
+        Password::broker()->sendResetLink(['email' => $user->email], function (User $user, string $token): void {
+            dispatch(fn () => $user->sendPasswordResetNotification($token));
+        });
+        $this->activityLogger->record('auth', 'password_reset_requested', "{$user->name} asked for a password reset link", $user, actor: $user);
+    }
 
-        return [
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $payload['user'],
-            'authorization' => $payload['authorization'],
-        ];
+    /**
+     * Set a new password from a reset link, then sign the account out of every phone and browser.
+     *
+     * @param  array{email: string, token: string, password: string, password_confirmation: string}  $data
+     *
+     * @throws ValidationException when the link is wrong or expired
+     */
+    public function resetPassword(array $data): void
+    {
+        $status = Password::broker()->reset($data, function (User $user, string $password): void {
+            $user->forceFill(['password' => Hash::make($password), 'remember_token' => Str::random(60)])->save();
+            $this->userService->signOutEverywhere($user);
+            $this->activityLogger->record('auth', 'password_reset', "{$user->name} set a new password with a reset link", $user, actor: $user);
+        });
+
+        if ($status !== Password::PASSWORD_RESET) {
+            throw ValidationHelper::exception(['token' => ['This reset link is invalid or has expired. Please ask for a new one.']]);
+        }
     }
 
     /**

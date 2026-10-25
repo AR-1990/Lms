@@ -4,7 +4,6 @@ namespace App\Http\Controllers\ERP;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ERP\LoginRequest;
-use App\Http\Requests\ERP\RegisterRequest;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -43,20 +42,31 @@ class AuthController extends Controller
     }
 
     /**
-     * User Registration for Web ERP and Mobile Apps.
+     * Email a password reset link (web "Forgot password?" page and the mobile apps). Always the same answer, so
+     * nobody can find out which accounts exist.
      */
-    public function register(RegisterRequest $request): JsonResponse
+    public function forgotPassword(Request $request): JsonResponse
     {
-        $roleSlug = $request->input('role', 'student');
-        $deviceName = $request->input('device_name', $request->header('User-Agent', 'client-app'));
+        $identifier = $request->validate(['identifier' => ['required', 'string', 'max:100']])['identifier'];
+        $this->authService->sendResetLink($identifier);
 
-        try {
-            $result = $this->authService->register($request->validated(), $roleSlug, $deviceName);
-        } catch (ValidationException $e) {
-            return $this->errorResponse('Registration failed.', 422, $e->errors());
-        }
+        return $this->successResponse(null, 'If that account has an email address, a reset link is on its way. No email on the account? Please contact the school office.');
+    }
 
-        return $this->successResponse($result, 'User registered successfully.', 201);
+    /**
+     * Set a new password from the emailed link; every phone and browser is signed out.
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'max:100', 'confirmed'],
+        ]);
+
+        $this->authService->resetPassword([...$data, 'password_confirmation' => $request->input('password_confirmation')]);
+
+        return $this->successResponse(null, 'Your password has been changed. Please sign in with the new password.');
     }
 
     /**

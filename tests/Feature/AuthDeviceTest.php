@@ -75,15 +75,14 @@ class AuthDeviceTest extends TestCase
         $this->assertSame(0, User::where('email', 'teacher@lms.test')->first()->tokens()->count());
     }
 
-    public function test_public_registration_cannot_pick_a_staff_role(): void
+    public function test_there_is_no_public_sign_up(): void
     {
         $this->postJson('/api/register', [
             'name' => 'Sneaky',
             'email' => 'sneaky@lms.test',
             'password' => 'secret-pass',
             'password_confirmation' => 'secret-pass',
-            'role' => 'admin',
-        ])->assertUnprocessable()->assertJsonPath('errors.first_key', 'role');
+        ])->assertNotFound();
 
         $this->assertDatabaseMissing('users', ['email' => 'sneaky@lms.test']);
     }

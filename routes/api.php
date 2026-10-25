@@ -84,10 +84,12 @@ use Illuminate\Support\Facades\Route;
 // Public website forms (the Blade page sends its CSRF token with the request).
 Route::post('inquiry', [SchoolController::class, 'submitInquiry'])->middleware([ForceJsonResponse::class, 'throttle:10,1'])->name('inquiry.submit');
 
-// Sign in / out for the mobile apps and API clients.
+// Sign in / out and password reset for the mobile apps and API clients. Accounts are only created by the school
+// (admissions, HR, Users) — there is no public sign-up.
 Route::middleware(ForceJsonResponse::class)->name('api.')->group(function () {
-    Route::post('login', [AuthController::class, 'login'])->name('login');
-    Route::post('register', [AuthController::class, 'register'])->name('register');
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset')->name('password.email');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset')->name('password.update');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me', [AuthController::class, 'me'])->name('me');

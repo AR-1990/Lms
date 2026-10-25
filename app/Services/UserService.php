@@ -187,9 +187,18 @@ class UserService
         }
     }
 
-    private function signOutEverywhere(User $user): void
+    /**
+     * End every mobile token and every web session of the account (disabled, deleted or password reset).
+     * Tokens and sessions are security data, so they are removed outright.
+     */
+    public function signOutEverywhere(User $user): void
     {
         $user->tokens()->delete();
+
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+        }
+
         UserDevice::where('user_id', $user->id)->update(['is_active' => false]);
     }
 

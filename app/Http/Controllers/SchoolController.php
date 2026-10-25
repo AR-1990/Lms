@@ -156,6 +156,19 @@ class SchoolController extends Controller
         return view('pages.login', ['page' => $this->pageService->page('login')]);
     }
 
+    public function forgotPassword(): View|RedirectResponse
+    {
+        return Auth::check() ? redirect()->route('dashboard') : view('pages.password', ['mode' => 'forgot']);
+    }
+
+    /**
+     * The page the emailed reset link opens (the link carries the token and the account's email).
+     */
+    public function resetPassword(Request $request, string $token): View
+    {
+        return view('pages.password', ['mode' => 'reset', 'token' => $token, 'email' => (string) $request->query('email', '')]);
+    }
+
     /**
      * Authenticate portal credentials and send the user to their role dashboard.
      */

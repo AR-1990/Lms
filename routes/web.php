@@ -42,7 +42,10 @@ Route::get('/contact', [SchoolController::class, 'contact'])->name('contact');
 Route::get('/portal', [SchoolController::class, 'portal'])->name('portal');
 Route::get('/login', [SchoolController::class, 'login'])->name('login');
 
-Route::post('/login', [SchoolController::class, 'handleLogin'])->name('login.submit');
+Route::post('/login', [SchoolController::class, 'handleLogin'])->middleware('throttle:login')->name('login.submit');
+// Forgot / reset password pages; their forms post to /api/forgot-password and /api/reset-password.
+Route::get('/forgot-password', [SchoolController::class, 'forgotPassword'])->name('password.request');
+Route::get('/reset-password/{token}', [SchoolController::class, 'resetPassword'])->name('password.reset');
 Route::get('/verify/{token}', [SchoolController::class, 'verifyCard'])->where('token', '[A-Za-z0-9]{20,64}')->middleware('throttle:30,1')->name('cards.verify');
 
 Route::middleware('auth')->group(function () {

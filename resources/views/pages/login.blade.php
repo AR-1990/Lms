@@ -97,9 +97,7 @@
                         <input type="checkbox" name="remember" style="accent-color: var(--primary); width: 16px; height: 16px;">
                         <span>Keep me signed in</span>
                     </label>
-                    @if ($settings->school_phone || $settings->contact_email)
-                        <span style="font-size: 0.8rem; color: #64748b;">Forgot password? Call {{ $settings->school_phone ?: $settings->contact_email }}</span>
-                    @endif
+                    <a href="{{ route('password.request') }}" style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Forgot password?</a>
                 </div>
 
                 <button type="submit" id="loginSubmitBtn" class="btn btn-primary btn-lg" style="width: 100%; box-shadow: var(--shadow-amber);">

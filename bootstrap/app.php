@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Support\ApiResponseHelper;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -40,6 +41,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Admin web screens call the same /api/erp endpoints as the mobile app, using the session cookie.
         $middleware->statefulApi();
+
+        // A disabled account loses its web session at once (web pages and the session-based API calls).
+        $middleware->web(append: [EnsureAccountIsActive::class]);
+        $middleware->api(append: [EnsureAccountIsActive::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

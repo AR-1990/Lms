@@ -1579,6 +1579,11 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 - Mobile: `POST /api/login` returns a Sanctum personal access token (one per device) plus the user, roles, permissions, and available portals.
 - Web: the same endpoints, authenticated with the Sanctum session (stateful SPA / Blade).
 - Logout revokes only that device's token; "log out of all devices" revokes all.
+- No public sign-up: accounts are created by the school (admissions, HR, Users). `/api/register` does not exist.
+- Sign-in is rate-limited (`throttle:login`): 5 tries a minute per account + IP and 20 a minute per IP, on both `POST /login` (error shown on the form) and `POST /api/login` (429 in the standard envelope). Password reset requests use `throttle:password-reset` with the same limits.
+- Mobile tokens have no fixed expiry; a token unused for `SANCTUM_IDLE_DAYS` (default 60) stops working and is pruned nightly at 03:00 with its `user_devices` row set inactive. Tokens of a disabled account are refused.
+- Disabling an account, deleting it or resetting its password deletes its tokens and its database sessions; the `EnsureAccountIsActive` middleware (web and api groups) also ends a disabled account's session on its next request, whatever the session driver.
+- Forgot password: `GET /forgot-password` and `GET /reset-password/{token}` (Blade) post to `POST /api/forgot-password` (`identifier` = ID, email or phone; always the same answer, so it never reveals which accounts exist) and `POST /api/reset-password` (`token`, `email`, `password`, `password_confirmation`). The link is emailed (Laravel password broker, `password_reset_tokens`, 60-minute links); accounts without an email must ask the school office. The mobile apps use the same two endpoints.
 
 **`user_devices`**
 | Field | Type | Notes |
