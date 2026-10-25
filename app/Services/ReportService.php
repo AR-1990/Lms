@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -83,6 +84,16 @@ class ReportService
      * @return array<string, mixed>
      */
     public function run(string $key, array $filters, int $page = 1): array
+    {
+        // The same report with the same filters is reused for two minutes; CSV and PDF always run fresh.
+        return Cache::remember('report:'.$key.':'.md5(serialize([$filters, $page, today()->toDateString()])), 120, fn (): array => $this->page($key, $filters, $page));
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private function page(string $key, array $filters, int $page): array
     {
         $report = $this->build($key, $filters);
 

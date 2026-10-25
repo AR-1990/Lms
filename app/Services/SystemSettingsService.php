@@ -12,11 +12,17 @@ use Database\Seeders\RegionSeeder;
 use Database\Seeders\SystemSettingSeeder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class SystemSettingsService
 {
+    /**
+     * Cached timezone and school name; cleared when system_settings or regions change (see the models).
+     */
+    public const RUNTIME_CACHE_KEY = 'settings:runtime';
+
     public function getSettingsPageData(): array
     {
         $this->ensureReferenceData();
@@ -124,23 +130,24 @@ class SystemSettingsService
     public function applyRuntimeConfiguration(): void
     {
         try {
-            if (! Schema::hasTable('system_settings') || ! Schema::hasTable('regions')) {
-                return;
+            // Runs on every request, so the school's timezone and name are cached until the settings are saved.
+            $runtime = Cache::rememberForever(self::RUNTIME_CACHE_KEY, function (): ?array {
+                if (! Schema::hasTable('system_settings') || ! Schema::hasTable('regions')) {
+                    return null;
+                }
+
+                $settings = SystemSetting::query()->with('region:id,timezone')->first();
+
+                return $settings === null ? null : ['timezone' => $settings->region?->timezone, 'name' => $settings->school_name];
+            });
+
+            if (filled($runtime['timezone'] ?? null)) {
+                config(['app.timezone' => $runtime['timezone']]);
+                date_default_timezone_set($runtime['timezone']);
             }
 
-            $settings = SystemSetting::query()->with('region:id,timezone')->first();
-
-            if ($settings === null) {
-                return;
-            }
-
-            if (filled($settings->region?->timezone)) {
-                config(['app.timezone' => $settings->region->timezone]);
-                date_default_timezone_set($settings->region->timezone);
-            }
-
-            if (filled($settings->school_name)) {
-                config(['app.name' => $settings->school_name]);
+            if (filled($runtime['name'] ?? null)) {
+                config(['app.name' => $runtime['name']]);
             }
         } catch (Throwable) {
         }

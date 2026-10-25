@@ -9,6 +9,7 @@ use App\Models\FeePayment;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AdminService
@@ -60,6 +61,15 @@ class AdminService
      * @return array<string, mixed>
      */
     public function getFinanceDashboard(int $months = 12): array
+    {
+        // About 15 grouped queries; one minute of caching keeps the figures close to live under heavy use.
+        return Cache::remember('dashboard:finance:'.$months.':'.today()->toDateString(), 60, fn (): array => $this->financeDashboard($months));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function financeDashboard(int $months): array
     {
         $today = today();
         $monthStart = $today->copy()->startOfMonth();

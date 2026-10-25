@@ -59,6 +59,14 @@ class StudentRecordController extends Controller
         return $this->deleteWithApproval($student, 'Student deleted.');
     }
 
+    /**
+     * Session-by-session record: class, how the year ended, results, attendance and fees.
+     */
+    public function history(Student $student): JsonResponse
+    {
+        return $this->successResponse($this->studentService->history($student), 'Student history retrieved.');
+    }
+
     public function changeStatus(Request $request, Student $student): JsonResponse
     {
         abort_unless($request->user()->hasPermission('manage-students'), 403);

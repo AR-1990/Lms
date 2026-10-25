@@ -3,10 +3,12 @@
 use App\Http\Controllers\ERP\AppraisalController;
 use App\Http\Controllers\ERP\AttachmentController;
 use App\Http\Controllers\ERP\ExamController;
+use App\Http\Controllers\ERP\FeeInvoiceController;
 use App\Http\Controllers\ERP\IdCardController;
 use App\Http\Controllers\ERP\MyHrController;
 use App\Http\Controllers\ERP\PayrollController;
 use App\Http\Controllers\ERP\ReportController;
+use App\Http\Controllers\ERP\StudentLeavingController;
 use App\Http\Controllers\ERP\TransportController;
 use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +37,11 @@ Route::middleware(['api', ForceJsonResponse::class, 'auth:sanctum'])->prefix('ap
         Route::get('exams/{exam}/admit-cards/pdf', [ExamController::class, 'admitCardsPdf'])->name('exams.admit-cards.pdf');
         Route::get('exams/{exam}/report-cards', [ExamController::class, 'reportCardsPdf'])->name('exams.report-cards');
     });
+
+    // Fee challans (PLAN.md §9): one challan for staff or its own student / parent; a whole monthly batch for staff
+    Route::get('fees/invoices/{fee_invoice}/pdf', [FeeInvoiceController::class, 'pdf'])->middleware('permission:manage-fees,view-fees')->name('fees.invoices.pdf');
+    Route::get('students/{student}/leaving-certificate/pdf', [StudentLeavingController::class, 'certificatePdf'])->middleware('permission:manage-students')->name('students.leaving-certificate.pdf');
+    Route::get('fees/batches/{fee_invoice_batch}/pdf', [FeeInvoiceController::class, 'batchPdf'])->middleware('permission:manage-fees')->name('fees.batches.pdf');
 
     // Transport (PLAN.md §18)
     Route::get('transport-routes/{transport_route}/sheet', [TransportController::class, 'routeSheet'])->middleware('permission:manage-transport')->name('transport-routes.sheet');

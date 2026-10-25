@@ -162,12 +162,20 @@ class AccountsSeeder extends Seeder
             ]);
         }
 
+        // Used only by "Adjust deposit against dues" on a leaving student; kept inactive so it never shows at the counter.
+        PaymentMethod::firstOrCreate(['code' => PaymentMethod::DEPOSIT_ADJUSTMENT], [
+            'name' => 'Security deposit adjustment',
+            'account_id' => $accounts['2500']->id,
+            'is_active' => false,
+            'sort_order' => 999,
+        ]);
+
         $hbl = Lookup::where('type', 'bank')->where('name', 'HBL')->value('id');
 
         if ($hbl !== null) {
             BankAccount::firstOrCreate(['account_id' => $accounts['1210']->id], [
                 'bank_id' => $hbl,
-                'branch' => 'Main Boulevard (demo)',
+                'branch' => 'Main Boulevard',
                 'account_title' => 'Pinnacle International Academy',
                 'account_number' => '0000-00000000-01',
                 'is_default_for_fees' => true,

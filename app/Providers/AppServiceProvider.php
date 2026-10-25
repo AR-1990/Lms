@@ -7,7 +7,10 @@ use App\Services\WebsitePageService;
 use App\Support\ApiResponseHelper;
 use App\Support\GridDataTable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -31,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Every grid gets the date range and safe per-column search (see GridDataTable).
         config(['datatables.engines.eloquent' => GridDataTable::class]);
+
+        // Migrations write permissions, settings and lookups directly; start every deploy with a clean cache.
+        Event::listen(MigrationsEnded::class, fn () => Cache::flush());
 
         app(SystemSettingsService::class)->applyRuntimeConfiguration();
 

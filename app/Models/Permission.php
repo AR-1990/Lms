@@ -30,6 +30,10 @@ class Permission extends Model
                 $permission->slug = Str::slug($permission->name);
             }
         });
+
+        // Renaming or removing a role / permission changes what every holder may do.
+        static::saved(fn () => User::flushAccess());
+        static::deleted(fn () => User::flushAccess());
     }
 
     /**
@@ -37,6 +41,6 @@ class Permission extends Model
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'permission_role')->withTimestamps();
+        return $this->belongsToMany(Role::class, 'permission_role')->using(PermissionRole::class)->withTimestamps();
     }
 }

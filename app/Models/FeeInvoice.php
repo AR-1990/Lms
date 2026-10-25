@@ -97,6 +97,16 @@ class FeeInvoice extends Model
         return $this->hasMany(FeePaymentAllocation::class);
     }
 
+    public function enrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class);
+    }
+
+    public function fines(): HasMany
+    {
+        return $this->hasMany(FeeInvoiceFine::class);
+    }
+
     public function waivers(): HasMany
     {
         return $this->hasMany(FeeWaiver::class);

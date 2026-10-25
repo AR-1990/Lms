@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * One option of a dynamic dropdown list (religion, relation, bank…), grouped by `type`.
@@ -46,5 +47,23 @@ class Lookup extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Dropdown lists are cached per type (LookupService::options); any change refreshes that list.
+     */
+    protected static function booted(): void
+    {
+        $forget = function (Lookup $lookup): void {
+            Cache::forget('lookups:'.$lookup->type);
+
+            if ($lookup->getOriginal('type') && $lookup->getOriginal('type') !== $lookup->type) {
+                Cache::forget('lookups:'.$lookup->getOriginal('type'));
+            }
+        };
+
+        static::saved($forget);
+        static::deleted($forget);
+        static::restored($forget);
     }
 }

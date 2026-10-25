@@ -7,6 +7,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -86,7 +87,8 @@ class LookupService
      */
     public function options(string $type): Collection
     {
-        return Lookup::query()->ofType($type)->active()->get(['id', 'type', 'name', 'code', 'description', 'sort_order']);
+        // Cached per list until any option of it changes (see Lookup::booted).
+        return Cache::rememberForever('lookups:'.$type, fn (): Collection => Lookup::query()->ofType($type)->active()->get(['id', 'type', 'name', 'code', 'description', 'sort_order']));
     }
 
     /**

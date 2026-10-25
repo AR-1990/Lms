@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\ConcessionType;
 use App\Models\FeeHead;
 use App\Models\FeeStructure;
+use App\Models\LateFeeRule;
 use App\Models\Lookup;
 use App\Models\SchoolClass;
 use Illuminate\Database\Seeder;
@@ -29,6 +30,7 @@ class FeeSeeder extends Seeder
         ['Exam Fee', 'EXM', '4400', 'one_time', false, false],
         ['Transport Fee', 'TRN', '4900', 'monthly', false, false],
         ['Uniform & Books', 'UNB', '4500', 'one_time', false, false],
+        ['Late Payment Fine', 'LPF', '4300', 'one_time', false, false],
     ];
 
     /**
@@ -79,6 +81,12 @@ class FeeSeeder extends Seeder
                 'is_active' => true,
             ]);
         }
+
+        // A starter rule the school switches on (Fees → Late Fees) once it has chosen its own amount.
+        LateFeeRule::firstOrCreate(['name' => 'Late payment fine'], [
+            'grace_days' => 5, 'calculation' => 'fixed', 'amount' => 50000, 'fee_head_id' => $heads['LPF']->id,
+            'invoice_type' => 'monthly', 'is_active' => false,
+        ]);
 
         $session = AcademicSession::where('is_current', true)->first();
 

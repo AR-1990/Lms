@@ -17,6 +17,11 @@ class PaymentMethod extends Model
 {
     use LogsActivity, SoftDeletes, TracksAuthor;
 
+    /**
+     * System method behind "Adjust deposit against dues" (Dr Security Deposits instead of cash).
+     */
+    public const DEPOSIT_ADJUSTMENT = 'DEPOSIT';
+
     protected string $activityModule = 'payment_methods';
 
     /**

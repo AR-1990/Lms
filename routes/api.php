@@ -28,6 +28,7 @@ use App\Http\Controllers\ERP\DiaryController;
 use App\Http\Controllers\ERP\EmployeeController;
 use App\Http\Controllers\ERP\ExamController;
 use App\Http\Controllers\ERP\ExpenseController;
+use App\Http\Controllers\ERP\FeeAutomationController;
 use App\Http\Controllers\ERP\FeeInvoiceController;
 use App\Http\Controllers\ERP\FeePaymentController;
 use App\Http\Controllers\ERP\FeeSetupController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\ERP\PayrollController;
 use App\Http\Controllers\ERP\PerformanceController;
 use App\Http\Controllers\ERP\PeriodController;
 use App\Http\Controllers\ERP\PermissionController;
+use App\Http\Controllers\ERP\PromotionController;
 use App\Http\Controllers\ERP\PurchaseRequestController;
 use App\Http\Controllers\ERP\ReportController;
 use App\Http\Controllers\ERP\RoleController;
@@ -58,6 +60,7 @@ use App\Http\Controllers\ERP\SchoolClassController;
 use App\Http\Controllers\ERP\SectionController;
 use App\Http\Controllers\ERP\StickyNoteController;
 use App\Http\Controllers\ERP\StudentController;
+use App\Http\Controllers\ERP\StudentLeavingController;
 use App\Http\Controllers\ERP\StudentRecordController;
 use App\Http\Controllers\ERP\SubjectController;
 use App\Http\Controllers\ERP\SystemSettingsController;
@@ -391,6 +394,8 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
 
     Route::middleware('permission:manage-students')->group(function () {
         Route::get('students/datatable', [StudentRecordController::class, 'datatable'])->name('students.datatable');
+        Route::get('students/{student}/history', [StudentRecordController::class, 'history'])->name('students.history');
+        Route::post('students/{student}/leaving-certificate', [StudentLeavingController::class, 'issueCertificate'])->name('students.leaving-certificate');
         Route::post('students/{student}/status', [StudentRecordController::class, 'changeStatus'])->name('students.status');
         Route::put('enrollments/{enrollment}', [StudentRecordController::class, 'updateEnrollment'])->name('enrollments.update');
         Route::get('guardians', [StudentRecordController::class, 'guardians'])->name('guardians.index');
@@ -399,6 +404,13 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::put('guardians/{guardian}', [StudentRecordController::class, 'updateGuardian'])->name('guardians.update');
         Route::post('guardians/{guardian}/portal-account', [StudentRecordController::class, 'parentLogin'])->name('guardians.portal-account');
         Route::apiResource('students', StudentRecordController::class);
+
+        Route::get('promotions', [PromotionController::class, 'index'])->name('promotions.index');
+        Route::get('promotions/students', [PromotionController::class, 'students'])->name('promotions.students');
+        Route::post('promotions/prepare', [PromotionController::class, 'prepare'])->middleware('permission:manage-academics')->name('promotions.prepare');
+        Route::post('promotions', [PromotionController::class, 'store'])->name('promotions.store');
+        Route::post('promotions/undo', [PromotionController::class, 'undo'])->name('promotions.undo');
+        Route::post('promotions/roll-numbers', [PromotionController::class, 'rollNumbers'])->name('promotions.roll-numbers');
     });
 
     Route::prefix('fees')->name('fees.')->group(function () {
@@ -422,6 +434,13 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
             Route::post('structures', [FeeSetupController::class, 'storeStructure'])->name('structures.store');
             Route::put('structures/{fee_structure}', [FeeSetupController::class, 'updateStructure'])->name('structures.update');
             Route::delete('structures/{fee_structure}', [FeeSetupController::class, 'destroyStructure'])->name('structures.destroy');
+
+            Route::get('late-fee-rules/datatable', [FeeAutomationController::class, 'rulesDatatable'])->name('late-fee-rules.datatable');
+            Route::post('late-fee-rules', [FeeAutomationController::class, 'storeRule'])->name('late-fee-rules.store');
+            Route::put('late-fee-rules/{late_fee_rule}', [FeeAutomationController::class, 'updateRule'])->name('late-fee-rules.update');
+            Route::delete('late-fee-rules/{late_fee_rule}', [FeeAutomationController::class, 'destroyRule'])->name('late-fee-rules.destroy');
+            Route::get('automation', [FeeAutomationController::class, 'settings'])->name('automation');
+            Route::put('automation', [FeeAutomationController::class, 'saveSettings'])->name('automation.update');
 
             Route::get('concessions/datatable', [FeeSetupController::class, 'concessionsDatatable'])->name('concessions.datatable');
             Route::post('concessions', [FeeSetupController::class, 'storeConcession'])->name('concessions.store');
@@ -447,7 +466,16 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         });
 
         Route::get('invoices/{fee_invoice}', [FeeInvoiceController::class, 'show'])->middleware('permission:manage-fees,view-fees')->name('invoices.show');
+
+        Route::middleware('permission:issue-refunds')->group(function () {
+            Route::get('refunds/datatable', [StudentLeavingController::class, 'refundsDatatable'])->name('refunds.datatable');
+            Route::post('refunds', [StudentLeavingController::class, 'refund'])->name('refunds.store');
+            Route::post('students/{student}/adjust-deposit', [StudentLeavingController::class, 'adjustDeposit'])->name('students.adjust-deposit');
+            Route::post('refunds/{fee_refund}/reverse', [StudentLeavingController::class, 'reverseRefund'])->name('refunds.reverse');
+        });
     });
+
+    Route::get('students/{student}/clearance', [StudentLeavingController::class, 'clearance'])->middleware('permission:manage-students,issue-refunds')->name('students.clearance');
 
     // ---------- Cards ----------
     // ID card templates, issuing and printing (PLAN.md §23). The QR check page is public (routes/web.php).

@@ -368,7 +368,7 @@ class AttendanceService
     /**
      * @param  array<string, int>  $counts
      */
-    private function percentage(array $counts): ?float
+    public function percentage(array $counts): ?float
     {
         $total = array_sum($counts);
 

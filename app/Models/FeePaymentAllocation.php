@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['fee_payment_id', 'fee_invoice_id', 'amount'])]
+#[Fillable(['fee_payment_id', 'fee_invoice_id', 'amount', 'from_advance', 'journal_entry_id'])]
 class FeePaymentAllocation extends Model
 {
     /**
@@ -14,7 +14,7 @@ class FeePaymentAllocation extends Model
      */
     protected function casts(): array
     {
-        return ['amount' => 'integer'];
+        return ['amount' => 'integer', 'from_advance' => 'boolean'];
     }
 
     public function invoice(): BelongsTo
@@ -25,5 +25,13 @@ class FeePaymentAllocation extends Model
     public function payment(): BelongsTo
     {
         return $this->belongsTo(FeePayment::class, 'fee_payment_id');
+    }
+
+    /**
+     * Voucher that moved the money from Student Advances to the challan (advance allocations only).
+     */
+    public function journalEntry(): BelongsTo
+    {
+        return $this->belongsTo(JournalEntry::class);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Portal;
 
+use App\Models\PaymentMethod;
 use App\Models\Section;
 use App\Models\Student;
 use App\Services\AcademicSessionService;
@@ -25,11 +26,17 @@ class StudentsPortalController extends PortalController
         return $this->screen('students', 'students');
     }
 
+    public function promotion(): View
+    {
+        return $this->screen('promotion', 'students');
+    }
+
     public function show(Student $student, StudentRecordService $studentService): View
     {
         return $this->screen('profile', 'students', [
             'student' => $studentService->find($student),
             'document_types' => $this->lookupService->options('document_type'),
+            'payment_methods' => PaymentMethod::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
         ]);
     }
 
@@ -48,7 +55,7 @@ class StudentsPortalController extends PortalController
      */
     private function screen(string $screen, string $active, array $data = []): View
     {
-        $lookups = collect(['gender', 'guardian_relation', 'occupation', 'religion', 'nationality', 'blood_group', 'withdrawal_reason', 'inquiry_source', 'admission_rejection_reason', 'bank'])
+        $lookups = collect(['gender', 'guardian_relation', 'occupation', 'religion', 'nationality', 'blood_group', 'withdrawal_reason', 'conduct', 'inquiry_source', 'admission_rejection_reason', 'bank'])
             ->mapWithKeys(fn (string $type): array => [$type => $this->lookupService->options($type)]);
 
         return $this->page("dashboards.students.{$screen}", 'admin', $active, [

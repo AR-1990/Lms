@@ -293,7 +293,7 @@ class FeeManagementTest extends TestCase
         $teacher = User::where('email', 'teacher@lms.test')->first();
         $accountant = User::where('email', 'accounts@lms.test')->first();
 
-        foreach (['challans', 'receipts', 'structures', 'heads', 'concessions', 'concession-types'] as $screen) {
+        foreach (['challans', 'receipts', 'structures', 'heads', 'concessions', 'concession-types', 'late-fees'] as $screen) {
             $this->actingAs($accountant)
                 ->get(route('accounts.fees.'.$screen))
                 ->assertOk()

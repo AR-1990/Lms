@@ -7,8 +7,10 @@ use App\Models\Enrollment;
 use App\Models\FeeInvoice;
 use App\Models\FeePayment;
 use App\Models\Guardian;
+use App\Models\ReportCard;
 use App\Models\Section;
 use App\Models\Student;
+use App\Models\StudentAttendance;
 use App\Models\StudentStatusHistory;
 use App\Models\User;
 use App\Models\UserDevice;
@@ -76,6 +78,75 @@ class StudentRecordService
             ->editColumn('date_of_birth', fn (Student $student): ?string => $student->date_of_birth?->toDateString())
             ->editColumn('admission_date', fn (Student $student): ?string => $student->admission_date?->toDateString())
             ->toArray();
+    }
+
+    /**
+     * One row per session the student studied in: class, section, how the year ended,
+     * published results, attendance and the year's fees.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function history(Student $student): array
+    {
+        $enrollments = $student->enrollments()
+            ->with(['academicSession:id,name,starts_on,is_current', 'schoolClass:id,name', 'section:id,name'])
+            ->get(['id', 'student_id', 'academic_session_id', 'class_id', 'section_id', 'roll_no', 'enrolled_on', 'status', 'result_status'])
+            ->sortByDesc(fn (Enrollment $enrollment) => $enrollment->academicSession?->starts_on)
+            ->values();
+        $ids = $enrollments->pluck('id');
+
+        $results = ReportCard::with(['exam:id,name,exam_term_id', 'exam.term:id,name,is_final'])
+            ->whereIn('enrollment_id', $ids)
+            ->whereHas('exam', fn (Builder $exam) => $exam->whereNotNull('published_at'))
+            ->orderBy('id')
+            ->get(['id', 'exam_id', 'enrollment_id', 'percentage', 'grade', 'result', 'position_in_class'])
+            ->groupBy('enrollment_id');
+
+        $attendance = StudentAttendance::whereIn('enrollment_id', $ids)
+            ->selectRaw('enrollment_id, status, count(*) as total')
+            ->groupBy('enrollment_id', 'status')
+            ->get()
+            ->groupBy('enrollment_id');
+
+        $fees = FeeInvoice::where('student_id', $student->id)
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('academic_session_id, count(*) as challans, sum(total) as billed, sum(paid_total) as paid, sum(waived_total) as waived, sum(balance) as balance')
+            ->groupBy('academic_session_id')
+            ->get()
+            ->keyBy('academic_session_id');
+
+        return $enrollments->map(function (Enrollment $enrollment) use ($results, $attendance, $fees): array {
+            $counts = ($attendance[$enrollment->id] ?? collect())->pluck('total', 'status')->map(fn ($total): int => (int) $total)->all();
+            $fee = $fees[$enrollment->academic_session_id] ?? null;
+
+            return [
+                'enrollment_id' => $enrollment->id,
+                'session' => $enrollment->academicSession?->only(['id', 'name', 'is_current']),
+                'class' => $enrollment->schoolClass?->name,
+                'section' => $enrollment->section?->name,
+                'roll_no' => $enrollment->roll_no,
+                'enrolled_on' => $enrollment->enrolled_on?->toDateString(),
+                'status' => $enrollment->status,
+                'result_status' => $enrollment->result_status,
+                'results' => ($results[$enrollment->id] ?? collect())->map(fn (ReportCard $card): array => [
+                    'exam' => $card->exam?->name,
+                    'term' => $card->exam?->term?->name,
+                    'is_final' => (bool) $card->exam?->term?->is_final,
+                    'percentage' => $card->percentage,
+                    'grade' => $card->grade,
+                    'result' => $card->result,
+                    'position_in_class' => $card->position_in_class,
+                ])->values()->all(),
+                'attendance' => ['days' => array_sum($counts), 'percentage' => app(AttendanceService::class)->percentage($counts), 'counts' => $counts],
+                'fees' => [
+                    'challans' => (int) ($fee->challans ?? 0),
+                    'billed' => (int) ($fee->billed ?? 0),
+                    'paid' => (int) ($fee->paid ?? 0),
+                    'waived' => (int) ($fee->waived ?? 0),
+                    'balance' => (int) ($fee->balance ?? 0),
+                ],
+            ];
+        })->all();
     }
 
     public function find(Student $student): Student

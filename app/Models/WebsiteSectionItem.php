@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
+use App\Services\WebsitePageService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -69,5 +70,14 @@ class WebsiteSectionItem extends Model
             'dark' => 'background: #e7e5e4; color: #1c1917;',
             default => 'background: var(--primary-light); color: var(--primary);',
         };
+    }
+
+    /**
+     * Any change reaches the public site at once (the pages are cached, see WebsitePageService).
+     */
+    protected static function booted(): void
+    {
+        static::saved(fn () => WebsitePageService::flush());
+        static::deleted(fn () => WebsitePageService::flush());
     }
 }

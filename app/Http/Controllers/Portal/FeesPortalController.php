@@ -46,6 +46,16 @@ class FeesPortalController extends PortalController
         ]);
     }
 
+    public function refunds(): View
+    {
+        return $this->screen('refunds');
+    }
+
+    public function lateFees(): View
+    {
+        return $this->screen('late-fees', ['all_heads' => FeeHead::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'code'])]);
+    }
+
     public function concessions(): View
     {
         return $this->screen('concessions');

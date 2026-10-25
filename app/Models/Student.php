@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
     'campus_id', 'user_id', 'admission_no', 'admission_date', 'application_id', 'first_name', 'middle_name', 'last_name', 'gender_id',
     'date_of_birth', 'place_of_birth', 'b_form_no', 'nationality_id', 'religion_id', 'blood_group_id', 'mother_tongue', 'photo_path', 'phone',
     'email', 'address_line', 'city', 'postal_code', 'permanent_address', 'house_id', 'previous_school', 'previous_class', 'current_status',
-    'left_on', 'leaving_reason_id', 'slc_no', 'slc_issued_on', 'is_staff_child', 'staff_parent_id', 'special_needs', 'remarks',
+    'left_on', 'leaving_reason_id', 'slc_no', 'slc_issued_on', 'slc_conduct_id', 'slc_remarks', 'is_staff_child', 'staff_parent_id', 'special_needs', 'remarks',
 ])]
 class Student extends Model
 {
@@ -87,6 +87,16 @@ class Student extends Model
     public function gender(): BelongsTo
     {
         return $this->belongsTo(Lookup::class, 'gender_id');
+    }
+
+    public function leavingReason(): BelongsTo
+    {
+        return $this->belongsTo(Lookup::class, 'leaving_reason_id');
+    }
+
+    public function slcConduct(): BelongsTo
+    {
+        return $this->belongsTo(Lookup::class, 'slc_conduct_id');
     }
 
     public function bloodGroup(): BelongsTo

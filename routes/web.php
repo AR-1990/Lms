@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/numbering', [AdminPortalController::class, 'numbering'])->middleware('permission:manage-numbering')->name('numbering');
         Route::middleware('permission:manage-students')->group(function () {
             Route::get('/students', [StudentsPortalController::class, 'students'])->name('students');
+            Route::get('/students/promotion', [StudentsPortalController::class, 'promotion'])->name('students.promotion');
             Route::get('/students/{student}', [StudentsPortalController::class, 'show'])->name('students.show');
         });
         Route::prefix('admissions')->name('admissions.')->middleware('permission:manage-admissions')->group(function () {
@@ -239,11 +240,13 @@ Route::middleware('auth')->group(function () {
                 Route::get('/challans', [FeesPortalController::class, 'challans'])->name('challans');
                 Route::get('/receipts', [FeesPortalController::class, 'receipts'])->name('receipts');
             });
+            Route::get('/refunds', [FeesPortalController::class, 'refunds'])->middleware('permission:issue-refunds')->name('refunds');
             Route::middleware('permission:manage-fee-setup')->group(function () {
                 Route::get('/structures', [FeesPortalController::class, 'structures'])->name('structures');
                 Route::get('/heads', [FeesPortalController::class, 'heads'])->name('heads');
                 Route::get('/concessions', [FeesPortalController::class, 'concessions'])->name('concessions');
                 Route::get('/concession-types', [FeesPortalController::class, 'concessionTypes'])->name('concession-types');
+                Route::get('/late-fees', [FeesPortalController::class, 'lateFees'])->name('late-fees');
             });
         });
 

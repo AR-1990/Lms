@@ -1,5 +1,12 @@
 <?php
 
+use App\Models\Lookup;
+use App\Models\SystemSetting;
+use App\Models\WebsitePage;
+use App\Models\WebsiteSection;
+use App\Models\WebsiteSectionItem;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 return [
@@ -36,7 +43,8 @@ return [
 
         'array' => [
             'driver' => 'array',
-            'serialize' => false,
+            // Tests serialize like the database / Redis stores, so a cached value that cannot be restored fails there too.
+            'serialize' => (bool) env('CACHE_ARRAY_SERIALIZE', false),
         ],
 
         'database' => [
@@ -131,6 +139,15 @@ return [
     |
     */
 
-    'serializable_classes' => false,
+    // Only the models the app caches itself (public website pages, school details, dropdown lists).
+    'serializable_classes' => [
+        WebsitePage::class,
+        WebsiteSection::class,
+        WebsiteSectionItem::class,
+        SystemSetting::class,
+        Lookup::class,
+        Collection::class,
+        Carbon::class,
+    ],
 
 ];

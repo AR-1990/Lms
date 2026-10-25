@@ -27,6 +27,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'View Fee Status', 'slug' => 'view-fees', 'group' => 'parent', 'description' => 'View fee status and challans.'],
             ['name' => 'View Notices', 'slug' => 'view-notices', 'group' => 'parent', 'description' => 'View school notices.'],
             ['name' => 'Manage Fee Collections', 'slug' => 'manage-fees', 'group' => 'accounts', 'description' => 'Manage fee collection workflows.'],
+            ['name' => 'Issue Fee Refunds', 'slug' => 'issue-refunds', 'group' => 'accounts', 'description' => 'Pay back a leaving student\'s security deposit or unused advance, and reverse refunds.'],
             ['name' => 'View Payroll', 'slug' => 'view-payroll', 'group' => 'accounts', 'description' => 'View payroll information.'],
             ['name' => 'Manage Lookups', 'slug' => 'manage-lookups', 'group' => 'admin', 'description' => 'Maintain dropdown master data (lookups).'],
             ['name' => 'View Activity Log', 'slug' => 'view-activity-log', 'group' => 'admin', 'description' => 'See who did what, on which module.'],

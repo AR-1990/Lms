@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsActivity;
 use App\Models\Concerns\TracksAuthor;
+use App\Services\WebsitePageService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,5 +50,14 @@ class WebsiteSection extends Model
     public function imageUrl(): ?string
     {
         return WebsitePage::imageUrl($this->image_path);
+    }
+
+    /**
+     * Any change reaches the public site at once (the pages are cached, see WebsitePageService).
+     */
+    protected static function booted(): void
+    {
+        static::saved(fn () => WebsitePageService::flush());
+        static::deleted(fn () => WebsitePageService::flush());
     }
 }

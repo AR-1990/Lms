@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\SystemSettingsService;
+use App\Services\WebsitePageService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 class SystemSetting extends Model
 {
@@ -30,6 +33,7 @@ class SystemSetting extends Model
         'logo_file_name',
         'late_grace_count',
         'lates_per_deduction_day',
+        'fee_auto_generate_day',
     ];
 
     public function country(): BelongsTo
@@ -45,5 +49,16 @@ class SystemSetting extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
+    }
+
+    /**
+     * The timezone / school name and the public pages are cached; a saved setting reaches them at once.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (): void {
+            Cache::forget(SystemSettingsService::RUNTIME_CACHE_KEY);
+            WebsitePageService::flush();
+        });
     }
 }

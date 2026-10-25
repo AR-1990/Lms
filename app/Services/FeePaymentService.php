@@ -6,6 +6,8 @@ use App\Models\AdmissionApplication;
 use App\Models\FeeInvoice;
 use App\Models\FeePayment;
 use App\Models\FeePaymentAllocation;
+use App\Models\FeeRefund;
+use App\Models\JournalEntry;
 use App\Models\PaymentMethod;
 use App\Models\Student;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,13 +76,17 @@ class FeePaymentService
      * Receive money from a student (or an applicant before enrolment) and post it.
      *
      * @param  array<string, mixed>  $data
+     * @param  bool  $fromDeposit  paid from the student's security deposit (the system method, which the counter cannot pick)
      *
      * @throws ValidationException
      */
-    public function receive(array $data): FeePayment
+    public function receive(array $data, bool $fromDeposit = false): FeePayment
     {
         $method = PaymentMethod::findOrFail($data['payment_method_id']);
-        $this->checkMethodDetails($method, $data);
+
+        if (! $fromDeposit) {
+            $this->checkMethodDetails($method, $data);
+        }
 
         $student = isset($data['student_id']) ? Student::findOrFail($data['student_id']) : null;
         $application = $student === null ? AdmissionApplication::findOrFail($data['admission_application_id']) : null;
@@ -173,11 +179,29 @@ class FeePaymentService
             throw ValidationException::withMessages(['payment' => ['This receipt has already been reversed.']]);
         }
 
+        // Money already paid back may have come from this receipt; reverse the refund first.
+        $refund = $payment->student_id ? FeeRefund::where('student_id', $payment->student_id)->where('status', FeeRefund::STATUS_POSTED)->value('refund_no') : null;
+
+        if ($refund !== null) {
+            throw ValidationException::withMessages(['payment' => ["Refund {$refund} was paid to this student. Reverse it before reversing a receipt."]]);
+        }
+
         return DB::transaction(function () use ($payment, $reason, $chequeBounced): FeePayment {
             $this->journalService->reverse($payment->journalEntry, "Receipt {$payment->receipt_no}: {$reason}");
 
-            foreach ($payment->allocations()->with('invoice')->get() as $allocation) {
+            foreach ($payment->allocations()->with(['invoice', 'journalEntry'])->get() as $allocation) {
+                // Advance from this receipt that already paid a later challan is taken back from it too.
+                if ($allocation->from_advance && $allocation->journalEntry?->status === JournalEntry::STATUS_POSTED) {
+                    $this->journalService->reverse($allocation->journalEntry, "Receipt {$payment->receipt_no} reversed: {$reason}");
+                }
+
                 $invoice = $allocation->invoice;
+
+                // A cancelled challan already gave its advance back; it stays cancelled.
+                if ($invoice->status === 'cancelled') {
+                    continue;
+                }
+
                 $invoice->paid_total -= $allocation->amount;
                 $this->invoiceService->settle($invoice);
             }

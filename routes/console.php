@@ -6,6 +6,7 @@ use App\Models\UserDevice;
 use App\Services\AnnouncementService;
 use App\Services\ChatService;
 use App\Services\CounsellingService;
+use App\Services\FeeAutomationService;
 use App\Services\PerformanceService;
 use App\Services\StickyNoteService;
 use App\Services\TaskService;
@@ -57,6 +58,12 @@ Artisan::command('chat:sync-departments', function (ChatService $chatService) {
 Schedule::call(fn () => app(TransportService::class)->sendExpiryAlerts())->name('transport:expiry-alerts')->dailyAt('08:00');
 Schedule::call(fn () => app(CounsellingService::class)->sendFollowUpReminders())->name('counselling:follow-up-reminders')->dailyAt('07:30');
 Schedule::command('chat:sync-departments')->dailyAt('01:30');
+
+// Fees: late fines on overdue challans after midnight; the month's challans on the day set under Fees → Late Fees & Automation.
+Schedule::call(fn () => app(FeeAutomationService::class)->applyLateFees())->name('fees:late-fines')->dailyAt('00:30');
+Schedule::call(fn () => app(FeeAutomationService::class)->autoGenerate())->name('fees:auto-challans')->dailyAt('06:00');
+// Admins and accounts staff get a morning reminder of students who have not paid by the due date.
+Schedule::call(fn () => app(FeeAutomationService::class)->overdueAlert())->name('fees:overdue-alerts')->dailyAt('09:00');
 
 // Mobile tokens unused for SANCTUM_IDLE_DAYS no longer work (AppServiceProvider); remove them and their devices.
 Schedule::call(function (): void {

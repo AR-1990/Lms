@@ -10087,3 +10087,255 @@ select.dash-inline-score {
         clip-path: none;
     }
 }
+
+/* ==========================================================================
+   Year-end promotion wizard
+   ========================================================================== */
+
+.dash-promo-step {
+    display: inline-grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin-right: 0.4rem;
+    border-radius: 999px;
+    background: var(--brand-600);
+    color: #fff;
+    font-size: 0.8rem;
+    vertical-align: 0.1em;
+}
+
+.dash-promo-years {
+    padding: 0 1.5rem 1rem;
+}
+
+.dash-promo-prepare {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 1.5rem 1.25rem;
+    padding: 0.9rem 1rem;
+    border: 1px dashed var(--gray-300);
+    border-radius: 0.75rem;
+    background: var(--gray-50);
+}
+
+.dash-promo-prepare.is-ready {
+    border-style: solid;
+    border-color: var(--green-200, #bbf7d0);
+}
+
+.dash-promo-classes .dash-promo-class {
+    display: grid;
+    grid-template-columns: minmax(9rem, 1.2fr) minmax(6rem, 2fr) auto auto;
+    align-items: center;
+}
+
+.dash-promo-class.is-done .dash-promo-class-name strong {
+    color: var(--gray-500);
+}
+
+.dash-promo-meter {
+    height: 0.45rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--gray-200);
+}
+
+.dash-promo-meter span {
+    display: block;
+    height: 100%;
+    background: var(--brand-500);
+    transform-origin: left;
+    transition: transform 500ms var(--ease);
+}
+
+.dash-promo-count {
+    color: var(--gray-600);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.dash-promo-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    padding: 0 1.5rem 0.75rem;
+}
+
+.dash-promo-table select {
+    min-width: 9rem;
+}
+
+.dash-promo-pct {
+    color: var(--gray-600);
+    font-size: 0.8rem;
+}
+
+.dash-promo-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.dash-promo-footer .dash-muted {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .dash-promo-classes .dash-promo-class {
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem 1rem;
+    }
+
+    .dash-promo-meter {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .dash-promo-years,
+    .dash-promo-toolbar,
+    .dash-promo-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .dash-promo-prepare {
+        margin-left: 1rem;
+        margin-right: 1rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-promo-meter span {
+        transition: none;
+    }
+}
+
+.dash-promo-prepare[hidden],
+.dash-empty-note[hidden] {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .dash-promo-table thead {
+        display: none;
+    }
+
+    .dash-promo-table,
+    .dash-promo-table tbody {
+        display: block;
+    }
+
+    .dash-promo-table tr {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.5rem 0.75rem;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .dash-promo-table td {
+        display: block;
+        padding: 0;
+        border: 0;
+    }
+
+    .dash-promo-table td:nth-child(n+3) {
+        grid-column: 2;
+    }
+
+    .dash-promo-table select {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+/* ==========================================================================
+   Student profile: leaving & clearance
+   ========================================================================== */
+
+.dash-leave-checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0 1.5rem 1rem;
+    list-style: none;
+}
+
+.dash-leave-check {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--gray-200);
+    border-left: 3px solid var(--marigold, #e9a83a);
+    border-radius: 0.6rem;
+    background: var(--gray-50);
+}
+
+.dash-leave-check.is-done {
+    border-left-color: var(--brand-500);
+}
+
+.dash-leave-check strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--gray-900);
+}
+
+.dash-leave-mark {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: #fff3dc;
+    color: #a86b00;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.dash-leave-check.is-done .dash-leave-mark {
+    background: var(--brand-600);
+    color: #fff;
+}
+
+.dash-leave-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0 1.5rem 1.25rem;
+}
+
+.dash-leave-actions [hidden] {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .dash-leave-checks,
+    .dash-leave-actions {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+.dash-promo-class-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.dash-promo-carry {
+    padding-top: 0;
+}

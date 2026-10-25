@@ -4,22 +4,32 @@ namespace App\Services;
 
 use App\Models\Account;
 use App\Models\AdmissionApplication;
+use App\Models\BankAccount;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\FeeHead;
 use App\Models\FeeInvoice;
 use App\Models\FeeInvoiceBatch;
+use App\Models\FeePayment;
+use App\Models\FeePaymentAllocation;
+use App\Models\FeeRefund;
 use App\Models\FeeStructure;
 use App\Models\FeeStructureItem;
 use App\Models\FeeWaiver;
+use App\Models\JournalEntry;
+use App\Models\LateFeeRule;
 use App\Models\Student;
 use App\Models\StudentConcession;
+use App\Models\SystemSetting;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 
 /**
@@ -54,9 +64,11 @@ class FeeInvoiceService
             ->when($filters['student_id'] ?? null, fn (Builder $query, int $id) => $query->where('student_id', $id))
             ->when(array_key_exists('student_ids', $filters), fn (Builder $query) => $query->whereIn('student_id', $filters['student_ids']))
             ->when($filters['admission_application_id'] ?? null, fn (Builder $query, int $id) => $query->where('admission_application_id', $id))
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $status === 'unpaid'
-                ? $query->whereIn('status', FeeInvoice::OPEN_STATUSES)
-                : $query->where('status', $status))
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => match ($status) {
+                'unpaid' => $query->whereIn('status', FeeInvoice::OPEN_STATUSES),
+                'overdue' => $query->whereIn('status', FeeInvoice::OPEN_STATUSES)->where('balance', '>', 0)->whereDate('due_date', '<', today()->toDateString()),
+                default => $query->where('status', $status),
+            })
             ->when($filters['invoice_type'] ?? null, fn (Builder $query, string $type) => $query->where('invoice_type', $type))
             ->when($filters['billing_month'] ?? null, fn (Builder $query, string $month) => $query->whereDate('billing_month', Carbon::parse($month)->startOfMonth()->toDateString()))
             ->when($filters['class_id'] ?? null, fn (Builder $query, int $classId) => $query->whereIn('enrollment_id', Enrollment::where('class_id', $classId)->select('id')));
@@ -102,6 +114,7 @@ class FeeInvoiceService
         return $invoice->load([
             'items.feeHead:id,name,code', 'student:id,admission_no,first_name,last_name', 'application:id,application_no,first_name,last_name',
             'academicSession:id,name', 'journalEntry:id,voucher_no', 'allocations.payment:id,receipt_no,received_on,status', 'waivers.approvedBy:id,name', 'canceller:id,name',
+            'fines.rule:id,name',
         ]);
     }
 
@@ -287,11 +300,20 @@ class FeeInvoiceService
      */
     public function cancel(FeeInvoice $invoice, string $reason): FeeInvoice
     {
-        if ($invoice->status !== 'posted' || $invoice->paid_total > 0 || $invoice->waived_total > 0) {
+        $advance = $invoice->allocations()->where('from_advance', true)->with('journalEntry')->get();
+
+        // A challan paid only from the student's advance can still be cancelled; the advance goes back to them.
+        if (! in_array($invoice->status, [...FeeInvoice::OPEN_STATUSES, 'paid'], true) || $invoice->paid_total !== (int) $advance->sum('amount') || $invoice->waived_total > 0) {
             throw ValidationException::withMessages(['invoice' => ['Only an unpaid challan can be cancelled. Reverse its receipts first.']]);
         }
 
-        return DB::transaction(function () use ($invoice, $reason): FeeInvoice {
+        return DB::transaction(function () use ($invoice, $reason, $advance): FeeInvoice {
+            foreach ($advance as $allocation) {
+                if ($allocation->journalEntry?->status === JournalEntry::STATUS_POSTED) {
+                    $this->journalService->reverse($allocation->journalEntry, "Challan {$invoice->invoice_no} cancelled; advance returned");
+                }
+            }
+
             if ($invoice->journal_entry_id !== null) {
                 $this->journalService->reverse($invoice->journalEntry, "Challan {$invoice->invoice_no} cancelled: {$reason}");
             }
@@ -344,6 +366,83 @@ class FeeInvoiceService
         $invoice->balance = max($invoice->total - $invoice->paid_total - $invoice->waived_total, 0);
         $invoice->status = $invoice->balance === 0 ? 'paid' : ($invoice->paid_total + $invoice->waived_total > 0 ? 'partially_paid' : 'posted');
         $invoice->saveQuietly();
+    }
+
+    /**
+     * Money a student paid in advance pays a new challan straight away (oldest advance first): an allocation
+     * marked from_advance, posted Dr Student Advances / Cr Student Receivable.
+     */
+    public function applyAdvance(FeeInvoice $invoice): void
+    {
+        if ($invoice->student_id === null || $invoice->balance <= 0 || ! in_array($invoice->status, FeeInvoice::OPEN_STATUSES, true)) {
+            return;
+        }
+
+        $payments = FeePayment::where('student_id', $invoice->student_id)->where('status', 'posted')->where('advance_amount', '>', 0)
+            ->withSum(['allocations as advance_used' => fn (Builder $query) => $query->where('from_advance', true)->whereHas('invoice', fn (Builder $inner) => $inner->where('status', '!=', 'cancelled'))], 'amount')
+            ->orderBy('received_on')->orderBy('id')->lockForUpdate()->get(['id', 'receipt_no', 'advance_amount']);
+        // Advance already paid back to the family uses up the oldest receipts first.
+        $refunded = (int) FeeRefund::where('student_id', $invoice->student_id)->where('source', 'advance')->where('status', FeeRefund::STATUS_POSTED)->sum('amount');
+
+        foreach ($payments as $payment) {
+            $left = $payment->advance_amount - (int) $payment->advance_used;
+            $paidBack = min($left, $refunded);
+            $refunded -= $paidBack;
+            $left -= $paidBack;
+            $take = min($left, $invoice->balance);
+
+            if ($take <= 0) {
+                continue;
+            }
+
+            $entry = $this->journalService->record('JV', now()->toDateString(), "Advance from receipt {$payment->receipt_no} used on challan {$invoice->invoice_no}", [
+                ['account_id' => $this->account(self::ADVANCE_ACCOUNT), 'debit' => $take, 'description' => 'Advance used', ...$this->party($invoice)],
+                ['account_id' => $this->account(self::RECEIVABLE_ACCOUNT), 'credit' => $take, 'description' => $invoice->invoice_no, ...$this->party($invoice)],
+            ], $invoice);
+
+            FeePaymentAllocation::create(['fee_payment_id' => $payment->id, 'fee_invoice_id' => $invoice->id, 'amount' => $take, 'from_advance' => true, 'journal_entry_id' => $entry->id]);
+            $invoice->paid_total += $take;
+            $this->settle($invoice);
+            $this->activityLogger->record('fee_invoices', 'advance_applied', $this->money($take)." of advance from receipt {$payment->receipt_no} paid challan {$invoice->invoice_no}", $invoice);
+
+            if ($invoice->balance === 0) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Unused advance a student has paid (shown on the challan and the collection desk).
+     */
+    public function advanceBalance(int $studentId): int
+    {
+        $paid = (int) FeePayment::where('student_id', $studentId)->where('status', 'posted')->sum('advance_amount');
+        $used = (int) FeePaymentAllocation::where('from_advance', true)
+            ->whereHas('payment', fn (Builder $query) => $query->where('student_id', $studentId)->where('status', 'posted'))
+            ->whereHas('invoice', fn (Builder $query) => $query->where('status', '!=', 'cancelled'))
+            ->sum('amount');
+        $refunded = (int) FeeRefund::where('student_id', $studentId)->where('source', 'advance')->where('status', FeeRefund::STATUS_POSTED)->sum('amount');
+
+        return max(0, $paid - $used - $refunded);
+    }
+
+    /**
+     * Printable challans: one landscape page per challan with the bank, school and student copies side by side.
+     *
+     * @param  EloquentCollection<int, FeeInvoice>  $invoices
+     */
+    public function pdf(EloquentCollection $invoices, string $filename, User $user): Response
+    {
+        $invoices->load(['items', 'fines.rule:id,name', 'student:id,admission_no,first_name,middle_name,last_name', 'application:id,application_no,first_name,last_name', 'enrollment.schoolClass:id,name', 'enrollment.section:id,name']);
+        $rules = LateFeeRule::where('is_active', true)->get(['name', 'grace_days', 'calculation', 'amount', 'max_amount', 'invoice_type']);
+        $this->activityLogger->record('fee_invoices', 'printed', "{$user->name} printed ".$invoices->count().' challan(s)');
+
+        return Pdf::loadView('pdf.challans', [
+            'invoices' => $invoices,
+            'rules' => $rules,
+            'settings' => SystemSetting::query()->first(['school_name', 'school_address', 'school_phone']),
+            'bank' => BankAccount::with('bank:id,name')->where('is_default_for_fees', true)->first(['id', 'bank_id', 'branch', 'account_title', 'account_number', 'iban']),
+        ])->setPaper('a4', 'landscape')->stream($filename);
     }
 
     /**
@@ -454,6 +553,8 @@ class FeeInvoiceService
                 $entry = $this->journalService->record('FIV', $attributes['issue_date'], "Fee challan {$invoice->invoice_no} — {$invoice->payerName()}", $this->postingLines($invoice, $items), $invoice);
                 $invoice->forceFill(['journal_entry_id' => $entry->id])->saveQuietly();
             }
+
+            $this->applyAdvance($invoice);
 
             return $invoice;
         });

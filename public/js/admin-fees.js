@@ -221,10 +221,16 @@
         wirePopupForm(generateDialog, generateForm, function () {
             const hide = ui.busy('Generating monthly challans…');
 
+            const printAfter = generateForm.elements.print_after && generateForm.elements.print_after.checked;
+
             return kit.submitForm(generateForm, 'POST', resourceUrl + '/generate', kit.readForm(generateForm, { academic_session_id: 'int', class_id: 'int', billing_month: 'text' }))
-                .then(function () {
+                .then(function (envelope) {
                     generateDialog.close();
                     mounted.refresh();
+
+                    if (printAfter && envelope.data.generated_count > 0) {
+                        ui.openFile(resourceUrl.replace(/invoices$/, 'batches') + '/' + envelope.data.id + '/pdf', 'Preparing the challans to print…').catch(function () {});
+                    }
                 })
                 .finally(hide);
         });
@@ -246,8 +252,12 @@
                     + '<td class="dash-col-num">' + (item.concession_amount ? '− ' + money(item.concession_amount) : '—') + '</td><td class="dash-col-num">' + money(item.net_amount) + '</td></tr>';
             }).join('');
             const payments = invoice.payments.map(function (payment) {
-                return '<li><span>' + esc(payment.receipt_no) + ' · ' + shortDate(payment.received_on) + '</span><strong>' + money(payment.amount) + ' ' + badge(payment.status) + '</strong></li>';
+                return '<li><span>' + esc(payment.receipt_no) + ' · ' + shortDate(payment.received_on) + (payment.from_advance ? ' <span class="dash-badge dash-badge-system">from advance</span>' : '') + '</span><strong>' + money(payment.amount) + ' ' + badge(payment.status) + '</strong></li>';
             }).join('');
+            const fines = (invoice.fines || []).map(function (fine) {
+                return '<li><span>' + esc(fine.rule || 'Late fine') + ' · ' + shortDate(fine.applied_on) + '</span><strong>' + money(fine.amount) + '</strong></li>';
+            }).join('');
+            const paidFromAdvance = invoice.payments.filter(function (payment) { return payment.from_advance; }).reduce(function (sum, payment) { return sum + payment.amount; }, 0);
             const waivers = invoice.waivers.map(function (waiver) {
                 return '<li><span>' + esc(waiver.reason) + '</span><strong>' + money(waiver.amount) + (waiver.approved_by ? ' <span class="dash-muted">' + esc(waiver.approved_by) + '</span>' : '') + '</strong></li>';
             }).join('');
@@ -263,21 +273,27 @@
                 ['Cancelled by', invoice.cancelled_by_name ? esc(invoice.cancelled_by_name) + ' · ' + shortDate(invoice.cancelled_at) : null, true]
             ]) + '<div class="dash-grid-wrap"><table class="dash-table dash-mini-table"><thead><tr><th>Line</th><th class="dash-col-num">Amount</th><th class="dash-col-num">Concession</th><th class="dash-col-num">Net</th></tr></thead><tbody>' + lines + '</tbody></table></div>'
                 + kv([
+                    ['Late fines', invoice.fine_total ? money(invoice.fine_total) : null],
                     ['Total', money(invoice.total)],
                     ['Waived', invoice.waived_total ? money(invoice.waived_total) : null],
                     ['Paid', money(invoice.paid_total)],
                     ['Balance', '<strong>' + money(invoice.balance) + '</strong>' + (invoice.balance > 0 && invoice.status !== 'cancelled' ? ' <a class="dash-link-btn" href="' + esc(root.dataset.receiptsUrl + '?' + (invoice.student_id ? 'student=' + invoice.student_id : 'application=' + invoice.admission_application_id)) + '">Receive</a>' : ''), true]
                 ])
+                + (fines ? '<h4 class="dash-detail-heading">Late fines</h4><ul class="dash-kv">' + fines + '</ul>' : '')
                 + (payments ? '<h4 class="dash-detail-heading">Payments</h4><ul class="dash-kv">' + payments + '</ul>' : '')
                 + (waivers ? '<h4 class="dash-detail-heading">Write-offs</h4><ul class="dash-kv">' + waivers + '</ul>' : '');
 
             waiveForm.hidden = !open;
-            cancelForm.hidden = !open || invoice.paid_total > 0 || invoice.waived_total > 0;
+            cancelForm.hidden = invoice.status === 'cancelled' || invoice.paid_total !== paidFromAdvance || invoice.waived_total > 0;
             waiveForm.reset();
             cancelForm.reset();
             kit.clearErrors(waiveForm);
             kit.clearErrors(cancelForm);
         }
+
+        detail.querySelector('[data-print-challan]').addEventListener('click', function () {
+            ui.openFile(resourceUrl + '/' + detail.dataset.id + '/pdf', 'Preparing the challan…').catch(function () {});
+        });
 
         [[waiveForm, '/waive', { amount: 'money', reason: 'text' }], [cancelForm, '/cancel', { reason: 'text' }]].forEach(function (setup) {
             setup[0].addEventListener('submit', function (event) {
@@ -676,6 +692,108 @@
                 .catch(function (envelope) {
                     ui.toast(kit.messageOf(envelope, 'Could not save the decision.'), 'error');
                 });
+        });
+    }
+
+    /* ---------- Late fee rules and automatic challans ---------- */
+
+    if (screen === 'late-fees') {
+        const rulesForm = modal.querySelector('form');
+        const amountLabel = rulesForm.querySelector('[data-amount-label]');
+        const example = modal.querySelector('[data-late-example]');
+        const SCOPE = { '': 'Every challan', monthly: 'Monthly challans', admission: 'Admission challans', exam: 'Exam fee challans', other: 'Other challans' };
+        const describe = function (row) {
+            const amount = row.calculation === 'percent' ? (Number(row.amount) / 100) + '% of the challan' : money(row.amount) + (row.calculation === 'per_day' ? ' a day' : '');
+
+            return amount + (row.max_amount ? ', up to ' + money(row.max_amount) : '') + (row.grace_days ? ' · after ' + row.grace_days + ' day(s)' : ' · from the day after due');
+        };
+        const explain = function () {
+            const calculation = rulesForm.elements.calculation.value;
+            const amount = Number(rulesForm.elements.amount.value) || 0;
+            const grace = Number(rulesForm.elements.grace_days.value) || 0;
+            const cap = Number(rulesForm.elements.max_amount.value) || 0;
+
+            amountLabel.textContent = calculation === 'percent' ? 'Percent (%)' : (calculation === 'per_day' ? 'Amount a day (Rs)' : 'Amount (Rs)');
+            example.textContent = !amount ? 'Fines start the day after the grace days end.'
+                : calculation === 'per_day' ? 'Example: paid 10 days after the grace days → Rs ' + Math.round(cap ? Math.min(amount * 10, cap) : amount * 10).toLocaleString('en-PK') + ' fine.'
+                    : calculation === 'percent' ? 'Example: a Rs 10,000 challan paid late → Rs ' + Math.round(10000 * amount / 100).toLocaleString('en-PK') + ' fine.'
+                        : 'Rs ' + amount.toLocaleString('en-PK') + ' is added once, ' + (grace ? grace + ' day(s) after the due date.' : 'the day after the due date.');
+        };
+
+        const mounted = kit.mount({
+            root: root,
+            modal: modal,
+            order: [[0, 'asc']],
+            titles: { create: 'Add late fee rule', edit: 'Edit late fee rule' },
+            emptyText: 'No late fee rules yet.',
+            nameOf: function (row) { return row.name; },
+            columns: [
+                { data: 'name', render: display(function (value, row) { return titleCell(value, row.fee_head_name); }) },
+                { data: 'amount', searchable: false, orderable: false, render: display(function (value, row) { return esc(describe(row)); }) },
+                { data: 'invoice_type', searchable: false, render: display(function (value) { return esc(SCOPE[value || ''] || headline(value)); }) },
+                { data: 'fines_sum_amount', searchable: false, className: 'dash-hide-md', render: display(function (value, row) { return row.fines_count ? money(value) + ' <span class="dash-muted">on ' + row.fines_count + ' challan(s)</span>' : '<span class="dash-muted">Nothing yet</span>'; }) },
+                { data: 'is_active', searchable: false, render: display(function (value) { return value ? badge('active') : '<span class="dash-badge dash-badge-system">Off</span>'; }) }
+            ],
+            fill: function (formElement, row) {
+                kit.fillForm(formElement, row, { name: 'text', calculation: 'text', grace_days: 'int', invoice_type: 'text', fee_head_id: 'int', is_active: 'bool' }, { calculation: 'fixed', grace_days: 5, is_active: true });
+                formElement.elements.amount.value = row ? (row.calculation === 'percent' ? row.amount / 100 : row.amount / 100) : '';
+                formElement.elements.max_amount.value = row && row.max_amount ? row.max_amount / 100 : '';
+
+                if (!row) {
+                    const fine = [...formElement.elements.fee_head_id.options].find(function (option) { return option.defaultSelected; });
+                    formElement.elements.fee_head_id.value = fine ? fine.value : formElement.elements.fee_head_id.value;
+                }
+
+                explain();
+            },
+            payload: function (formElement) {
+                const body = kit.readForm(formElement, { name: 'text', calculation: 'text', grace_days: 'int', invoice_type: 'text', fee_head_id: 'int', is_active: 'bool', max_amount: 'money' });
+                body.amount = Math.round((Number(formElement.elements.amount.value) || 0) * 100);
+                body.invoice_type = body.invoice_type || null;
+
+                return body;
+            }
+        });
+
+        rulesForm.addEventListener('input', explain);
+        rulesForm.addEventListener('change', explain);
+
+        const automation = document.querySelector('[data-fee-automation]');
+        const automationForm = automation.querySelector('form');
+
+        ui.api('GET', automation.dataset.url).then(function (envelope) {
+            automationForm.elements.fee_auto_generate_day.value = envelope.data.fee_auto_generate_day || '';
+        }).catch(function () {});
+
+        automationForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const day = automationForm.elements.fee_auto_generate_day.value;
+            kit.submitForm(automationForm, 'PUT', automation.dataset.url, { fee_auto_generate_day: day ? Number(day) : null }).then(mounted.refresh).catch(function () {});
+        });
+    }
+
+    /* ---------- Refund register ---------- */
+
+    if (screen === 'refunds') {
+        kit.mount({
+            root: root,
+            modal: null,
+            order: [[3, 'desc']],
+            searchPlaceholder: 'Search refund no or student…',
+            emptyText: 'No refunds yet.',
+            creatable: false,
+            editable: false,
+            deletable: false,
+            nameOf: function (row) { return row.refund_no; },
+            viewUrl: function (row) { return root.dataset.profileUrl + '/' + row.student_id; },
+            columns: [
+                { data: 'student_name', name: 'student_name', orderable: false, render: display(function (value, row) { return titleCell(value || '—', row.admission_no); }) },
+                { data: 'refund_no', render: display(function (value, row) { return titleCell(value, row.reference_no); }) },
+                { data: 'source', searchable: false, className: 'dash-hide-md', render: display(function (value, row) { return titleCell(value === 'deposit' ? 'Security deposit' : 'Advance fee', row.status === 'reversed' ? 'Reversed: ' + row.reversal_reason : row.reason); }) },
+                { data: 'refunded_on', searchable: false, render: display(function (value, row) { return titleCell(dateFormat.format(new Date(value)), row.payment_method_name); }) },
+                { data: 'amount', searchable: false, className: 'dash-col-num', render: display(money) },
+                { data: 'status', searchable: false, render: display(function (value) { return value === 'reversed' ? '<span class="dash-badge dash-badge-system">Reversed</span>' : '<span class="dash-badge dash-badge-ok">Paid</span>'; }) }
+            ]
         });
     }
 })();

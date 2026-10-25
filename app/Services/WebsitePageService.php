@@ -8,6 +8,7 @@ use App\Models\WebsiteSection;
 use App\Models\WebsiteSectionItem;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,13 +19,20 @@ use Illuminate\Validation\ValidationException;
 class WebsitePageService
 {
     /**
+     * School details the public pages show (the stored logo is left out of the cache).
+     *
+     * @var array<int, string>
+     */
+    private const SITE_SETTING_COLUMNS = ['id', 'school_name', 'school_tagline', 'school_address', 'school_phone', 'admissions_phone', 'whatsapp_number', 'contact_email', 'admissions_email', 'office_hours', 'visiting_hours', 'footer_text', 'country_id', 'region_id', 'currency_id'];
+
+    /**
      * A public page with its blocks, cards and their child items (an unpublished page is not found).
      */
     public function page(string $slug): WebsitePage
     {
-        return WebsitePage::where('slug', $slug)->where('is_published', true)
+        return Cache::remember($this->key('page:'.$slug), now()->addDay(), fn (): WebsitePage => WebsitePage::where('slug', $slug)->where('is_published', true)
             ->with(['sections.items' => fn ($query) => $query->where('is_active', true)->with(['children' => fn ($children) => $children->where('is_active', true)])])
-            ->first() ?? new WebsitePage(['slug' => $slug]);
+            ->first() ?? new WebsitePage(['slug' => $slug]));
     }
 
     /**
@@ -35,9 +43,22 @@ class WebsitePageService
     public function site(): array
     {
         return once(fn (): array => [
-            'settings' => SystemSetting::query()->first() ?? new SystemSetting,
+            'settings' => Cache::remember($this->key('settings'), now()->addDay(), fn (): SystemSetting => SystemSetting::query()->first(self::SITE_SETTING_COLUMNS) ?? new SystemSetting),
             'page' => $this->page('site'),
         ]);
+    }
+
+    /**
+     * Forget every cached public page; called when a page, block, card or the school settings change.
+     */
+    public static function flush(): void
+    {
+        Cache::forever('website-version', (int) Cache::get('website-version', 1) + 1);
+    }
+
+    private function key(string $name): string
+    {
+        return 'website:'.(int) Cache::get('website-version', 1).':'.$name;
     }
 
     /* ---------- Admin ---------- */

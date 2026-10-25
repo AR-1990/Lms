@@ -140,6 +140,21 @@
     </section>
 </div>
 
+<section class="dash-panel" data-student-years data-url="{{ route('erp.students.history', $student) }}">
+    <div class="dash-panel-head">
+        <div>
+            <h2>Year by year</h2>
+            <p>Each session this student studied in: class, how the year ended, published results, attendance and fees.</p>
+        </div>
+    </div>
+    <div class="dash-table-wrap">
+        <table class="dash-table dash-years-table">
+            <thead><tr><th>Session</th><th>Class</th><th>Year ended</th><th>Results</th><th class="dash-col-num">Attendance</th><th class="dash-col-num">Fees billed</th><th class="dash-col-num">Paid</th><th class="dash-col-num">Due</th></tr></thead>
+            <tbody data-year-rows><tr><td colspan="8" class="dash-muted">Loading…</td></tr></tbody>
+        </table>
+    </div>
+</section>
+
 <section class="dash-panel">
     <div class="dash-panel-head">
         <div>
@@ -169,6 +184,152 @@
         @endforeach
     </ul>
 </section>
+
+@php
+    $canRefund = auth()->user()->hasPermission('issue-refunds');
+@endphp
+<section class="dash-panel" data-student-leaving
+         data-url="{{ route('erp.students.clearance', $student) }}"
+         data-certificate-url="{{ route('erp.students.leaving-certificate', $student) }}"
+         data-certificate-pdf-url="{{ route('erp.students.leaving-certificate.pdf', $student) }}"
+         data-refunds-url="{{ url('/api/erp/fees/refunds') }}"
+         data-adjust-url="{{ route('erp.fees.students.adjust-deposit', $student) }}">
+    <div class="dash-panel-head">
+        <div>
+            <h2>Leaving &amp; clearance</h2>
+            <p>When the student leaves: clear the dues, take back school items, pay back the security deposit, then issue the School Leaving Certificate.</p>
+        </div>
+        <span class="dash-badge" data-clear-badge>…</span>
+    </div>
+    <ul class="dash-leave-checks" data-clear-list></ul>
+    <div class="dash-leave-actions">
+        @if ($canRefund)
+            <button type="button" class="dash-btn dash-btn-ghost" data-adjust-deposit hidden>@include('partials.dashboard-icon', ['name' => 'refresh']) Pay dues from deposit</button>
+            <button type="button" class="dash-btn dash-btn-ghost" data-open-refund hidden>@include('partials.dashboard-icon', ['name' => 'wallet']) Refund deposit / advance</button>
+        @endif
+        <button type="button" class="dash-btn dash-btn-primary" data-open-certificate hidden>@include('partials.dashboard-icon', ['name' => 'check']) Issue leaving certificate</button>
+        <button type="button" class="dash-btn dash-btn-ghost" data-print-certificate hidden>@include('partials.dashboard-icon', ['name' => 'printer']) Print certificate</button>
+    </div>
+    <div class="dash-table-wrap" data-refunds-wrap hidden>
+        <table class="dash-table">
+            <thead><tr><th>Refund</th><th>Paid from</th><th class="dash-col-num">Amount</th><th>Status</th><th class="dash-col-actions"><span class="dash-visually-hidden">Actions</span></th></tr></thead>
+            <tbody data-refund-rows></tbody>
+        </table>
+    </div>
+</section>
+
+@if ($canRefund)
+    <dialog class="dash-modal dash-form-modal" id="refundModal" aria-labelledby="refundModalTitle">
+        <form novalidate>
+            <div class="dash-modal-head">
+                <span class="dash-modal-icon dash-modal-icon-brand">@include('partials.dashboard-icon', ['name' => 'wallet'])</span>
+                <div>
+                    <h3 id="refundModalTitle">Pay back to the family</h3>
+                    <p>Posted to the ledger as a payment voucher. A refund paid by mistake can be reversed.</p>
+                </div>
+                <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
+            </div>
+            <div class="dash-form-grid">
+                <div class="dash-field dash-field-wide">
+                    <label for="refundSource">Pay back from</label>
+                    <select id="refundSource" name="source" required>
+                        <option value="deposit">Security deposit</option>
+                        <option value="advance">Unused advance fee</option>
+                    </select>
+                    <p class="dash-field-error" data-error-for="source" hidden></p>
+                </div>
+                @include('dashboards.partials.field', ['name' => 'amount', 'label' => 'Amount (Rs)', 'type' => 'number', 'required' => true, 'min' => 1, 'step' => 1, 'id' => 'refundAmount'])
+                <div class="dash-field">
+                    <label for="refundMethod">Paid by</label>
+                    <select id="refundMethod" name="payment_method_id" required>
+                        @foreach ($data['payment_methods'] as $method)
+                            <option value="{{ $method->id }}">{{ $method->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="dash-field-error" data-error-for="payment_method_id" hidden></p>
+                </div>
+                @include('dashboards.partials.field', ['name' => 'refunded_on', 'label' => 'Date', 'type' => 'date', 'required' => true, 'id' => 'refundDate'])
+                @include('dashboards.partials.field', ['name' => 'reference_no', 'label' => 'Cheque / transfer no', 'id' => 'refundReference'])
+                @include('dashboards.partials.field', ['name' => 'reason', 'label' => 'Reason', 'type' => 'textarea', 'required' => true, 'wide' => true, 'id' => 'refundReason'])
+            </div>
+            <p class="dash-form-error" data-form-error hidden></p>
+            <div class="dash-modal-actions">
+                <button type="button" class="dash-btn dash-btn-ghost" data-modal-close>Cancel</button>
+                <button type="submit" class="dash-btn dash-btn-primary">@include('partials.dashboard-icon', ['name' => 'check']) Pay refund</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="dash-modal" id="depositAdjustModal" aria-labelledby="depositAdjustTitle">
+        <div class="dash-modal-head">
+            <span class="dash-modal-icon dash-modal-icon-brand">@include('partials.dashboard-icon', ['name' => 'refresh'])</span>
+            <div>
+                <h3 id="depositAdjustTitle">Pay dues from the deposit?</h3>
+                <p data-adjust-text></p>
+            </div>
+            <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
+        </div>
+        <p class="dash-form-error" data-form-error hidden></p>
+        <div class="dash-modal-actions">
+            <button type="button" class="dash-btn dash-btn-ghost" data-modal-close>Cancel</button>
+            <button type="button" class="dash-btn dash-btn-primary" data-adjust-yes>@include('partials.dashboard-icon', ['name' => 'check']) Yes, pay from deposit</button>
+        </div>
+    </dialog>
+
+    <dialog class="dash-modal dash-form-modal" id="refundReverseModal" aria-labelledby="refundReverseTitle">
+        <form novalidate>
+            <div class="dash-modal-head">
+                <span class="dash-modal-icon">@include('partials.dashboard-icon', ['name' => 'refresh'])</span>
+                <div>
+                    <h3 id="refundReverseTitle">Reverse refund</h3>
+                    <p data-reverse-text>The voucher is reversed and the money counts as held again.</p>
+                </div>
+                <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
+            </div>
+            <div class="dash-form-grid">
+                @include('dashboards.partials.field', ['name' => 'reason', 'label' => 'Why is it reversed?', 'required' => true, 'wide' => true, 'id' => 'refundReverseReason'])
+            </div>
+            <p class="dash-form-error" data-form-error hidden></p>
+            <div class="dash-modal-actions">
+                <button type="button" class="dash-btn dash-btn-ghost" data-modal-close>Cancel</button>
+                <button type="submit" class="dash-btn dash-btn-primary">Reverse</button>
+            </div>
+        </form>
+    </dialog>
+@endif
+
+<dialog class="dash-modal dash-form-modal" id="certificateModal" aria-labelledby="certificateModalTitle">
+    <form novalidate>
+        <div class="dash-modal-head">
+            <span class="dash-modal-icon dash-modal-icon-brand">@include('partials.dashboard-icon', ['name' => 'file'])</span>
+            <div>
+                <h3 id="certificateModalTitle">School Leaving Certificate</h3>
+                <p>The certificate number is given once and kept if you issue it again.</p>
+            </div>
+            <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
+        </div>
+        <div class="dash-form-grid">
+            @include('dashboards.partials.field', ['name' => 'issued_on', 'label' => 'Date of issue', 'type' => 'date', 'required' => true, 'id' => 'certificateDate'])
+            <div class="dash-field">
+                <label for="certificateConduct">Conduct <span class="dash-optional">optional</span></label>
+                <select id="certificateConduct" name="conduct_id">
+                    <option value="">—</option>
+                    @foreach ($data['lookups']['conduct'] as $conduct)
+                        <option value="{{ $conduct->id }}">{{ $conduct->name }}</option>
+                    @endforeach
+                </select>
+                <p class="dash-field-error" data-error-for="conduct_id" hidden></p>
+            </div>
+            @include('dashboards.partials.field', ['name' => 'remarks', 'label' => 'Remarks', 'type' => 'textarea', 'wide' => true, 'id' => 'certificateRemarks'])
+            <p class="dash-field-error dash-field-wide" data-error-for="slc" hidden></p>
+        </div>
+        <p class="dash-form-error" data-form-error hidden></p>
+        <div class="dash-modal-actions">
+            <button type="button" class="dash-btn dash-btn-ghost" data-modal-close>Cancel</button>
+            <button type="submit" class="dash-btn dash-btn-primary">@include('partials.dashboard-icon', ['name' => 'check']) Issue certificate</button>
+        </div>
+    </form>
+</dialog>
 
 @include('dashboards.partials.documents-panel', ['owner' => 'students', 'ownerId' => $student->id, 'documentTypes' => $data['document_types']])
 

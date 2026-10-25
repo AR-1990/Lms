@@ -40,7 +40,7 @@
         <div class="dash-table-wrap">
             <table class="dash-table">
                 <thead>
-                    <tr><th>Voucher</th><th>Child</th><th>For</th><th>Due</th><th>Total</th><th>Balance</th><th>Status</th></tr>
+                    <tr><th>Voucher</th><th>Child</th><th>For</th><th>Due</th><th>Total</th><th>Balance</th><th>Status</th><th><span class="dash-visually-hidden">Challan</span></th></tr>
                 </thead>
                 <tbody>
                     @foreach ($data['ledger'] as $row)
@@ -52,6 +52,7 @@
                             <td>Rs {{ number_format($row['total'] / 100) }}</td>
                             <td>Rs {{ number_format($row['balance'] / 100) }}</td>
                             <td><span class="dash-badge {{ $row['status'] === 'paid' ? 'dash-badge-ok' : 'dash-badge-warn' }}">{{ ucfirst(str_replace('_', ' ', $row['status'])) }}</span></td>
+                            <td><a class="dash-btn dash-btn-ghost dash-btn-sm" href="{{ route('erp.fees.invoices.pdf', $row['id']) }}" target="_blank" rel="noopener">Download challan</a></td>
                         </tr>
                     @endforeach
                 </tbody>

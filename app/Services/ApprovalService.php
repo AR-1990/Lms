@@ -41,6 +41,7 @@ use App\Models\ItemCategory;
 use App\Models\JobApplication;
 use App\Models\JobOpening;
 use App\Models\JournalEntry;
+use App\Models\LateFeeRule;
 use App\Models\LeaveType;
 use App\Models\Location;
 use App\Models\Lookup;
@@ -105,6 +106,7 @@ class ApprovalService
         Asset::class => [AssetService::class, 'delete'],
         CounsellingNote::class => [CounsellingService::class, 'delete'],
         PayrollAdjustment::class => [PayrollService::class, 'deleteAdjustment'],
+        LateFeeRule::class => [FeeAutomationService::class, 'deleteRule'],
         TransportRoute::class => [TransportService::class, 'deleteRoute'],
         Vehicle::class => [TransportService::class, 'deleteVehicle'],
         Expense::class => [ExpenseService::class, 'delete'],

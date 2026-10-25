@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'username', 'phone', 'photo_path', 'is_active', 'must_change_password', 'campus_id', 'password'])]
@@ -25,6 +26,23 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, LogsActivity, Notifiable, SoftDeletes;
 
     protected string $activityModule = 'users';
+
+    /**
+     * Role and permission slugs for this request (see access()).
+     *
+     * @var array{roles: array<int, string>, permissions: array<int, string>}|null
+     */
+    private ?array $accessList = null;
+
+    /**
+     * Flushes seen when $accessList was read; a later change in this process makes it reload.
+     */
+    private int $accessListFlushes = 0;
+
+    /**
+     * Access flushes in this process (a long-lived object notices a change made elsewhere in the same request).
+     */
+    private static int $flushes = 0;
 
     /**
      * Get the attributes that should be cast.
@@ -85,7 +103,7 @@ class User extends Authenticatable
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'role_user')->withTimestamps();
+        return $this->belongsToMany(Role::class, 'role_user')->using(RoleUser::class)->withTimestamps();
     }
 
     /**
@@ -102,7 +120,40 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->roles()->whereIn('slug', $roleList)->exists();
+        return array_intersect($roleList, $this->access()['roles']) !== [];
+    }
+
+    /**
+     * The account's role and permission slugs, read once per request and cached until any role, permission or
+     * role assignment changes (flushAccess bumps the version, so every user's list is rebuilt on next use).
+     *
+     * @return array{roles: array<int, string>, permissions: array<int, string>}
+     */
+    public function access(): array
+    {
+        if ($this->accessList !== null && $this->accessListFlushes === self::$flushes) {
+            return $this->accessList;
+        }
+
+        $this->accessListFlushes = self::$flushes;
+
+        return $this->accessList = Cache::remember('access:'.(int) Cache::get('access-version', 1).':'.$this->id, now()->addDay(), function (): array {
+            $roles = $this->roles()->with('permissions:id,slug')->get(['roles.id', 'roles.slug']);
+
+            return [
+                'roles' => $roles->pluck('slug')->values()->all(),
+                'permissions' => $roles->flatMap->permissions->pluck('slug')->unique()->values()->all(),
+            ];
+        });
+    }
+
+    /**
+     * Forget every cached role / permission list (called on any role, permission or assignment change).
+     */
+    public static function flushAccess(): void
+    {
+        self::$flushes++;
+        Cache::forever('access-version', (int) Cache::get('access-version', 1) + 1);
     }
 
     /**
@@ -118,9 +169,7 @@ class User extends Authenticatable
      */
     public function hasAllRoles(array $roles): bool
     {
-        $count = $this->roles()->whereIn('slug', $roles)->count();
-
-        return $count === count($roles);
+        return array_diff($roles, $this->access()['roles']) === [];
     }
 
     /**
@@ -141,11 +190,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->roles()
-            ->whereHas('permissions', function ($query) use ($permissionList) {
-                $query->whereIn('slug', $permissionList);
-            })
-            ->exists();
+        return array_intersect($permissionList, $this->access()['permissions']) !== [];
     }
 
     /**

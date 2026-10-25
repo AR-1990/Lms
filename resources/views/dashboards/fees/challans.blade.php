@@ -39,6 +39,7 @@
                 <select data-filter="status">
                     <option value="">All statuses</option>
                     <option value="unpaid">Unpaid</option>
+                    <option value="overdue" @selected(request('status') === 'overdue')>Overdue (past due date)</option>
                     <option value="paid">Paid</option>
                     <option value="cancelled">Cancelled</option>
                 </select>
@@ -148,6 +149,11 @@
             </div>
             @include('dashboards.partials.select', ['name' => 'class_id', 'label' => 'Class', 'options' => $data['classes'], 'empty' => 'All classes', 'id' => 'generateClass'])
             @include('dashboards.partials.field', ['name' => 'billing_month', 'label' => 'Month', 'type' => 'month', 'required' => true, 'id' => 'generateMonth', 'wide' => true])
+            <label class="dash-switch">
+                <input type="checkbox" name="print_after">
+                <span class="dash-switch-track" aria-hidden="true"><span class="dash-switch-thumb"></span></span>
+                <span>Open the challans to print when done</span>
+            </label>
         </div>
         <p class="dash-form-error" data-form-error hidden></p>
         <div class="dash-modal-actions">
@@ -164,6 +170,7 @@
             <h3 id="challanTitle" data-detail-title>Challan</h3>
             <p data-detail-subtitle></p>
         </div>
+        <button type="button" class="dash-btn dash-btn-ghost" data-print-challan>@include('partials.dashboard-icon', ['name' => 'book']) Print</button>
         <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
     </div>
     <div class="dash-detail-body" data-detail-body></div>

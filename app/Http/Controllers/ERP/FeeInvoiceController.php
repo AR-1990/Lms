@@ -7,6 +7,7 @@ use App\Http\Requests\Fees\CreateManualInvoiceRequest;
 use App\Http\Resources\FeeInvoiceResource;
 use App\Http\Resources\StudentResource;
 use App\Models\FeeInvoice;
+use App\Models\FeeInvoiceBatch;
 use App\Services\FeeInvoiceService;
 use App\Services\StudentRecordService;
 use App\Traits\ApiResponse;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
 
 class FeeInvoiceController extends Controller
 {
@@ -62,6 +64,28 @@ class FeeInvoiceController extends Controller
         abort_if($visible !== null && ! in_array($feeInvoice->student_id, $visible, true), 404);
 
         return $this->successResponse(new FeeInvoiceResource($this->invoiceService->find($feeInvoice)), 'Challan retrieved.');
+    }
+
+    /**
+     * One challan as a printable PDF (staff, or the student / parent it belongs to).
+     */
+    public function pdf(Request $request, FeeInvoice $feeInvoice): Response
+    {
+        $visible = $this->invoiceService->visibleStudentIds($request->user());
+        abort_if($visible !== null && ! in_array($feeInvoice->student_id, $visible, true), 404);
+
+        return $this->invoiceService->pdf(FeeInvoice::whereKey($feeInvoice->id)->get(), "challan-{$feeInvoice->invoice_no}.pdf", $request->user());
+    }
+
+    /**
+     * Every challan of a monthly batch, to print and hand out (500 at most per file).
+     */
+    public function batchPdf(Request $request, FeeInvoiceBatch $feeInvoiceBatch): Response
+    {
+        $invoices = FeeInvoice::where('fee_invoice_batch_id', $feeInvoiceBatch->id)->where('status', '!=', 'cancelled')->orderBy('invoice_no')->limit(500)->get();
+        abort_if($invoices->isEmpty(), 404, 'This batch has no challans to print.');
+
+        return $this->invoiceService->pdf($invoices, 'challans-'.$feeInvoiceBatch->billing_month->format('Y-m').'.pdf', $request->user());
     }
 
     public function store(CreateManualInvoiceRequest $request): JsonResponse
@@ -116,7 +140,7 @@ class FeeInvoiceController extends Controller
         $validated = $request->validate([
             'student_id' => ['nullable', 'integer'],
             'admission_application_id' => ['nullable', 'integer'],
-            'status' => ['nullable', Rule::in(['posted', 'partially_paid', 'paid', 'cancelled', 'unpaid'])],
+            'status' => ['nullable', Rule::in(['posted', 'partially_paid', 'paid', 'cancelled', 'unpaid', 'overdue'])],
             'invoice_type' => ['nullable', Rule::in(FeeInvoice::TYPES)],
             'billing_month' => ['nullable', 'date_format:Y-m'],
             'class_id' => ['nullable', 'integer'],

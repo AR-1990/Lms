@@ -53,6 +53,12 @@ class FeeInvoiceResource extends JsonResource
                 'received_on' => $allocation->payment?->received_on?->toDateString(),
                 'status' => $allocation->payment?->status,
                 'amount' => $allocation->amount,
+                'from_advance' => (bool) $allocation->from_advance,
+            ])->all()),
+            'fines' => $this->whenLoaded('fines', fn (): array => $this->fines->map(fn ($fine): array => [
+                'rule' => $fine->rule?->name,
+                'amount' => $fine->amount,
+                'applied_on' => $fine->applied_on?->toDateString(),
             ])->all()),
             'waivers' => $this->whenLoaded('waivers', fn (): array => $this->waivers->map(fn ($waiver): array => [
                 'amount' => $waiver->amount,

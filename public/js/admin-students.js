@@ -286,6 +286,199 @@
                     + '<td class="dash-col-num">' + money(invoice.total) + '</td><td class="dash-col-num">' + money(invoice.balance) + '</td><td>' + badge(invoice.status) + '</td></tr>';
             }).join('') : '<tr><td colspan="5" class="dash-muted">No challans yet.</td></tr>';
         });
+
+        const years = document.querySelector('[data-student-years]');
+        const YEAR_END = { active: ['Studying', 'dash-badge-ok'], promoted: ['Promoted', 'dash-badge-ok'], repeated: ['Kept in class', 'dash-badge-warn'], demoted: ['Moved down', 'dash-badge-warn'], graduated: ['Graduated', 'dash-badge-brand'], withdrawn: ['Left', 'dash-badge-system'], transferred: ['Transferred', 'dash-badge-system'] };
+
+        ui.api('GET', years.dataset.url).then(function (envelope) {
+            years.querySelector('[data-year-rows]').innerHTML = envelope.data.length ? envelope.data.map(function (year) {
+                const end = YEAR_END[year.status] || [headline(year.status), 'dash-badge-system'];
+                const results = year.results.map(function (card) {
+                    const tone = card.result === 'fail' ? 'dash-badge-danger' : 'dash-badge-ok';
+
+                    return '<span class="dash-muted">' + esc(card.exam) + '</span> <span class="dash-badge ' + tone + '">' + esc(card.percentage !== null ? Number(card.percentage) + '%' : headline(card.result)) + (card.grade ? ' · ' + esc(card.grade) : '') + '</span>';
+                }).join('<br>');
+
+                return '<tr><td>' + titleCell(year.session ? year.session.name : '—', year.session && year.session.is_current ? 'Current' : null) + '</td>'
+                    + '<td>' + titleCell(year.class || '—', [year.section, year.roll_no ? 'Roll ' + year.roll_no : null].filter(Boolean).join(' · ')) + '</td>'
+                    + '<td><span class="dash-badge ' + end[1] + '">' + esc(end[0]) + '</span></td>'
+                    + '<td>' + (results || '<span class="dash-muted">No published results</span>') + '</td>'
+                    + '<td class="dash-col-num">' + (year.attendance.percentage !== null ? esc(year.attendance.percentage) + '%<span class="dash-muted"> of ' + year.attendance.days + (year.attendance.days === 1 ? ' day' : ' days') + '</span>' : '—') + '</td>'
+                    + '<td class="dash-col-num">' + money(year.fees.billed) + '</td>'
+                    + '<td class="dash-col-num">' + money(year.fees.paid) + '</td>'
+                    + '<td class="dash-col-num">' + (year.fees.balance > 0 ? '<strong>' + money(year.fees.balance) + '</strong>' : money(0)) + '</td></tr>';
+            }).join('') : '<tr><td colspan="8" class="dash-muted">No sessions yet.</td></tr>';
+        }).catch(function () {
+            years.querySelector('[data-year-rows]').innerHTML = '<tr><td colspan="8" class="dash-muted">Could not load the history.</td></tr>';
+        });
+
+        /* ---------- Leaving & clearance ---------- */
+
+        const leaving = document.querySelector('[data-student-leaving]');
+        const refundDialog = document.getElementById('refundModal');
+        const reverseDialog = document.getElementById('refundReverseModal');
+        const certificateDialog = document.getElementById('certificateModal');
+        let clearance = null;
+
+        function check(done, title, detail) {
+            return '<li class="dash-leave-check' + (done ? ' is-done' : '') + '"><span class="dash-leave-mark" aria-hidden="true">' + (done ? '✓' : '!') + '</span>'
+                + '<div><strong>' + esc(title) + '</strong>' + (detail ? '<span class="dash-muted">' + detail + '</span>' : '') + '</div></li>';
+        }
+
+        function renderClearance(data) {
+            clearance = data;
+            const badge = leaving.querySelector('[data-clear-badge]');
+            const dues = data.dues.map(function (invoice) { return esc(invoice.invoice_no) + ' — ' + money(invoice.balance); }).join(' · ');
+            const items = data.items_held.map(function (item) { return esc(item.name) + (item.asset_tag ? ' (' + esc(item.asset_tag) + ')' : ''); }).join(' · ');
+            const held = data.deposit_available + data.advance_available;
+
+            badge.textContent = data.slc.no ? 'Certificate ' + data.slc.no : (!data.is_leaving ? 'Still studying' : (data.is_clear ? 'Cleared' : 'Not cleared'));
+            badge.className = 'dash-badge ' + (!data.is_leaving && !data.slc.no ? 'dash-badge-system' : (data.is_clear ? 'dash-badge-ok' : 'dash-badge-warn'));
+
+            leaving.querySelector('[data-clear-list]').innerHTML = [
+                check(data.fee_due === 0, data.fee_due === 0 ? 'No fees due' : money(data.fee_due) + ' of fees due', dues || null),
+                check(data.items_held.length === 0, data.items_held.length ? data.items_held.length + ' school item(s) not returned' : 'No school items held', items || 'Books, devices or kits handed out from Assets are taken back there.'),
+                check(held === 0, held ? money(held) + ' to pay back' : 'Nothing to pay back', [data.deposit_available ? 'Security deposit ' + money(data.deposit_available) : null, data.advance_available ? 'Unused advance ' + money(data.advance_available) : null].filter(Boolean).join(' · ') || null),
+                check(Boolean(data.slc.no), data.slc.no ? 'Leaving certificate ' + esc(data.slc.no) : 'Leaving certificate not issued', data.slc.no ? 'Issued ' + shortDate(data.slc.issued_on) : (data.is_leaving ? 'Issue it once the checks above are clear.' : 'First change the status to withdrawn, left or graduated (Details above).'))
+            ].join('');
+
+            const refundButton = leaving.querySelector('[data-open-refund]');
+
+            if (refundButton) {
+                refundButton.hidden = held === 0;
+                leaving.querySelector('[data-adjust-deposit]').hidden = !(data.deposit_available > 0 && data.fee_due > 0);
+            }
+
+            leaving.querySelector('[data-open-certificate]').hidden = !data.is_leaving;
+            leaving.querySelector('[data-open-certificate]').lastChild.textContent = data.slc.no ? ' Edit certificate' : ' Issue leaving certificate';
+            leaving.querySelector('[data-print-certificate]').hidden = !data.slc.no;
+
+            leaving.querySelector('[data-refunds-wrap]').hidden = data.refunds.length === 0;
+            leaving.querySelector('[data-refund-rows]').innerHTML = data.refunds.map(function (refund) {
+                const reversed = refund.status === 'reversed';
+
+                return '<tr><td>' + titleCell(refund.refund_no, dateFormat.format(new Date(refund.refunded_on)) + (refund.payment_method ? ' · ' + refund.payment_method : '')) + '</td>'
+                    + '<td>' + esc(refund.source === 'deposit' ? 'Security deposit' : 'Advance fee') + '<span class="dash-muted">' + esc(reversed ? 'Reversed: ' + refund.reversal_reason : refund.reason) + '</span></td>'
+                    + '<td class="dash-col-num">' + money(refund.amount) + '</td>'
+                    + '<td><span class="dash-badge ' + (reversed ? 'dash-badge-system' : 'dash-badge-ok') + '">' + (reversed ? 'Reversed' : 'Paid') + '</span></td>'
+                    + '<td class="dash-col-actions">' + (!reversed && reverseDialog ? '<button type="button" class="dash-link-btn" data-reverse-refund="' + refund.id + '" data-refund-no="' + esc(refund.refund_no) + '">Reverse</button>' : '') + '</td></tr>';
+            }).join('');
+        }
+
+        function loadClearance() {
+            return ui.api('GET', leaving.dataset.url).then(function (envelope) { renderClearance(envelope.data); }).catch(function () {
+                leaving.querySelector('[data-clear-list]').innerHTML = '<li><span class="dash-muted">Could not load the clearance.</span></li>';
+            });
+        }
+
+        loadClearance();
+        kit.wireDialog(certificateDialog);
+
+        leaving.querySelector('[data-open-certificate]').addEventListener('click', function () {
+            const form = certificateDialog.querySelector('form');
+            kit.clearErrors(form);
+            form.elements.issued_on.value = clearance.slc.issued_on || today();
+            form.elements.conduct_id.value = clearance.slc.conduct_id || '';
+            form.elements.remarks.value = clearance.slc.remarks || '';
+            certificateDialog.showModal();
+        });
+
+        certificateDialog.querySelector('form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const form = event.target;
+
+            kit.submitForm(form, 'POST', leaving.dataset.certificateUrl, kit.readForm(form, { issued_on: 'text', conduct_id: 'int', remarks: 'text' })).then(function (envelope) {
+                certificateDialog.close();
+                renderClearance(envelope.data);
+            }).catch(function () {});
+        });
+
+        leaving.querySelector('[data-print-certificate]').addEventListener('click', function () {
+            ui.openFile(leaving.dataset.certificatePdfUrl, 'Preparing the certificate…');
+        });
+
+        if (refundDialog) {
+            const adjustDialog = document.getElementById('depositAdjustModal');
+            kit.wireDialog(adjustDialog);
+
+            leaving.querySelector('[data-adjust-deposit]').addEventListener('click', function () {
+                const amount = Math.min(clearance.deposit_available, clearance.fee_due);
+                adjustDialog.querySelector('[data-adjust-text]').textContent = money(amount) + ' of the ' + money(clearance.deposit_available) + ' security deposit pays the oldest unpaid challans. A receipt is made and posted to the ledger; reversing that receipt gives the deposit back.';
+                adjustDialog.querySelector('[data-form-error]').hidden = true;
+                adjustDialog.showModal();
+            });
+
+            adjustDialog.querySelector('[data-adjust-yes]').addEventListener('click', function () {
+                const error = adjustDialog.querySelector('[data-form-error]');
+
+                ui.api('POST', leaving.dataset.adjustUrl).then(function (envelope) {
+                    adjustDialog.close();
+                    ui.toast(envelope.message);
+                    renderClearance(envelope.data);
+                }).catch(function (envelope) {
+                    error.textContent = kit.messageOf(envelope, 'Could not adjust the deposit.');
+                    error.hidden = false;
+                });
+            });
+
+            kit.wireDialog(refundDialog);
+            kit.wireDialog(reverseDialog);
+            const refundForm = refundDialog.querySelector('form');
+            const sourceLabels = { deposit: 'Security deposit', advance: 'Unused advance fee' };
+
+            leaving.querySelector('[data-open-refund]').addEventListener('click', function () {
+                refundForm.reset();
+                kit.clearErrors(refundForm);
+                Array.prototype.forEach.call(refundForm.elements.source.options, function (option) {
+                    const available = option.value === 'deposit' ? clearance.deposit_available : clearance.advance_available;
+                    option.textContent = sourceLabels[option.value] + ' — ' + money(available) + ' held';
+                    option.disabled = available === 0;
+                });
+                refundForm.elements.source.value = clearance.deposit_available ? 'deposit' : 'advance';
+                refundForm.elements.amount.value = (refundForm.elements.source.value === 'deposit' ? clearance.deposit_available : clearance.advance_available) / 100;
+                refundForm.elements.refunded_on.value = today();
+                refundDialog.showModal();
+            });
+
+            refundForm.elements.source.addEventListener('change', function () {
+                refundForm.elements.amount.value = (refundForm.elements.source.value === 'deposit' ? clearance.deposit_available : clearance.advance_available) / 100;
+            });
+
+            refundForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const body = kit.readForm(refundForm, { source: 'text', amount: 'money', payment_method_id: 'int', refunded_on: 'text', reference_no: 'text', reason: 'text' });
+                body.student_id = Number(profile.dataset.studentId);
+
+                kit.submitForm(refundForm, 'POST', leaving.dataset.refundsUrl, body).then(function () {
+                    refundDialog.close();
+                    loadClearance();
+                }).catch(function () {});
+            });
+
+            leaving.querySelector('[data-refund-rows]').addEventListener('click', function (event) {
+                const button = event.target.closest('[data-reverse-refund]');
+
+                if (!button) {
+                    return;
+                }
+
+                const form = reverseDialog.querySelector('form');
+                form.reset();
+                kit.clearErrors(form);
+                reverseDialog.dataset.refundId = button.dataset.reverseRefund;
+                reverseDialog.querySelector('[data-reverse-text]').textContent = 'Refund ' + button.dataset.refundNo + ': its voucher is reversed and the money counts as held again.';
+                reverseDialog.showModal();
+            });
+
+            reverseDialog.querySelector('form').addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                kit.submitForm(event.target, 'POST', leaving.dataset.refundsUrl + '/' + reverseDialog.dataset.refundId + '/reverse', { reason: event.target.elements.reason.value.trim() }).then(function () {
+                    reverseDialog.close();
+                    loadClearance();
+                }).catch(function () {});
+            });
+        }
     }
 
     /* ---------- Applications ---------- */
