@@ -11367,3 +11367,83 @@ tr.is-today td {
         transition: none;
     }
 }
+
+.dash-live-settings form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.25rem;
+}
+
+.dash-live-settings form > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.dash-live-settings p {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+    .dash-live-settings form {
+        flex-wrap: wrap;
+    }
+}
+
+.dash-ot-question-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.dash-ot-question-tools[hidden] {
+    display: none;
+}
+
+.dash-ot-question-tools select {
+    max-width: 16rem;
+}
+
+.dash-ot-upload {
+    cursor: pointer;
+}
+
+/* Academics → Substitutions */
+.dash-subs {
+    display: grid;
+    gap: 1rem;
+}
+
+.dash-subs-pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.dash-subs-pick select {
+    min-width: 0;
+    max-width: 18rem;
+}
+
+.dash-subs-date input {
+    padding: 0.5rem 0.7rem;
+}
+
+/* Admissions → Enquiries: follow-up log */
+[data-follow-form][hidden] {
+    display: none;
+}
+
+.dash-follow-list {
+    padding: 0 1.5rem 1rem;
+}
+
+/* Library */
+.dash-library-rules,
+.dash-library-issue {
+    align-items: end;
+    padding-bottom: 1rem;
+}

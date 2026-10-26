@@ -161,24 +161,64 @@ class FeeAutomationService
     /* ---------- Automatic monthly challans ---------- */
 
     /**
-     * @return array{fee_auto_generate_day: int|null}
+     * @return array{fee_auto_generate_day: int|null, fee_reminder_days: int|null}
      */
     public function settings(): array
     {
-        return ['fee_auto_generate_day' => SystemSetting::query()->value('fee_auto_generate_day')];
+        $settings = SystemSetting::query()->first(['fee_auto_generate_day', 'fee_reminder_days']);
+
+        return ['fee_auto_generate_day' => $settings?->fee_auto_generate_day, 'fee_reminder_days' => $settings?->fee_reminder_days];
     }
 
     /**
-     * @param  array{fee_auto_generate_day: int|null}  $data
-     * @return array{fee_auto_generate_day: int|null}
+     * @param  array{fee_auto_generate_day: int|null, fee_reminder_days?: int|null}  $data
+     * @return array{fee_auto_generate_day: int|null, fee_reminder_days: int|null}
      */
     public function saveSettings(array $data, User $user): array
     {
         SystemSetting::query()->firstOrFail()->update($data);
         $day = $data['fee_auto_generate_day'];
-        $this->activityLogger->record('fee_invoices', 'automation', $day ? "{$user->name} set monthly challans to be generated on day {$day}" : "{$user->name} switched off automatic monthly challans");
+        $reminder = $data['fee_reminder_days'] ?? null;
+        $this->activityLogger->record('fee_invoices', 'automation', ($day ? "{$user->name} set monthly challans to be generated on day {$day}" : "{$user->name} switched off automatic monthly challans")
+            .($reminder ? "; families are reminded {$reminder} day(s) before the due date" : '; no reminder before the due date'));
 
         return $this->settings();
+    }
+
+    /**
+     * Daily: families of challans falling due within the reminder days get the "fee due soon" message,
+     * once per challan. Returns how many challans were reminded.
+     */
+    public function dueSoonReminders(): int
+    {
+        $days = (int) SystemSetting::query()->value('fee_reminder_days');
+
+        if ($days < 1) {
+            return 0;
+        }
+
+        $sent = 0;
+
+        FeeInvoice::query()
+            ->whereIn('status', FeeInvoice::OPEN_STATUSES)
+            ->where('balance', '>', 0)
+            ->whereNotNull('student_id')
+            ->whereNull('reminder_sent_at')
+            ->whereDate('due_date', '>=', today())
+            ->whereDate('due_date', '<=', today()->addDays($days))
+            ->with('student:id,first_name,middle_name,last_name')
+            ->chunkById(200, function ($invoices) use (&$sent): void {
+                foreach ($invoices as $invoice) {
+                    $this->notificationService->notifyEvent('fee_due_soon', $this->notificationService->familyUserIds([$invoice->student_id])->all(), [
+                        'student_name' => $invoice->student?->fullName(), 'invoice_no' => $invoice->invoice_no,
+                        'amount' => 'Rs '.number_format($invoice->balance / 100), 'due_date' => $invoice->due_date?->format('d M Y'),
+                    ], $invoice, route('family.child', $invoice->student_id));
+                    $invoice->forceFill(['reminder_sent_at' => now()])->saveQuietly();
+                    $sent++;
+                }
+            });
+
+        return $sent;
     }
 
     /**

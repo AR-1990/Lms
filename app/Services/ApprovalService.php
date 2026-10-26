@@ -44,6 +44,7 @@ use App\Models\JobOpening;
 use App\Models\JournalEntry;
 use App\Models\LateFeeRule;
 use App\Models\LeaveType;
+use App\Models\LibraryBook;
 use App\Models\Location;
 use App\Models\Lookup;
 use App\Models\MessageTemplate;
@@ -64,6 +65,7 @@ use App\Models\StudentConcession;
 use App\Models\StudentGoal;
 use App\Models\StudentMedicalRecord;
 use App\Models\Subject;
+use App\Models\Substitution;
 use App\Models\Task;
 use App\Models\TaskBoard;
 use App\Models\TaxSlab;
@@ -113,6 +115,8 @@ class ApprovalService
         WorkShift::class => [WorkShiftService::class, 'delete'],
         DisciplineRecord::class => [StudentCareService::class, 'delete'],
         OnlineTest::class => [OnlineTestService::class, 'delete'],
+        Substitution::class => [SubstitutionService::class, 'remove'],
+        LibraryBook::class => [LibraryService::class, 'deleteBook'],
         StudentMedicalRecord::class => [StudentCareService::class, 'delete'],
         StudentAchievement::class => [StudentCareService::class, 'delete'],
         PayrollAdjustment::class => [PayrollService::class, 'deleteAdjustment'],

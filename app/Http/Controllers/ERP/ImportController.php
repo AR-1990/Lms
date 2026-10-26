@@ -25,7 +25,7 @@ class ImportController extends Controller
     public function index(Request $request): JsonResponse
     {
         $types = collect(ImportService::TYPES)
-            ->filter(fn (array $type): bool => $request->user()->hasPermission($type['permission']))
+            ->filter(fn (array $type): bool => empty($type['builder']) && $request->user()->hasPermission($type['permission']))
             ->map(fn (array $type, string $key): array => ['type' => $key, 'label' => $type['label'], 'columns' => $type['columns'], 'template_url' => route('erp.imports.template', $key)])
             ->values();
 
@@ -46,6 +46,10 @@ class ImportController extends Controller
             $message = count($result['errors']).' problem(s) found. Nothing was imported; fix the rows and check again.';
 
             return ApiResponseHelper::error($message, 422, ['file' => [$message]], $result);
+        }
+
+        if (isset($result['questions'])) {
+            return $this->successResponse($result, count($result['questions']).' question(s) added. Check them, then save the test.');
         }
 
         return $this->successResponse($result, $result['imported'] > 0 ? $result['imported'].' row(s) imported.' : $result['rows'].' row(s) are ready to import.');

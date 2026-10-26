@@ -755,7 +755,7 @@
                 convertDialog.showModal();
             },
             columns: [
-                { data: 'parent_name', render: display(function (value, row) { return titleCell(value, row.phone + ' · ' + row.inquiry_no); }) },
+                { data: 'parent_name', render: display(function (value, row) { return titleCell(value, row.phone + ' · ' + row.inquiry_no) + '<button type="button" class="dash-link-btn" data-follow="' + row.id + '">Follow-ups (' + (row.follow_ups_count || 0) + ')</button>'; }) },
                 { data: 'child_name', defaultContent: '', render: display(function (value, row) { return titleCell(value || '—', row.class_name); }) },
                 { data: 'follow_up_on', searchable: false, className: 'dash-hide-md', render: display(shortDate) },
                 { data: 'status', searchable: false, render: display(badge) }
@@ -770,6 +770,54 @@
 
         mountFilters(inquiriesRoot, mounted.grid);
         kit.wireDialog(convertDialog);
+
+        // Follow-up log: every call / visit with its outcome, and the next follow-up date.
+        const followDialog = document.getElementById('followUpModal');
+        const followForm = followDialog.querySelector('[data-follow-form]');
+        const followList = followDialog.querySelector('[data-follow-list]');
+        let followRow = null;
+
+        const loadFollowUps = function () {
+            ui.api('GET', inquiriesRoot.dataset.resourceUrl + '/' + followRow.id + '/follow-ups').then(function (envelope) {
+                followList.innerHTML = envelope.data.length ? envelope.data.map(function (item) {
+                    return '<li><div><strong>' + esc(item.outcome) + '</strong><span class="dash-muted">' + esc([shortDate(item.followed_up_on), item.channel ? item.channel.name : null, item.creator ? item.creator.name : null].filter(Boolean).join(' · ')) + '</span></div>'
+                        + (item.next_follow_up_on ? '<span class="dash-badge dash-badge-brand">Next ' + esc(shortDate(item.next_follow_up_on)) + '</span>' : '') + '</li>';
+                }).join('') : '<li><span class="dash-muted">No follow-ups yet.</span></li>';
+            }).catch(function () {});
+        };
+
+        kit.wireDialog(followDialog);
+
+        inquiriesRoot.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-follow]');
+
+            if (!button) {
+                return;
+            }
+
+            followRow = mounted.grid.row(button.closest('tr')).data();
+            followDialog.querySelector('[data-follow-title]').textContent = 'Follow-ups: ' + followRow.parent_name;
+            followDialog.querySelector('[data-follow-sub]').textContent = [followRow.child_name, followRow.class_name, followRow.phone].filter(Boolean).join(' · ');
+            followForm.reset();
+            kit.clearErrors(followForm);
+            followForm.hidden = ['converted', 'closed'].indexOf(followRow.status) !== -1;
+            followForm.elements.followed_up_on.value = today();
+            followList.innerHTML = '<li class="dash-muted">Loading…</li>';
+            followDialog.showModal();
+            loadFollowUps();
+        });
+
+        followForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            kit.submitForm(followForm, 'POST', inquiriesRoot.dataset.resourceUrl + '/' + followRow.id + '/follow-ups', kit.readForm(followForm, { followed_up_on: 'text', channel_id: 'int', outcome: 'text', next_follow_up_on: 'text' }))
+                .then(function () {
+                    followForm.elements.outcome.value = '';
+                    followForm.elements.next_follow_up_on.value = '';
+                    loadFollowUps();
+                    mounted.refresh();
+                })
+                .catch(function () {});
+        });
 
         convertForm.addEventListener('submit', function (event) {
             event.preventDefault();

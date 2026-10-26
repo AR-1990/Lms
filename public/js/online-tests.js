@@ -104,7 +104,7 @@
     function setLocked(isLocked) {
         locked = isLocked;
         form.querySelector('[data-ot-locked]').hidden = !isLocked;
-        form.querySelector('[data-ot-add-question]').hidden = isLocked;
+        form.querySelector('[data-ot-tools]').hidden = isLocked;
         list.querySelectorAll('input, textarea, button').forEach(function (control) { control.disabled = isLocked; });
         sectionSelect.disabled = subjectSelect.disabled = isLocked;
     }
@@ -120,6 +120,63 @@
             };
         });
     }
+
+    /* ---------- Question bank: copy from an earlier test, or a CSV of questions ---------- */
+
+    const copySelect = form.querySelector('[data-ot-copy]');
+    const csvInput = form.querySelector('[data-ot-csv]');
+    form.querySelector('[data-ot-template]').href = root.dataset.templateUrl;
+
+    function appendQuestions(questions) {
+        // A builder that only has the empty starter question takes the new ones in its place.
+        const items = list.querySelectorAll('.dash-ot-question');
+
+        if (items.length === 1 && !items[0].querySelector('[data-ot-question]').value.trim()) {
+            items[0].remove();
+        }
+
+        questions.forEach(addQuestion);
+        renumber();
+    }
+
+    function loadCopyList() {
+        ui.api('GET', root.dataset.datatableUrl + '?per_page=100').then(function (envelope) {
+            copySelect.innerHTML = '<option value="">Copy from a test…</option>' + envelope.data.items.filter(function (test) { return test.questions_count > 0; }).map(function (test) {
+                return '<option value="' + test.id + '">' + esc(test.title) + ' — ' + esc((test.class_name || '') + ' ' + (test.section_name || '')) + ' · ' + esc(test.subject_name || '') + ' (' + test.questions_count + ')</option>';
+            }).join('');
+        }).catch(function () {});
+    }
+
+    copySelect.addEventListener('change', function () {
+        if (!copySelect.value) {
+            return;
+        }
+
+        ui.api('GET', root.dataset.resourceUrl + '/' + copySelect.value).then(function (envelope) {
+            appendQuestions(envelope.data.questions.map(function (question) {
+                return { question: question.question, marks: question.marks, options: question.options.map(function (option) { return { option_text: option.option_text, is_correct: option.is_correct }; }) };
+            }));
+            ui.toast(envelope.data.questions.length + ' question(s) copied. Edit them if needed, then save.');
+        }).catch(function (envelope) { ui.toast((envelope && envelope.message) || 'Could not copy the questions.', 'error'); })
+            .finally(function () { copySelect.value = ''; });
+    });
+
+    csvInput.addEventListener('change', function () {
+        if (!csvInput.files[0]) {
+            return;
+        }
+
+        const body = new window.FormData();
+        body.append('file', csvInput.files[0]);
+        body.append('save', '0');
+        ui.api('POST', root.dataset.importUrl, body).then(function (envelope) {
+            appendQuestions(envelope.data.questions);
+            ui.toast(envelope.message);
+        }).catch(function (envelope) {
+            const rows = envelope && envelope.data && envelope.data.errors ? envelope.data.errors.slice(0, 5).map(function (error) { return 'Row ' + error.row + ': ' + error.messages.join(' '); }).join(' · ') : '';
+            ui.toast(rows || (envelope && envelope.message) || 'Could not read the file.', 'error');
+        }).finally(function () { csvInput.value = ''; });
+    });
 
     sectionSelect.addEventListener('change', filterChoices);
     subjectSelect.addEventListener('change', filterChoices);
@@ -187,6 +244,7 @@
             list.innerHTML = '';
             (row ? row.questions : [null]).forEach(addQuestion);
             setLocked(Boolean(row && row.submitted_count > 0));
+            loadCopyList();
         },
         payload: function (target) {
             const body = kit.readForm(target, spec);

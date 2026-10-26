@@ -54,6 +54,28 @@
     </div>
 </section>
 
+<dialog class="dash-modal dash-form-modal" id="followUpModal" aria-labelledby="followUpTitle">
+    <div class="dash-modal-head">
+        <span class="dash-modal-icon dash-modal-icon-brand">@include('partials.dashboard-icon', ['name' => 'chat'])</span>
+        <div>
+            <h3 id="followUpTitle" data-follow-title>Follow-ups</h3>
+            <p data-follow-sub></p>
+        </div>
+        <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
+    </div>
+    <div class="dash-form-scroll">
+        <form class="dash-form-grid" data-follow-form novalidate>
+            @include('dashboards.partials.field', ['name' => 'followed_up_on', 'label' => 'Date', 'type' => 'date', 'required' => true, 'id' => 'fuDate'])
+            @include('dashboards.partials.select', ['name' => 'channel_id', 'label' => 'How', 'options' => $data['lookups']['follow_up_channel'], 'id' => 'fuChannel'])
+            @include('dashboards.partials.field', ['name' => 'outcome', 'label' => 'What was said', 'type' => 'textarea', 'required' => true, 'wide' => true, 'id' => 'fuOutcome'])
+            @include('dashboards.partials.field', ['name' => 'next_follow_up_on', 'label' => 'Follow up again on', 'type' => 'date', 'id' => 'fuNext', 'hint' => 'Leave empty if no more follow-up is needed.'])
+            <p class="dash-form-error dash-field-wide" data-form-error hidden></p>
+            <div><button type="submit" class="dash-btn dash-btn-primary" data-submit>@include('partials.dashboard-icon', ['name' => 'check']) Save follow-up</button></div>
+        </form>
+        <ul class="dash-list dash-follow-list" data-follow-list></ul>
+    </div>
+</dialog>
+
 <dialog class="dash-modal dash-form-modal dash-modal-wide" id="inquiryModal" aria-labelledby="inquiryModalTitle">
     <form data-resource-form novalidate>
         <div class="dash-modal-head">

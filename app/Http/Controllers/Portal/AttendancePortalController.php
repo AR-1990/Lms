@@ -80,6 +80,11 @@ class AttendancePortalController extends PortalController
         ]);
     }
 
+    public function substitutions(): View
+    {
+        return $this->page('dashboards.admin.academics.substitutions', 'admin', 'academics');
+    }
+
     public function calendar(LookupService $lookupService): View
     {
         return $this->page('dashboards.admin.academics.calendar', 'admin', 'academics', [

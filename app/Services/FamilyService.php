@@ -77,6 +77,7 @@ class FamilyService
                     'to_date' => $leave->to_date?->toDateString(),
                 ])->all(),
             'records' => collect(app(StudentCareService::class)->records($student, true))->only(['discipline', 'achievements'])->all(),
+            'library' => app(LibraryService::class)->forBorrower('student', $student->id),
             'transport' => StudentTransport::where('student_id', $student->id)->where('status', 'active')
                 ->with(['route:id,name', 'stop:id,name'])->get(['id', 'transport_route_id', 'transport_stop_id', 'from_date'])
                 ->map(fn (StudentTransport $ride): array => ['route' => $ride->route?->name, 'stop' => $ride->stop?->name, 'from_date' => $ride->from_date?->toDateString()])

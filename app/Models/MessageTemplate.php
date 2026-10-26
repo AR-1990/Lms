@@ -35,6 +35,9 @@ class MessageTemplate extends Model
         'diary_published' => ['Diary / homework published', ['class_section', 'date', 'entries', 'school_name']],
         'leave_decided' => ['Leave request decided', ['student_name', 'decision', 'from', 'to', 'school_name']],
         'admit_card_ready' => ['Admit card ready', ['student_name', 'exam_name', 'exam_roll_no', 'school_name']],
+        'student_arrived' => ['Student arrived at school (gate scan)', ['student_name', 'time', 'date', 'school_name']],
+        'fee_due_soon' => ['Fee due soon (reminder)', ['student_name', 'invoice_no', 'amount', 'due_date', 'school_name']],
+        'library_overdue' => ['Library book overdue', ['borrower_name', 'book_title', 'due_date', 'school_name']],
     ];
 
     protected string $activityModule = 'announcements';

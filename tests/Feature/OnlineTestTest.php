@@ -17,6 +17,7 @@ use App\Models\UserNotification;
 use App\Services\OnlineTestService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class OnlineTestTest extends TestCase
@@ -176,5 +177,26 @@ class OnlineTestTest extends TestCase
         $childId = Student::where('user_id', $this->studentUser->id)->value('id');
         $this->actingAs($parent, 'sanctum')->getJson("/api/erp/my-online-tests?student_id={$childId}")->assertOk()->assertJsonPath('data.0.score', 3);
         $this->actingAs($this->teacher, 'sanctum')->getJson("/api/erp/my-online-tests?student_id={$childId}")->assertNotFound();
+    }
+
+    public function test_teachers_bring_questions_from_a_csv_into_the_builder(): void
+    {
+        $csv = "question*,marks,correct*,option_a*,option_b*,option_c\n\"2 + 3 = ?\",2,B,4,5,6\nCapital of Pakistan?,,a,Islamabad,Lahore,\n";
+        $this->actingAs($this->teacher, 'sanctum')
+            ->post('/api/erp/imports/online_test_questions', ['file' => UploadedFile::fake()->createWithContent('questions.csv', $csv), 'save' => '0'], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.questions.0.marks', 2)
+            ->assertJsonPath('data.questions.0.options.1', ['option_text' => '5', 'is_correct' => true])
+            ->assertJsonPath('data.questions.1.marks', 1)
+            ->assertJsonCount(2, 'data.questions.1.options');
+
+        $this->actingAs($this->teacher, 'sanctum')
+            ->post('/api/erp/imports/online_test_questions', ['file' => UploadedFile::fake()->createWithContent('bad.csv', "question*,marks,correct*,option_a*,option_b*\nPick,1,C,x,y\n"), 'save' => '1'], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonPath('data.errors.0.row', 2);
+        $this->assertDatabaseCount('online_test_questions', 0);
+
+        $this->actingAs($this->studentUser, 'sanctum')->post('/api/erp/imports/online_test_questions', ['file' => UploadedFile::fake()->createWithContent('q.csv', $csv)], ['Accept' => 'application/json'])->assertForbidden();
+        $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/imports')->assertOk()->assertJsonMissing(['type' => 'online_test_questions']);
     }
 }

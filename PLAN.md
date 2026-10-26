@@ -300,6 +300,9 @@ Passwords, tokens, and other secrets are never written to `old_value` / `new_val
 | room | string(50) | |
 | effective_from / effective_to | date | timetable changes mid-year |
 
+### `substitutions` (cover for absent teachers)
+`date` R, `timetable_slot_id` R, `absent_teacher_id` → employees R, `substitute_teacher_id` → employees R, `remarks`. **[AU]** Academics → Substitutions (`manage-timetable`, `GET/POST /api/erp/substitutions`, `DELETE substitutions/{id}`) lists, for a date, each teaching staff member on approved leave or marked absent / on leave with their periods that day, and the teachers free in each period (no class and no other cover then; the leave's named substitute first, then the fewest periods that day). Assigning tells the cover teacher, and the period shows as "Cover" in their today's schedule (dashboard and app).
+
 ### `calendar_events` (holidays, exams, PTMs, events)
 | Field | Type | Notes |
 |---|---|---|
@@ -314,6 +317,9 @@ Passwords, tokens, and other secrets are never written to `old_value` / `new_val
 ---
 
 ## 5. Module 2 — Admissions
+
+### `admission_inquiry_follow_ups`
+`admission_inquiry_id` R, `followed_up_on` date R, `channel_id` → lookups (`follow_up_channel`: Phone call, WhatsApp, School visit, SMS, Email), `outcome` text R, `next_follow_up_on` date. **[AU]** Saving one moves the enquiry's `follow_up_on` to the next date and makes a new enquiry "contacted". Every morning (08:45) admissions staff (and the assigned person) get one notification listing enquiries due or overdue for follow-up. Report **Enquiries by Source**: enquiries, applications, admitted, closed and admitted % per source. APIs: `GET/POST /api/erp/admission-inquiries/{id}/follow-ups`.
 
 ### `admission_inquiries`
 | Field | Type | Notes |
@@ -540,7 +546,7 @@ Guardian data captured before a student exists (copied into `guardians` on enrol
 | date | date R | |
 | status | string(20) R | `present`, `absent`, `late`, `leave`, `half_day` |
 | check_in_at | time | |
-| source | string(20) default `manual` | `manual` (register), `qr` (staff scanner), `kiosk` (gate); a register change makes it `manual` |
+| source | string(20) default `manual` | `manual` (register), `qr` (staff scanner), `kiosk` (gate), `auto` (automatic absent); a register change makes it `manual` |
 | remarks | string | |
 | marked_by | → users | |
 | | | unique (enrollment, date) |
@@ -1233,6 +1239,21 @@ For consumables and sellable stock: stationery, chalk/markers, cleaning supplies
 
 ---
 
+## 16a. Library
+
+### `library_books` (catalogue)
+`campus_id`, `title` R, `author`, `isbn`, `publisher`, `edition`, `category_id` → lookups (`book_category`), `shelf`, `description`, `is_active`. **[SD] [AU]**
+
+### `library_copies`
+`library_book_id` R, `accession_no` R unique (sequence `library_accession`, ACC-000001), `status` (`available`/`issued`/`lost`/`damaged`/`withdrawn`), `remarks`. **[SD] [AU]**
+
+### `library_issues` (loans)
+`library_copy_id` R, `borrower_type` (`student`/`employee`) R, `borrower_id` R, `issued_on` R, `due_on` R, `returned_on`, `fine_amount` bigInteger (paisa), `fee_invoice_id` (the fine challan), `status` (`issued`/`returned`/`lost`), `remarks`. **[SD] [AU]**
+
+Rules on `system_settings`: `library_loan_days` (14), `library_max_books` (2 at a time), `library_fine_per_day` (paisa; 0 = no fine). Lending needs a free copy and no overdue book; a late return is fined per day and a student's fine becomes a challan line with fee head **LIB** "Library Fine" (income 4900). Borrowers (a student's family, or the staff member) are reminded the day after the due date and weekly after that (`library_overdue` message, 08:30). Books still out stop a student's leaving clearance and a staff member's final settlement. Families see the child's books on the Year by year tab. Permission `manage-library` (give it to a librarian role). APIs under `/api/erp/library`: `books/datatable`, `books` (POST with `copies`), `books/{id}` (GET with copies, PUT, DELETE), `copies/{id}` (status), `settings`, `borrowers`, `issues/datatable` (`status` issued / overdue / returned / lost), `issues`, `issues/{id}/return` (`lost`).
+
+---
+
 ## 17. Module 14 — Communication
 
 ### 17.1 Announcements (students, parents, employees, public)
@@ -1725,6 +1746,11 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 - **Approvals inbox** — One page (`/approvals-inbox`, `GET /api/erp/approvals/inbox`) lists everything waiting for the signed-in user's decision — delete requests, expenses, purchase orders, loans, concessions, staff and student leave — each with Approve / Reject calling that module's own endpoint.
 - **ID cards** — New look "Modern angled header" (`theme` `modern`, the default student and staff templates on a fresh install) and a card item `school_logo` (the school logo from Settings) for every card type; the QR on the card is the gate-attendance code.
 - **Jump to** — The top bar search (Ctrl K or "/") lists every page the user may open, grouped by module (`GET /api/erp/jump-to`), read from the named web routes and their permissions, so new screens appear by themselves.
+- **Automatic absent & arrival alerts** — `system_settings.auto_absent_at` (Attendance → Live Today, `GET/PUT /api/erp/attendance/settings`, `manage-students`; empty = off): for gate-scanning schools, after that time every student of the current session with no mark is made absent (`source` `auto`; approved leave becomes "leave") and families get the absent alert; Sundays and holidays are skipped. A student who scans in later becomes "late". Every gate / QR check-in sends the family the `student_arrived` message ("arrived at school 7:52 AM").
+- **Fee reminders before the due date** — `system_settings.fee_reminder_days` (Fees → Late Fees & Automation): each morning (09:15) families of challans due within that many days get the `fee_due_soon` message, once per challan (`fee_invoices.reminder_sent_at`).
+- **SMS / WhatsApp** — sent through the school's provider HTTP API once `SMS_GATEWAY_URL` / `WHATSAPP_GATEWAY_URL` are set (`{to}` `{message}` `{sender}` placeholders, GET or POST form fields, optional Bearer token); numbers become 92XXXXXXXXXX. Queued and logged like email.
+- **Online test questions from CSV** — the test builder can copy questions from an earlier test or read a CSV (`question, marks, correct (A–F), option_a … option_f`; template `imports/online_test_questions/template`), checked by the data importer and added to the builder before saving.
+- **Morning summary** — Monday to Saturday at 10:30 everyone with `view-stats` (and administrators) gets one notification: students present so far, staff in, yesterday's collection, overdue fees, new enquiries and what waits for approval.
 - **Overdue fee alerts** — Every morning at 09:00 (`fees:overdue-alerts`) everyone who manages fees (administrators and the accounts role) gets one in-app notification: how many students have challans unpaid after the due date and the amount, naming up to five who became overdue yesterday (marked urgent when there are new ones). It opens Fees → Challans with the new **Overdue (past due date)** filter (`status=overdue`).
 - **Fee flow notes** — Late fines are applied nightly at 00:30 (`fees:late-fines`): for each active rule, every unpaid challan of its type whose due date + grace days has passed gets what the rule asks for and has not yet added (fixed or percent once, per-day growing to `max_amount`); paid or cancelled challans are never fined. Monthly challans can generate themselves on `system_settings.fee_auto_generate_day` (1–28, or 31 = last day of the month; null = off) at 06:00 (`fees:auto-challans`), once per month for all classes of the current session; fee staff are notified of both. A new challan for a student with unused advance is paid from it at once; cancelling a challan paid only from advance returns the advance, and reversing a receipt also takes back any advance it had already applied. Challan PDF: three copies (bank / school / student) per A4 landscape page with the default fees bank account, fines and the late-fine notice — `GET /api/erp/fees/invoices/{id}/pdf` (staff, or the child's own parent / student) and `/api/erp/fees/batches/{id}/pdf` (a monthly batch, up to 500). Screens: Fees → Late Fees & Automation; Print on the challan popup; "open the challans to print" when generating; Download challan on the parent Fees page. A starter rule (Rs 500 after 5 days, monthly) is seeded switched off.
 - **Phase 17e notes** — Reports are computed from the module tables; no new tables. The catalogue and each report follow the module permission (finance `view-ledger`; fees `view-fees` / `manage-fees`; students `manage-students`, admissions also `manage-admissions`, attendance also `record-attendance`; HR `manage-hr`, staff attendance `manage-staff-attendance`, leave `manage-leave`, payroll `manage-payroll` / `view-payroll`; `manage-expenses`, `manage-inventory`, `manage-assets`, `manage-transport`). API `GET /api/erp/reports` and `/api/erp/reports/{key}` (long lists paginated, 50 a page); CSV and PDF in routes/export.php (`/api/erp/reports/{key}/csv|pdf`), CSV streamed in chunks, PDF capped at 1,000 rows; every export and print is activity-logged. The Balance Sheet adds the surplus to date under equity, so it balances without a year-end closing entry.

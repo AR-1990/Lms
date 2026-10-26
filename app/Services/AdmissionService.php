@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AdmissionApplication;
 use App\Models\AdmissionApplicationGuardian;
 use App\Models\AdmissionInquiry;
+use App\Models\AdmissionInquiryFollowUp;
 use App\Models\AdmissionInterview;
 use App\Models\AdmissionStatusHistory;
 use App\Models\AdmissionTest;
@@ -13,7 +14,9 @@ use App\Models\Enrollment;
 use App\Models\FeeInvoice;
 use App\Models\FeePayment;
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Yajra\DataTables\Facades\DataTables;
@@ -35,6 +38,7 @@ class AdmissionService
         private NumberSequenceService $numberSequenceService,
         private FeeInvoiceService $invoiceService,
         private StudentRecordService $studentService,
+        private NotificationService $notificationService,
     ) {}
 
     /* ---------- Inquiries ---------- */
@@ -50,12 +54,68 @@ class AdmissionService
     }
 
     /**
+     * Contacts with the family, newest first.
+     *
+     * @return Collection<int, AdmissionInquiryFollowUp>
+     */
+    public function followUps(AdmissionInquiry $inquiry): Collection
+    {
+        return AdmissionInquiryFollowUp::where('admission_inquiry_id', $inquiry->id)->with(['channel:id,name', 'creator:id,name'])->latest('followed_up_on')->latest('id')->get();
+    }
+
+    /**
+     * Log a call / visit / message; the enquiry's next follow-up date moves to the one given (empty = none),
+     * and a new enquiry becomes "contacted".
+     *
+     * @param  array{followed_up_on: string, channel_id?: int|null, outcome: string, next_follow_up_on?: string|null}  $data
+     */
+    public function addFollowUp(AdmissionInquiry $inquiry, array $data): AdmissionInquiryFollowUp
+    {
+        if (in_array($inquiry->status, ['converted', 'closed'], true)) {
+            throw ValidationException::withMessages(['outcome' => ['This enquiry is '.$inquiry->status.'.']]);
+        }
+
+        return DB::transaction(function () use ($inquiry, $data): AdmissionInquiryFollowUp {
+            $followUp = AdmissionInquiryFollowUp::create([...$data, 'admission_inquiry_id' => $inquiry->id]);
+            $inquiry->update(['follow_up_on' => $data['next_follow_up_on'] ?? null, 'status' => $inquiry->status === 'new' ? 'contacted' : $inquiry->status]);
+
+            return $followUp->load(['channel:id,name', 'creator:id,name']);
+        });
+    }
+
+    /**
+     * Daily: everyone who handles admissions (or the enquiry's assigned person) hears which open enquiries
+     * are due or overdue for a follow-up today. Returns how many enquiries are due.
+     */
+    public function followUpReminders(): int
+    {
+        $due = AdmissionInquiry::whereNotIn('status', ['converted', 'closed'])->whereNotNull('follow_up_on')->whereDate('follow_up_on', '<=', today())->get(['id', 'parent_name', 'child_name', 'follow_up_on', 'assigned_to']);
+
+        if ($due->isEmpty()) {
+            return 0;
+        }
+
+        $staff = User::where('is_active', true)->whereHas('roles.permissions', fn (Builder $query) => $query->where('slug', 'manage-admissions'))->pluck('id');
+        $overdue = $due->filter(fn (AdmissionInquiry $inquiry): bool => $inquiry->follow_up_on->isPast() && ! $inquiry->follow_up_on->isToday())->count();
+        $names = $due->take(5)->map(fn (AdmissionInquiry $inquiry): string => $inquiry->parent_name.($inquiry->child_name ? ' ('.$inquiry->child_name.')' : ''))->implode(', ');
+
+        $this->notificationService->notify(
+            $staff->merge($due->pluck('assigned_to')->filter())->unique()->values()->all(), 'inquiry_follow_ups_due',
+            $due->count().' admission enquir'.($due->count() === 1 ? 'y' : 'ies').' to follow up today',
+            $names.($due->count() > 5 ? ' and '.($due->count() - 5).' more' : '').($overdue ? " · {$overdue} overdue" : ''),
+            route('admin.admissions.inquiries'), null, $overdue > 0,
+        );
+
+        return $due->count();
+    }
+
+    /**
      * @param  array{status?: string|null}  $filters
      * @return array<string, mixed>
      */
     public function inquiriesDatatable(array $filters): array
     {
-        return DataTables::eloquent($this->inquiriesQuery($filters))
+        return DataTables::eloquent($this->inquiriesQuery($filters)->withCount('followUps'))
             ->escapeColumns([])
             ->addColumn('class_name', fn (AdmissionInquiry $inquiry): ?string => $inquiry->classSought?->name)
             ->addColumn('source_name', fn (AdmissionInquiry $inquiry): ?string => $inquiry->source?->name)

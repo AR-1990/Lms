@@ -92,5 +92,21 @@
         }
     });
 
+    // Automatic absent time (staff who manage students only).
+    const settings = root.querySelector('[data-live-settings]');
+
+    if (settings) {
+        ui.api('GET', settings.dataset.url).then(function (envelope) {
+            settings.elements.auto_absent_at.value = envelope.data.auto_absent_at || '';
+        }).catch(function () {});
+
+        settings.addEventListener('submit', function (event) {
+            event.preventDefault();
+            ui.api('PUT', settings.dataset.url, { auto_absent_at: settings.elements.auto_absent_at.value || null })
+                .then(function (envelope) { ui.toast(envelope.message); })
+                .catch(function (envelope) { ui.toast((envelope && envelope.message) || 'Could not save.', 'error'); });
+        });
+    }
+
     start();
 })();

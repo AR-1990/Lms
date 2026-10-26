@@ -107,18 +107,23 @@ class TeacherService
             return [];
         }
 
-        return TimetableSlot::where('teacher_id', $employee->id)
+        $own = TimetableSlot::where('teacher_id', $employee->id)
             ->where('day_of_week', today()->dayOfWeekIso)
             ->with(['subject:id,name', 'section:id,name,class_id', 'section.schoolClass:id,name', 'period:id,name,starts_at,ends_at,sort_order'])
-            ->get()
-            ->sortBy(fn (TimetableSlot $slot): int => (int) $slot->period?->sort_order)
-            ->map(fn (TimetableSlot $slot): array => [
-                'period' => $slot->period?->name,
-                'starts_at' => $slot->period?->starts_at ? substr((string) $slot->period->starts_at, 0, 5) : null,
-                'ends_at' => $slot->period?->ends_at ? substr((string) $slot->period->ends_at, 0, 5) : null,
-                'subject' => $slot->subject?->name,
-                'section' => trim(($slot->section?->schoolClass?->name ?? '').' '.($slot->section?->name ?? '')),
-                'room' => $slot->room,
+            ->get();
+        $covers = app(SubstitutionService::class)->coversFor($employee, today()->toDateString());
+
+        return $own->map(fn (TimetableSlot $slot): array => [$slot, false])
+            ->concat($covers->filter(fn ($cover): bool => $cover->slot !== null)->map(fn ($cover): array => [$cover->slot, true]))
+            ->sortBy(fn (array $entry): int => (int) $entry[0]->period?->sort_order)
+            ->map(fn (array $entry): array => [
+                'period' => $entry[0]->period?->name,
+                'starts_at' => $entry[0]->period?->starts_at ? substr((string) $entry[0]->period->starts_at, 0, 5) : null,
+                'ends_at' => $entry[0]->period?->ends_at ? substr((string) $entry[0]->period->ends_at, 0, 5) : null,
+                'subject' => $entry[0]->subject?->name,
+                'section' => trim(($entry[0]->section?->schoolClass?->name ?? '').' '.($entry[0]->section?->name ?? '')),
+                'room' => $entry[0]->room,
+                'is_cover' => $entry[1],
             ])->values()->all();
     }
 }

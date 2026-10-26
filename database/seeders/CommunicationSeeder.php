@@ -45,6 +45,10 @@ class CommunicationSeeder extends Seeder
             ['Fee overdue (SMS)', 'sms', 'fee_overdue', null, '{school_name}: {student_name} fee {amount} (challan {invoice_no}) was due on {due_date}. Please pay to avoid a late fine.'],
             ['Diary published (bell)', 'in_app', 'diary_published', 'Diary for {date}: {class_section}', '{entries} — open the diary in the portal.'],
             ['Leave decided (bell)', 'in_app', 'leave_decided', 'Leave {decision}: {student_name}', 'The leave request for {from} to {to} was {decision}.'],
+            ['Arrived at school (bell)', 'in_app', 'student_arrived', '{student_name} arrived at school', '{student_name} scanned in at the school gate at {time} on {date}.'],
+            ['Fee due soon (bell)', 'in_app', 'fee_due_soon', 'Fee due on {due_date}: {student_name}', 'Challan {invoice_no} ({amount}) is due on {due_date}. Pay at the bank, or pay online and send the screenshot from the portal.'],
+            ['Fee due soon (SMS)', 'sms', 'fee_due_soon', null, '{school_name}: {student_name} fee {amount} (challan {invoice_no}) is due on {due_date}.'],
+            ['Library book overdue (bell)', 'in_app', 'library_overdue', 'Library book overdue: {book_title}', '{borrower_name} should have returned "{book_title}" by {due_date}. Please return it to the library.'],
             ['Admit card ready (bell)', 'in_app', 'admit_card_ready', 'Admit card ready: {exam_name}', 'The {exam_name} admit card of {student_name} (roll no {exam_roll_no}) can be downloaded from the portal.'],
         ] as [$name, $channel, $event, $subject, $body]) {
             MessageTemplate::updateOrCreate(['name' => $name], ['channel' => $channel, 'event_key' => $event, 'subject' => $subject, 'body' => $body, 'is_active' => true]);

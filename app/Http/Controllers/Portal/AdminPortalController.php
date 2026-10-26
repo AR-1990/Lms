@@ -96,6 +96,14 @@ class AdminPortalController extends PortalController
         return $this->page('dashboards.admin.imports', 'admin', 'imports');
     }
 
+    /**
+     * Library screens: the catalogue (books) and issue & return (loans).
+     */
+    public function library(string $screen, LookupService $lookupService): View
+    {
+        return $this->page('dashboards.library.'.$screen, 'admin', 'library', ['categories' => $lookupService->options('book_category')]);
+    }
+
     public function numbering(): View
     {
         return $this->page('dashboards.admin.numbering', 'admin', 'numbering');

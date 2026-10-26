@@ -310,8 +310,9 @@ class FeeManagementTest extends TestCase
         $teacher = User::where('email', 'teacher@lms.test')->first();
 
         $this->actingAs($accountant, 'sanctum')->getJson('/api/erp/students')->assertForbidden();
+        // Search by admission number: random factory names (e.g. "Johnson") must not make the count vary.
         $this->actingAs($accountant, 'sanctum')
-            ->getJson('/api/erp/fees/students?search=John')
+            ->getJson('/api/erp/fees/students?search='.$this->john->admission_no)
             ->assertOk()
             ->assertJsonPath('data.meta.total', 1)
             ->assertJsonPath('data.items.0.admission_no', $this->john->admission_no)

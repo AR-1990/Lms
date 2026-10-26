@@ -57,10 +57,12 @@ class StudentLeavingService
             ->get(['id', 'refund_no', 'source', 'amount', 'reason', 'payment_method_id', 'reference_no', 'refunded_on', 'status', 'reversal_reason']);
 
         $feeDue = (int) $dues->sum('balance');
+        $books = collect(app(LibraryService::class)->forBorrower('student', $student->id))->where('status', 'issued')->values()->all();
 
         return [
             'is_leaving' => in_array($student->current_status, Student::LEAVING_STATUSES, true),
-            'is_clear' => $feeDue === 0 && $items->isEmpty(),
+            'is_clear' => $feeDue === 0 && $items->isEmpty() && $books === [],
+            'library_books' => $books,
             'fee_due' => $feeDue,
             'dues' => $dues->map(fn (FeeInvoice $invoice): array => [
                 'id' => $invoice->id,

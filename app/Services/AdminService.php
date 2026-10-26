@@ -17,7 +17,54 @@ class AdminService
     public function __construct(
         private SystemSettingsService $systemSettingsService,
         private LookupService $lookupService,
+        private NotificationService $notificationService,
     ) {}
+
+    /**
+     * The morning summary for the principal / owner (everyone with view-stats), Monday to Saturday:
+     * today's attendance so far, yesterday's fee collection, money overdue, new enquiries and what waits
+     * for approval. Returns the figures it sent.
+     *
+     * @return array<string, int|float|null>
+     */
+    public function sendDailySummary(): array
+    {
+        $today = today();
+        $yesterday = $today->copy()->subDay();
+        $students = DB::table('enrollments')->where('status', 'active')->whereNull('deleted_at')->whereIn('academic_session_id', AcademicSession::where('is_current', true)->select('id'))->count();
+        $marks = DB::table('student_attendances')->whereDate('date', $today)->selectRaw("count(*) as marked, sum(case when status in ('present', 'late', 'half_day') then 1 else 0 end) as present")->first();
+        $staff = Employee::whereIn('status', Employee::CURRENT_STATUSES)->count();
+        $staffIn = DB::table('staff_attendances')->whereDate('date', $today)->whereNotNull('check_in_at')->count();
+        $collected = FeePayment::where('status', 'posted')->whereDate('received_on', $yesterday)->selectRaw('count(*) as receipts, coalesce(sum(amount), 0) as amount')->first();
+        $overdue = (int) FeeInvoice::whereIn('status', FeeInvoice::OPEN_STATUSES)->whereDate('due_date', '<', $today)->sum('balance');
+        $enquiries = DB::table('admission_inquiries')->whereNull('deleted_at')->whereDate('inquiry_date', $yesterday)->count();
+        $waiting = DB::table('approval_requests')->where('status', 'pending')->count() + DB::table('payment_proofs')->whereNull('deleted_at')->where('status', 'pending')->count()
+            + DB::table('leave_requests')->where('status', 'pending')->count() + DB::table('student_leave_requests')->where('status', 'pending')->count();
+
+        $figures = [
+            'students' => $students, 'students_marked' => (int) ($marks->marked ?? 0), 'students_present' => (int) ($marks->present ?? 0),
+            'attendance_percent' => $marks->marked ? round($marks->present * 100 / $marks->marked, 1) : null,
+            'staff' => $staff, 'staff_in' => $staffIn,
+            'collected' => (int) $collected->amount, 'receipts' => (int) $collected->receipts,
+            'overdue' => $overdue, 'enquiries' => $enquiries, 'waiting' => $waiting,
+        ];
+
+        $money = fn (int $paisa): string => 'Rs '.number_format($paisa / 100);
+        $body = implode(' · ', array_filter([
+            'Students '.$figures['students_present'].'/'.$figures['students'].' present'.($figures['students_marked'] < $figures['students'] ? ' ('.($figures['students'] - $figures['students_marked']).' not marked yet)' : ''),
+            'Staff in '.$staffIn.'/'.$staff,
+            'Collected yesterday '.$money($figures['collected']).' ('.$figures['receipts'].' receipts)',
+            $overdue > 0 ? 'Overdue fees '.$money($overdue) : null,
+            $enquiries > 0 ? $enquiries.' new enquir'.($enquiries === 1 ? 'y' : 'ies') : null,
+            $waiting > 0 ? $waiting.' waiting for approval' : null,
+        ]));
+
+        $recipients = User::where('is_active', true)->whereHas('roles.permissions', fn ($query) => $query->where('slug', 'view-stats'))->pluck('id')
+            ->merge(User::where('is_active', true)->whereHas('roles', fn ($query) => $query->where('slug', 'admin'))->pluck('id'))->unique()->values()->all();
+        $this->notificationService->notify($recipients, 'daily_summary', 'School today — '.$today->format('D d M'), $body, route('dashboard'));
+
+        return $figures;
+    }
 
     /**
      * Get system-wide dashboard overview and statistics directly via Eloquent SQL.

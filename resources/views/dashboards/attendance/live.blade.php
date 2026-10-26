@@ -31,6 +31,19 @@
         <article class="dash-stat"><span class="dash-stat-label">Not in yet</span><strong class="dash-stat-value" data-staff="not_in">0</strong></article>
     </section>
 
+    @if ($user->hasPermission('manage-students'))
+        <section class="dash-panel dash-live-settings">
+            <form data-live-settings data-url="{{ route('erp.attendance.settings') }}" novalidate>
+                <div>
+                    <label for="autoAbsentAt"><strong>Mark absent automatically at</strong></label>
+                    <p class="dash-muted">For gate scanning: students with no mark by this time are made absent and parents get the absent alert. Late arrivals become "late" at the gate; teachers can still change any mark. Leave empty if teachers mark the register.</p>
+                </div>
+                <input id="autoAbsentAt" type="time" name="auto_absent_at">
+                <button type="submit" class="dash-btn dash-btn-ghost">Save</button>
+            </form>
+        </section>
+    @endif
+
     <div class="dash-live-grid">
         <section class="dash-panel" data-live-sections-panel hidden>
             <div class="dash-panel-head"><div><h2>Classes</h2><p>Open a class to mark the register by hand.</p></div></div>

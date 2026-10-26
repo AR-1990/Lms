@@ -44,6 +44,8 @@ class LookupSeeder extends Seeder
         'inquiry_status_reason' => ['Fee Concern', 'Distance', 'Joined Another School', 'No Seat Available', 'Not Interested'],
         'admission_rejection_reason' => ['Did Not Pass Test', 'Age Criteria', 'Incomplete Documents', 'Seats Full'],
         'exit_clearance_area' => ['Accounts', 'Library', 'IT', 'Administration'],
+        'follow_up_channel' => ['Phone call', 'WhatsApp', 'School visit', 'SMS', 'Email'],
+        'book_category' => ['Fiction', 'Reference', 'Textbook', 'Science', 'History', 'Islamic Studies', 'Urdu Literature', 'Children'],
         'conduct' => ['Excellent', 'Very Good', 'Good', 'Satisfactory'],
         'withdrawal_reason' => ['Relocation', 'Financial', 'Transfer to Another School', 'Graduated', 'Medical', 'Other'],
         'employment_type' => ['Permanent', 'Contract', 'Visiting', 'Intern', 'Probation'],

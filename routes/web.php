@@ -101,6 +101,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/activity-log', [AdminPortalController::class, 'activityLog'])->middleware('permission:view-activity-log')->name('activity-log');
         Route::get('/campuses', [AdminPortalController::class, 'campuses'])->middleware('permission:manage-campuses')->name('campuses');
         Route::get('/numbering', [AdminPortalController::class, 'numbering'])->middleware('permission:manage-numbering')->name('numbering');
+        Route::prefix('library')->name('library.')->middleware('permission:manage-library')->group(function () {
+            Route::get('/', [AdminPortalController::class, 'library'])->defaults('screen', 'books')->name('books');
+            Route::get('/issues', [AdminPortalController::class, 'library'])->defaults('screen', 'issues')->name('issues');
+        });
         Route::get('/imports', [AdminPortalController::class, 'imports'])->middleware('permission:manage-students,manage-hr,manage-fees')->name('imports');
         Route::middleware('permission:manage-students')->group(function () {
             Route::get('/students', [StudentsPortalController::class, 'students'])->name('students');
@@ -209,6 +213,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/homework', [AttendancePortalController::class, 'homework'])->name('homework');
         });
         Route::get('/academics/timetable', [AttendancePortalController::class, 'timetable'])->middleware('permission:manage-timetable')->name('academics.timetable');
+        Route::get('/academics/substitutions', [AttendancePortalController::class, 'substitutions'])->middleware('permission:manage-timetable')->name('academics.substitutions');
         Route::get('/academics/calendar', [AttendancePortalController::class, 'calendar'])->middleware('permission:manage-calendar')->name('academics.calendar');
         Route::prefix('academics')->name('academics.')->middleware('permission:manage-academics')->group(function () {
             Route::get('/sessions', [AcademicsPortalController::class, 'sessions'])->name('sessions');

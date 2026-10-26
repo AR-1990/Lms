@@ -294,6 +294,16 @@
         root.querySelector('[data-family-records]').innerHTML = rows.join('') || '<li><span class="dash-muted">Nothing recorded yet.</span></li>';
     }
 
+    function renderLibrary(books) {
+        root.querySelector('[data-family-library]').innerHTML = books.length ? books.map(function (book) {
+            const state = book.status === 'issued'
+                ? badge(book.is_overdue ? 'Overdue — due ' + date(book.due_on) : 'Due ' + date(book.due_on), book.is_overdue ? 'dash-badge-danger' : 'dash-badge-warn')
+                : badge(book.status === 'lost' ? 'Lost' : 'Returned ' + date(book.returned_on), book.status === 'lost' ? 'dash-badge-danger' : 'dash-badge-ok');
+
+            return '<li><div><strong>' + esc(book.title) + '</strong><span class="dash-muted">' + esc([book.author, book.accession_no, book.fine_amount > 0 ? 'Fine ' + money(book.fine_amount) : null].filter(Boolean).join(' · ')) + '</span></div>' + state + '</li>';
+        }).join('') : '<li><span class="dash-muted">No library books yet.</span></li>';
+    }
+
     function loadOverview() {
         return ui.api('GET', root.dataset.overviewUrl).then(function (envelope) {
             overview = envelope.data;
@@ -305,6 +315,7 @@
             loadProofs();
             renderLeave(overview.leave_requests);
             renderRecords(overview.records);
+            renderLibrary(overview.library);
         }).catch(function () {
             failed(root.querySelector('[data-exams]'));
             root.querySelector('[data-today-periods]').innerHTML = '<li><span class="dash-muted">Could not load the timetable.</span></li>';

@@ -37,6 +37,16 @@
             </select>
             <p class="dash-field-error" data-error-for="fee_auto_generate_day" hidden></p>
         </div>
+        <div class="dash-field">
+            <label for="reminderDays">Remind families before the due date</label>
+            <select id="reminderDays" name="fee_reminder_days">
+                <option value="">Off</option>
+                @foreach ([1, 2, 3, 5, 7] as $days)
+                    <option value="{{ $days }}">{{ $days }} day(s) before</option>
+                @endforeach
+            </select>
+            <p class="dash-field-error" data-error-for="fee_reminder_days" hidden></p>
+        </div>
         <p class="dash-form-error" data-form-error hidden></p>
         <div><button type="submit" class="dash-btn dash-btn-primary" data-submit>@include('partials.dashboard-icon', ['name' => 'check']) Save</button></div>
     </form>

@@ -32,6 +32,11 @@ class SystemSetting extends Model
         'late_grace_count',
         'lates_per_deduction_day',
         'fee_auto_generate_day',
+        'auto_absent_at',
+        'fee_reminder_days',
+        'library_loan_days',
+        'library_max_books',
+        'library_fine_per_day',
     ];
 
     public function country(): BelongsTo

@@ -768,12 +768,13 @@
 
         ui.api('GET', automation.dataset.url).then(function (envelope) {
             automationForm.elements.fee_auto_generate_day.value = envelope.data.fee_auto_generate_day || '';
+            automationForm.elements.fee_reminder_days.value = envelope.data.fee_reminder_days || '';
         }).catch(function () {});
 
         automationForm.addEventListener('submit', function (event) {
             event.preventDefault();
             const day = automationForm.elements.fee_auto_generate_day.value;
-            kit.submitForm(automationForm, 'PUT', automation.dataset.url, { fee_auto_generate_day: day ? Number(day) : null }).then(mounted.refresh).catch(function () {});
+            kit.submitForm(automationForm, 'PUT', automation.dataset.url, { fee_auto_generate_day: day ? Number(day) : null, fee_reminder_days: automationForm.elements.fee_reminder_days.value ? Number(automationForm.elements.fee_reminder_days.value) : null }).then(mounted.refresh).catch(function () {});
         });
     }
 

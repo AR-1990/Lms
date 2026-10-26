@@ -41,6 +41,7 @@ class ReportService
         'fee-defaulters' => ['Fee Defaulters & Ageing', 'Fees', 'Students with overdue challans, split by how long they are overdue.', ['view-fees', 'manage-fees'], ['as_of', 'class_id'], true],
         'class-strength' => ['Class Strength', 'Students', 'Enrolled students per class and section this session, by gender.', ['manage-students'], [], false],
         'admissions' => ['Admissions Funnel', 'Students', 'Inquiries and applications by stage for a period.', ['manage-students', 'manage-admissions'], ['from', 'to'], false],
+        'admission-sources' => ['Enquiries by Source', 'Students', 'Where enquiries come from and how many became applications and admissions.', ['manage-students', 'manage-admissions'], ['from', 'to'], false],
         'student-attendance' => ['Student Attendance', 'Students', 'Attendance per section for a period, with the percentage present.', ['manage-students', 'record-attendance'], ['from', 'to', 'class_id'], false],
         'staff-strength' => ['Staff Strength', 'HR', 'Current staff per department, teaching and non-teaching.', ['manage-hr'], [], false],
         'staff-attendance' => ['Staff Attendance', 'HR', 'Present, late, absent and leave days per employee.', ['manage-hr', 'manage-staff-attendance'], ['from', 'to'], true],
@@ -426,6 +427,30 @@ class ReportService
     /**
      * @return array<string, mixed>
      */
+    private function admissionSources(string $from, string $to): array
+    {
+        $rows = DB::table('admission_inquiries')
+            ->leftJoin('lookups', 'lookups.id', '=', 'admission_inquiries.source_id')
+            ->leftJoin('admission_applications', 'admission_applications.id', '=', 'admission_inquiries.application_id')
+            ->whereNull('admission_inquiries.deleted_at')
+            ->whereDate('admission_inquiries.inquiry_date', '>=', $from)->whereDate('admission_inquiries.inquiry_date', '<=', $to)
+            ->groupBy('lookups.name')->orderByRaw('count(*) desc')
+            ->selectRaw("lookups.name as source, count(*) as inquiries, count(admission_inquiries.application_id) as applications,
+                sum(case when admission_applications.status = 'enrolled' then 1 else 0 end) as enrolled,
+                sum(case when admission_inquiries.status = 'closed' then 1 else 0 end) as closed")
+            ->get()
+            ->map(fn (object $row): array => [
+                'source' => $row->source ?? 'Not recorded', 'inquiries' => (int) $row->inquiries, 'applications' => (int) $row->applications, 'enrolled' => (int) $row->enrolled, 'closed' => (int) $row->closed,
+                'conversion' => $row->inquiries ? round($row->enrolled * 100 / $row->inquiries, 1) : 0,
+            ]);
+
+        return [
+            'columns' => [$this->column('source', 'Source'), $this->column('inquiries', 'Enquiries', 'number'), $this->column('applications', 'Applications', 'number'), $this->column('enrolled', 'Admitted', 'number'), $this->column('closed', 'Closed', 'number'), $this->column('conversion', 'Admitted %', 'number')],
+            'rows' => $rows->all(),
+            'summary' => [['Enquiries', $rows->sum('inquiries'), 'number'], ['Admitted', $rows->sum('enrolled'), 'number'], ['Conversion %', $rows->sum('inquiries') ? round($rows->sum('enrolled') * 100 / $rows->sum('inquiries'), 1) : 0, 'number']],
+        ];
+    }
+
     private function admissions(string $from, string $to): array
     {
         $count = fn (string $table, string $dateColumn) => DB::table($table)->whereNull('deleted_at')->whereDate($dateColumn, '>=', $from)->whereDate($dateColumn, '<=', $to)

@@ -13,6 +13,7 @@ use App\Traits\ApiResponse;
 use App\Traits\DeletesWithApproval;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AdmissionInquiryController extends Controller
 {
@@ -57,6 +58,23 @@ class AdmissionInquiryController extends Controller
         $application = $this->admissionService->convertInquiry($admissionInquiry, $request->validated());
 
         return $this->successResponse(new AdmissionApplicationResource($application), "Application {$application->application_no} created from the inquiry.", 201);
+    }
+
+    public function followUps(AdmissionInquiry $admissionInquiry): JsonResponse
+    {
+        return $this->successResponse($this->admissionService->followUps($admissionInquiry), 'Follow-ups retrieved.');
+    }
+
+    public function addFollowUp(Request $request, AdmissionInquiry $admissionInquiry): JsonResponse
+    {
+        $data = $request->validate([
+            'followed_up_on' => ['required', 'date', 'before_or_equal:today'],
+            'channel_id' => ['nullable', 'integer', Rule::exists('lookups', 'id')->where('type', 'follow_up_channel')->whereNull('deleted_at')],
+            'outcome' => ['required', 'string', 'max:1000'],
+            'next_follow_up_on' => ['nullable', 'date', 'after_or_equal:today'],
+        ]);
+
+        return $this->successResponse($this->admissionService->addFollowUp($admissionInquiry, $data), 'Follow-up saved.', 201);
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Models\Concerns\TracksAuthor;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -16,6 +17,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class AdmissionInquiry extends Model
 {
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(AdmissionInquiryFollowUp::class);
+    }
+
     use BelongsToCampus, LogsActivity, SoftDeletes, TracksAuthor;
 
     /**

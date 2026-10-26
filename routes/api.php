@@ -46,6 +46,7 @@ use App\Http\Controllers\ERP\JobOpeningController;
 use App\Http\Controllers\ERP\JournalEntryController;
 use App\Http\Controllers\ERP\JumpToController;
 use App\Http\Controllers\ERP\LeaveController;
+use App\Http\Controllers\ERP\LibraryController;
 use App\Http\Controllers\ERP\LoanController;
 use App\Http\Controllers\ERP\LookupController;
 use App\Http\Controllers\ERP\MarksController;
@@ -127,6 +128,22 @@ Route::middleware(ForceJsonResponse::class)->name('api.')->group(function () {
 
 // ERP API (/api/erp/...): signed in with the web session or a Sanctum token, then checked per permission.
 Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->name('erp.')->group(function () {
+    // ---------- Library ----------
+    Route::middleware('permission:manage-library')->prefix('library')->name('library.')->group(function () {
+        Route::get('books/datatable', [LibraryController::class, 'booksDatatable'])->name('books.datatable');
+        Route::get('books/{library_book}', [LibraryController::class, 'showBook'])->name('books.show');
+        Route::post('books', [LibraryController::class, 'storeBook'])->name('books.store');
+        Route::put('books/{library_book}', [LibraryController::class, 'updateBook'])->name('books.update');
+        Route::delete('books/{library_book}', [LibraryController::class, 'destroyBook'])->name('books.destroy');
+        Route::put('copies/{library_copy}', [LibraryController::class, 'changeCopy'])->name('copies.update');
+        Route::get('settings', [LibraryController::class, 'settings'])->name('settings');
+        Route::put('settings', [LibraryController::class, 'saveSettings'])->name('settings.update');
+        Route::get('borrowers', [LibraryController::class, 'borrowers'])->name('borrowers');
+        Route::get('issues/datatable', [LibraryController::class, 'issuesDatatable'])->name('issues.datatable');
+        Route::post('issues', [LibraryController::class, 'issue'])->name('issues.store');
+        Route::post('issues/{library_issue}/return', [LibraryController::class, 'returnBook'])->name('issues.return');
+    });
+
     // "Jump to" search: the pages this user may open.
     Route::get('jump-to', JumpToController::class)->name('jump-to');
 
@@ -421,6 +438,8 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     Route::middleware('permission:manage-admissions')->group(function () {
         Route::get('admission-inquiries/datatable', [AdmissionInquiryController::class, 'datatable'])->name('admission-inquiries.datatable');
         Route::post('admission-inquiries/{admission_inquiry}/convert', [AdmissionInquiryController::class, 'convert'])->name('admission-inquiries.convert');
+        Route::get('admission-inquiries/{admission_inquiry}/follow-ups', [AdmissionInquiryController::class, 'followUps'])->name('admission-inquiries.follow-ups');
+        Route::post('admission-inquiries/{admission_inquiry}/follow-ups', [AdmissionInquiryController::class, 'addFollowUp'])->name('admission-inquiries.follow-ups.store');
         Route::apiResource('admission-inquiries', AdmissionInquiryController::class);
 
         Route::get('admission-applications/datatable', [AdmissionApplicationController::class, 'datatable'])->name('admission-applications.datatable');
@@ -577,6 +596,9 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     Route::middleware('permission:manage-timetable')->group(function () {
         Route::post('timetable-slots', [TimetableController::class, 'store'])->name('timetable-slots.store');
         Route::delete('timetable-slots/{timetable_slot}', [TimetableController::class, 'destroy'])->name('timetable-slots.destroy');
+        Route::get('substitutions', [TimetableController::class, 'substitutions'])->name('substitutions.index');
+        Route::post('substitutions', [TimetableController::class, 'assignSubstitution'])->name('substitutions.store');
+        Route::delete('substitutions/{substitution}', [TimetableController::class, 'removeSubstitution'])->name('substitutions.destroy');
     });
 
     Route::middleware('permission:manage-staff-attendance')->group(function () {
@@ -586,6 +608,8 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::post('attendance-kiosks/{attendance_kiosk}/renew', [AttendanceKioskController::class, 'renew'])->name('attendance-kiosks.renew');
     });
     Route::get('my-attendance-qr', [IdCardController::class, 'myQr'])->name('my-attendance-qr');
+    Route::get('attendance/settings', [AttendanceController::class, 'settings'])->middleware('permission:manage-students')->name('attendance.settings');
+    Route::put('attendance/settings', [AttendanceController::class, 'saveSettings'])->middleware('permission:manage-students')->name('attendance.settings.update');
     Route::get('attendance/live', [AttendanceController::class, 'live'])->middleware('permission:record-attendance,manage-staff-attendance')->name('attendance.live');
     Route::post('attendance/scan', [AttendanceController::class, 'scan'])->middleware(['permission:record-attendance,manage-staff-attendance', 'throttle:120,1'])->name('attendance.scan');
 

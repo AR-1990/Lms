@@ -168,6 +168,7 @@ class EmployeeExitService
             'blocking' => array_values(array_filter([
                 $pending->isNotEmpty() ? 'Clearance pending: '.$pending->implode(', ').'.' : null,
                 $assets !== [] ? count($assets).' school asset(s) still held — take them back under Assets first.' : null,
+                ($books = app(LibraryService::class)->openFor('employee', $employee->id)->count()) > 0 ? $books.' library book(s) not returned yet.' : null,
                 $earnings - $deductions < 0 ? 'The employee owes Rs '.number_format(($deductions - $earnings) / 100).'; receive it first or adjust the lines.' : null,
             ])),
         ];

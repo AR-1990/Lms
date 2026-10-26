@@ -32,6 +32,7 @@ class FeeSeeder extends Seeder
         ['Uniform & Books', 'UNB', '4500', 'one_time', false, false],
         ['Late Payment Fine', 'LPF', '4300', 'one_time', false, false],
         ['Previous Balance', 'OPB', '3300', 'one_time', false, false],
+        ['Library Fine', 'LIB', '4900', 'one_time', false, false],
     ];
 
     /**

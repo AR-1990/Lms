@@ -3,11 +3,15 @@
 use App\Models\AcademicSession;
 use App\Models\ExamTerm;
 use App\Models\UserDevice;
+use App\Services\AdminService;
+use App\Services\AdmissionService;
 use App\Services\AnnouncementService;
+use App\Services\AttendanceService;
 use App\Services\BackupService;
 use App\Services\ChatService;
 use App\Services\CounsellingService;
 use App\Services\FeeAutomationService;
+use App\Services\LibraryService;
 use App\Services\OnlineTestService;
 use App\Services\PerformanceService;
 use App\Services\StickyNoteService;
@@ -72,12 +76,21 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->name(
 Artisan::command('backup:run', function (): void {
     $this->info('Backup '.app(BackupService::class)->run()['file'].' created.');
 })->purpose('Back up the database to storage/app/private/backups');
+// Gate-scanning schools: students with no mark by the chosen time are made absent (once, then only newcomers).
+Schedule::call(fn () => app(AttendanceService::class)->autoAbsent())->name('attendance:auto-absent')->everyFiveMinutes()->withoutOverlapping();
+
 // Online tests left open (connection lost, tab closed) are marked from their saved answers once time is up.
 Schedule::call(fn () => app(OnlineTestService::class)->finishExpired())->name('online-tests:finish-expired')->everyFiveMinutes();
 
 Schedule::command('backup:run')->name('backup:nightly')->dailyAt('02:30')->withoutOverlapping();
 
 // Admins and accounts staff get a morning reminder of students who have not paid by the due date.
+// Morning summary for the principal / owner (Monday to Saturday, after the first periods are marked).
+Schedule::call(fn () => app(AdminService::class)->sendDailySummary())->name('daily-summary')->days([1, 2, 3, 4, 5, 6])->at('10:30');
+
+Schedule::call(fn () => app(LibraryService::class)->overdueReminders())->name('library:overdue-reminders')->dailyAt('08:30');
+Schedule::call(fn () => app(AdmissionService::class)->followUpReminders())->name('admissions:follow-up-reminders')->dailyAt('08:45');
+Schedule::call(fn () => app(FeeAutomationService::class)->dueSoonReminders())->name('fees:due-soon-reminders')->dailyAt('09:15');
 Schedule::call(fn () => app(FeeAutomationService::class)->overdueAlert())->name('fees:overdue-alerts')->dailyAt('09:00');
 
 // Mobile tokens unused for SANCTUM_IDLE_DAYS no longer work (AppServiceProvider); remove them and their devices.

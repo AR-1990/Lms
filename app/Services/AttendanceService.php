@@ -12,6 +12,7 @@ use App\Models\StaffAttendance;
 use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Models\StudentLeaveRequest;
+use App\Models\SystemSetting;
 use App\Models\TeacherAssignment;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -31,6 +32,7 @@ class AttendanceService
         private CalendarService $calendarService,
         private TeacherAssignmentService $assignmentService,
         private NotificationService $notificationService,
+        private ActivityLogger $activityLogger,
     ) {}
 
     /**
@@ -130,18 +132,95 @@ class AttendanceService
             }
         });
 
-        // Families of students newly marked absent get the "absent alert" message templates.
-        if ($newlyAbsent !== []) {
-            $classSection = $section->loadMissing('schoolClass:id,name')->schoolClass?->name.' '.$section->name;
-
-            foreach (Student::whereIn('id', $newlyAbsent)->get(['id', 'first_name', 'middle_name', 'last_name']) as $student) {
-                $this->notificationService->notifyEvent('absent_alert', $this->notificationService->familyUserIds([$student->id])->all(), [
-                    'student_name' => $student->fullName(), 'class_section' => $classSection, 'date' => Carbon::parse($date)->format('d M Y'),
-                ], $student);
-            }
-        }
+        $this->alertAbsent($newlyAbsent, $date);
 
         return collect($rows)->countBy('status')->all();
+    }
+
+    /**
+     * @return array{auto_absent_at: string|null}
+     */
+    public function settings(): array
+    {
+        $time = SystemSetting::query()->value('auto_absent_at');
+
+        return ['auto_absent_at' => $time ? substr($time, 0, 5) : null];
+    }
+
+    /**
+     * @param  array{auto_absent_at: string|null}  $data
+     * @return array{auto_absent_at: string|null}
+     */
+    public function saveSettings(array $data, User $user): array
+    {
+        SystemSetting::query()->firstOrFail()->update($data);
+        $this->activityLogger->record('attendance', 'settings', $data['auto_absent_at'] ? "{$user->name} set students with no mark to be made absent at {$data['auto_absent_at']}" : "{$user->name} switched off automatic absent marking");
+
+        return $this->settings();
+    }
+
+    /**
+     * For schools that take attendance at the gate: after the chosen time, every student of the current
+     * session with no mark today is made absent (or "leave" with approved leave) and the family gets the
+     * absent alert. Skips Sundays and holidays. A student who arrives later becomes "late" at the gate,
+     * and teachers can still change any mark in the register. Returns how many were marked.
+     */
+    public function autoAbsent(?Carbon $now = null): int
+    {
+        $now ??= now();
+        $time = SystemSetting::query()->value('auto_absent_at');
+        $today = $now->toDateString();
+
+        if ($time === null || $now->format('H:i:s') < $time || $now->isSunday() || $this->calendarService->holidayOn($today) !== null) {
+            return 0;
+        }
+
+        $enrollments = Enrollment::where('status', 'active')
+            ->whereIn('academic_session_id', AcademicSession::where('is_current', true)->select('id'))
+            ->whereNotNull('section_id')
+            ->whereNotExists(fn ($marked) => $marked->from('student_attendances')->whereColumn('student_attendances.enrollment_id', 'enrollments.id')->whereDate('student_attendances.date', $today))
+            ->get(['id', 'student_id', 'section_id']);
+        $onLeave = StudentLeaveRequest::where('status', 'approved')->whereDate('from_date', '<=', $today)->whereDate('to_date', '>=', $today)->whereIn('student_id', $enrollments->pluck('student_id'))->pluck('student_id')->all();
+        $absent = [];
+
+        DB::transaction(function () use ($enrollments, $onLeave, $today, &$absent): void {
+            foreach ($enrollments as $enrollment) {
+                $status = in_array($enrollment->student_id, $onLeave, true) ? 'leave' : 'absent';
+                StudentAttendance::create(['enrollment_id' => $enrollment->id, 'student_id' => $enrollment->student_id, 'section_id' => $enrollment->section_id, 'date' => $today, 'status' => $status, 'source' => 'auto']);
+                if ($status === 'absent') {
+                    $absent[] = $enrollment->student_id;
+                }
+            }
+
+            if ($enrollments->isNotEmpty()) {
+                $this->activityLogger->record('attendance', 'auto_absent', count($absent).' student(s) with no mark made absent, '.($enrollments->count() - count($absent)).' on leave');
+            }
+        });
+
+        $this->alertAbsent($absent, $today);
+
+        return $enrollments->count();
+    }
+
+    /**
+     * Families of students newly marked absent get the "absent alert" message templates.
+     *
+     * @param  array<int, int>  $studentIds
+     */
+    private function alertAbsent(array $studentIds, string $date): void
+    {
+        if ($studentIds === []) {
+            return;
+        }
+
+        $students = Student::whereIn('id', $studentIds)->with('currentEnrollment.section.schoolClass:id,name')->get(['id', 'first_name', 'middle_name', 'last_name']);
+
+        foreach ($students as $student) {
+            $section = $student->currentEnrollment?->section;
+            $this->notificationService->notifyEvent('absent_alert', $this->notificationService->familyUserIds([$student->id])->all(), [
+                'student_name' => $student->fullName(), 'class_section' => trim(($section?->schoolClass?->name ?? '').' '.($section?->name ?? '')), 'date' => Carbon::parse($date)->format('d M Y'),
+            ], $student);
+        }
     }
 
     /**
@@ -314,8 +393,15 @@ class AttendanceService
             throw ValidationException::withMessages(['code' => ["{$student->fullName()} has no class section this session."]]);
         }
 
-        return DB::transaction(function () use ($student, $enrollment, $today, $time, $markedBy, $source): array {
+        $result = DB::transaction(function () use ($student, $enrollment, $today, $time, $markedBy, $source): array {
             $attendance = StudentAttendance::where('enrollment_id', $enrollment->id)->whereDate('date', $today)->first();
+
+            // Made absent automatically, then arrived: late from the gate time.
+            if ($attendance !== null && $attendance->source === 'auto' && $attendance->status === 'absent') {
+                $attendance->update(['status' => 'late', 'check_in_at' => $time, 'source' => $source, 'marked_by' => $markedBy]);
+
+                return ['name' => $student->fullName(), 'holder_type' => 'student', 'status' => 'late', 'time' => substr($time, 0, 5), 'action' => 'checked_in'];
+            }
 
             if ($attendance === null) {
                 StudentAttendance::create(['enrollment_id' => $enrollment->id, 'student_id' => $student->id, 'section_id' => $enrollment->section_id, 'date' => $today, 'status' => 'present', 'check_in_at' => $time, 'source' => $source, 'marked_by' => $markedBy]);
@@ -323,6 +409,14 @@ class AttendanceService
 
             return ['name' => $student->fullName(), 'holder_type' => 'student', 'status' => $attendance?->status ?? 'present', 'time' => substr($time, 0, 5), 'action' => $attendance ? 'already_marked' : 'checked_in'];
         });
+
+        if ($result['action'] === 'checked_in') {
+            $this->notificationService->notifyEvent('student_arrived', $this->notificationService->familyUserIds([$student->id])->all(), [
+                'student_name' => $student->fullName(), 'time' => Carbon::parse($time)->format('h:i A'), 'date' => Carbon::parse($today)->format('d M Y'),
+            ], $student);
+        }
+
+        return $result;
     }
 
     /**

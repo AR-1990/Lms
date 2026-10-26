@@ -52,6 +52,10 @@ class ImportService
         'staff_attendance' => ['permission' => 'manage-staff-attendance', 'label' => 'Biometric attendance', 'columns' => [
             'employee_code*', 'date*', 'time*',
         ]],
+        // Checked here and handed back to the online test builder (saved with the test, not on its own).
+        'online_test_questions' => ['permission' => 'submit-grades', 'label' => 'Online test questions', 'builder' => true, 'columns' => [
+            'question*', 'marks', 'correct*', 'option_a*', 'option_b*', 'option_c', 'option_d', 'option_e', 'option_f',
+        ]],
     ];
 
     public const MAX_ROWS = 2000;
@@ -96,6 +100,7 @@ class ImportService
                     'staff' => $this->staff($row),
                     'opening_balances' => $this->balance($row),
                     'staff_attendance' => $this->punch($row),
+                    'online_test_questions' => $this->question($row),
                 };
             } catch (ValidationException $exception) {
                 $errors[] = ['row' => $line, 'messages' => collect($exception->errors())->flatten()->values()->all()];
@@ -104,6 +109,10 @@ class ImportService
 
         $errors = [...$errors, ...$this->duplicates($type, $prepared)];
         $result = ['type' => $type, 'rows' => count($rows), 'valid' => count($rows) - count(array_unique(array_column($errors, 'row'))), 'imported' => 0, 'errors' => $errors];
+
+        if ($type === 'online_test_questions') {
+            return [...$result, 'questions' => $errors === [] ? array_values($prepared) : []];
+        }
 
         if (! $save || $errors !== [] || $prepared === []) {
             return $result;
@@ -340,9 +349,49 @@ class ImportService
      * @param  array<int, array<string, mixed>>  $prepared
      * @return array<int, array{row: int, messages: array<int, string>}>
      */
+    /**
+     * One MCQ: the question, its marks (default 1), options A–F (at least two) and the letter of the right one.
+     *
+     * @param  array<string, string>  $row
+     * @return array{question: string, marks: int, options: array<int, array{option_text: string, is_correct: bool}>}
+     */
+    private function question(array $row): array
+    {
+        $letters = ['a', 'b', 'c', 'd', 'e', 'f'];
+        $options = collect($letters)->filter(fn (string $letter): bool => ($row['option_'.$letter] ?? '') !== '');
+        $correct = strtolower(trim($row['correct'] ?? ''));
+        $messages = [];
+
+        if (($row['question'] ?? '') === '') {
+            $messages[] = 'The question is empty.';
+        }
+
+        if ($options->count() < 2) {
+            $messages[] = 'Give at least two options (option_a and option_b).';
+        }
+
+        if (! $options->contains($correct)) {
+            $messages[] = 'correct must be the letter of a filled option (A–F).';
+        }
+
+        if (($row['marks'] ?? '') !== '' && (! ctype_digit($row['marks']) || (int) $row['marks'] < 1 || (int) $row['marks'] > 100)) {
+            $messages[] = 'marks must be a whole number from 1 to 100.';
+        }
+
+        if ($messages !== []) {
+            throw ValidationException::withMessages(['row' => $messages]);
+        }
+
+        return [
+            'question' => mb_substr($row['question'], 0, 2000),
+            'marks' => ($row['marks'] ?? '') === '' ? 1 : (int) $row['marks'],
+            'options' => $options->map(fn (string $letter): array => ['option_text' => mb_substr($row['option_'.$letter], 0, 500), 'is_correct' => $letter === $correct])->values()->all(),
+        ];
+    }
+
     private function duplicates(string $type, array $prepared): array
     {
-        $keys = ['students' => ['admission_no', 'b_form_no'], 'staff' => ['cnic', 'email'], 'opening_balances' => [], 'staff_attendance' => []][$type];
+        $keys = ['students' => ['admission_no', 'b_form_no'], 'staff' => ['cnic', 'email'], 'opening_balances' => [], 'staff_attendance' => [], 'online_test_questions' => []][$type];
         $seen = [];
         $errors = [];
 

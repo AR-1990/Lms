@@ -176,6 +176,10 @@
             <ul class="dash-list" data-family-records><li class="dash-muted">Loading…</li></ul>
         </section>
         <section class="dash-panel">
+            <div class="dash-panel-head"><div><h2>Library books</h2><p>Books borrowed from the school library and when they are due back.</p></div></div>
+            <ul class="dash-list" data-family-library><li class="dash-muted">Loading…</li></ul>
+        </section>
+        <section class="dash-panel">
             <div class="dash-panel-head"><div><h2>Year by year</h2><p>Class, results, attendance and fees of each session.</p></div><div data-certificate></div></div>
             <div class="dash-table-wrap"><table class="dash-table">
                 <thead><tr><th>Session</th><th>Class</th><th>Year ended</th><th>Results</th><th class="dash-col-num">Attendance</th><th class="dash-col-num">Fees billed</th><th class="dash-col-num">Due</th></tr></thead>

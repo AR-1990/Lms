@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\NotificationLog;
+use App\Services\MessagingGatewayService;
 use App\Services\PushService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -11,8 +12,8 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Sends one queued email or push (to all the user's active devices) from the delivery log and records the
- * outcome on the same row.
+ * Sends one queued email, push (to all the user's active devices), SMS or WhatsApp message from the
+ * delivery log and records the outcome on the same row.
  */
 class SendNotificationMessage implements ShouldQueue
 {
@@ -20,7 +21,7 @@ class SendNotificationMessage implements ShouldQueue
 
     public function __construct(public int $notificationLogId) {}
 
-    public function handle(PushService $pushService): void
+    public function handle(PushService $pushService, MessagingGatewayService $gateway): void
     {
         $log = NotificationLog::find($this->notificationLogId);
 
@@ -32,6 +33,13 @@ class SendNotificationMessage implements ShouldQueue
             if ($log->channel === 'push') {
                 $sent = $pushService->sendToUser($log->user_id, $log->subject ?? 'School notice', $log->body, ['event_key' => (string) $log->event_key]);
                 $log->update($sent > 0 ? ['status' => 'sent', 'sent_at' => now()] : ['status' => 'failed', 'error' => 'The app is no longer installed on any device.']);
+
+                return;
+            }
+
+            if (in_array($log->channel, ['sms', 'whatsapp'], true)) {
+                $gateway->send($log->channel, $log->recipient, $log->body);
+                $log->update(['status' => 'sent', 'sent_at' => now()]);
 
                 return;
             }

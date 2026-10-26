@@ -101,6 +101,21 @@ class AttendanceController extends Controller
         return $this->successResponse($this->attendanceService->live($request->user()), 'Live attendance.');
     }
 
+    public function settings(): JsonResponse
+    {
+        return $this->successResponse($this->attendanceService->settings(), 'Attendance settings.');
+    }
+
+    /**
+     * Automatic absent time (gate-scanning schools); empty switches it off.
+     */
+    public function saveSettings(Request $request): JsonResponse
+    {
+        $data = $request->validate(['auto_absent_at' => ['nullable', 'date_format:H:i']]);
+
+        return $this->successResponse($this->attendanceService->saveSettings(['auto_absent_at' => $data['auto_absent_at'] ?? null], $request->user()), 'Attendance settings saved.');
+    }
+
     /* ---------- Leave requests ---------- */
 
     /**

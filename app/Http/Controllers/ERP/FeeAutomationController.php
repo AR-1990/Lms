@@ -47,8 +47,8 @@ class FeeAutomationController extends Controller
 
     public function saveSettings(Request $request): JsonResponse
     {
-        $data = $request->validate(['fee_auto_generate_day' => ['nullable', 'integer', 'min:1', 'max:31']]);
+        $data = $request->validate(['fee_auto_generate_day' => ['nullable', 'integer', 'min:1', 'max:31'], 'fee_reminder_days' => ['nullable', 'integer', 'min:1', 'max:15']]);
 
-        return $this->successResponse($this->automationService->saveSettings(['fee_auto_generate_day' => $data['fee_auto_generate_day'] ?? null], $request->user()), 'Fee automation saved.');
+        return $this->successResponse($this->automationService->saveSettings(['fee_auto_generate_day' => $data['fee_auto_generate_day'] ?? null, 'fee_reminder_days' => $data['fee_reminder_days'] ?? null], $request->user()), 'Fee automation saved.');
     }
 }

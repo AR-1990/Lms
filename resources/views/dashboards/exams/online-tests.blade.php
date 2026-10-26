@@ -18,7 +18,7 @@
 
 @include('dashboards.exams.tabs', ['current' => 'admin.exams.online-tests'])
 
-<section class="dash-panel" data-online-tests data-datatable-url="{{ route('erp.online-tests.datatable') }}" data-resource-url="{{ url('/api/erp/online-tests') }}">
+<section class="dash-panel" data-online-tests data-import-url="{{ route('erp.imports.store', 'online_test_questions') }}" data-template-url="{{ route('erp.imports.template', 'online_test_questions') }}" data-datatable-url="{{ route('erp.online-tests.datatable') }}" data-resource-url="{{ url('/api/erp/online-tests') }}">
     <div class="dash-grid-wrap">
         <table class="dash-table dash-datatable" data-grid>
             <thead>
@@ -105,7 +105,18 @@
             <div class="dash-ot-questions">
                 <div class="dash-ot-questions-head">
                     <h4>Questions <span class="dash-muted" data-ot-total></span></h4>
-                    <button type="button" class="dash-btn dash-btn-ghost" data-ot-add-question>@include('partials.dashboard-icon', ['name' => 'plus']) Question</button>
+                    <div class="dash-ot-question-tools" data-ot-tools>
+                        <label class="dash-select">
+                            <span class="dash-visually-hidden">Copy questions from a test</span>
+                            <select data-ot-copy><option value="">Copy from a test…</option></select>
+                        </label>
+                        <label class="dash-btn dash-btn-ghost dash-ot-upload">
+                            @include('partials.dashboard-icon', ['name' => 'upload']) CSV
+                            <input type="file" accept=".csv,text/csv" data-ot-csv hidden>
+                        </label>
+                        <a class="dash-link-btn" data-ot-template>Template</a>
+                        <button type="button" class="dash-btn dash-btn-ghost" data-ot-add-question>@include('partials.dashboard-icon', ['name' => 'plus']) Question</button>
+                    </div>
                 </div>
                 <p class="dash-muted" data-ot-locked hidden>Students have already attempted this test, so its questions are locked.</p>
                 <ol class="dash-ot-list" data-ot-list></ol>

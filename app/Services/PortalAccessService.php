@@ -37,6 +37,7 @@ class PortalAccessService
             ['key' => 'id_cards', 'label' => 'ID Cards', 'route' => 'admin.cards.index', 'icon' => 'key', 'tone' => 'amber'],
             ['key' => 'assets', 'label' => 'Assets', 'route' => 'admin.assets.index', 'icon' => 'server', 'tone' => 'sky'],
             ['key' => 'inventory', 'label' => 'Inventory', 'route' => 'admin.inventory.index', 'icon' => 'inbox', 'tone' => 'amber'],
+            ['key' => 'library', 'label' => 'Library', 'route' => 'admin.library.books', 'icon' => 'book', 'tone' => 'violet'],
             ['key' => 'transport', 'label' => 'Transport', 'route' => 'admin.transport.routes', 'icon' => 'map', 'tone' => 'emerald'],
             ['key' => 'tasks', 'label' => 'Tasks', 'route' => 'tasks.index', 'icon' => 'check', 'tone' => 'blue'],
             ['key' => 'chat', 'label' => 'Chat', 'route' => 'chat', 'icon' => 'chat', 'tone' => 'emerald'],

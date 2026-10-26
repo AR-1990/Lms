@@ -57,6 +57,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'Manage Payroll', 'slug' => 'manage-payroll', 'group' => 'hr', 'description' => 'Salary components and structures, payroll runs, payslips, loans and posting salaries to the ledger.'],
             ['name' => 'Use Tasks', 'slug' => 'use-tasks', 'group' => 'communication', 'description' => 'Task boards, My Tasks, assigning and commenting on tasks.'],
             ['name' => 'Use Staff Chat', 'slug' => 'use-chat', 'group' => 'communication', 'description' => 'One-to-one and group chat between employees.'],
+            ['name' => 'Manage Library', 'slug' => 'manage-library', 'group' => 'library', 'description' => 'Book catalogue and copies, issuing and returning books, library fines.'],
             ['name' => 'Manage Assets', 'slug' => 'manage-assets', 'group' => 'assets', 'description' => 'Asset register, categories, locations, repairs, verification, depreciation and disposal.'],
             ['name' => 'Assign Assets', 'slug' => 'assign-assets', 'group' => 'assets', 'description' => 'Hand assets to staff, students, departments or rooms and take them back.'],
             ['name' => 'Manage Expenses', 'slug' => 'manage-expenses', 'group' => 'accounts', 'description' => 'Record and pay expenses and vendor bills; approving them needs Approve Requests.'],

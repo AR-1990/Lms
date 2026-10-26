@@ -39,6 +39,7 @@ class NumberSequenceSeeder extends Seeder
         ['slc_no', 'School Leaving Certificate', 'SLC-', true, 5, true],
         ['refund_no', 'Fee refund', 'RFD-', true, 5, true],
         ['certificate_no', 'Student certificate', 'CERT-', true, 5, true],
+        ['library_accession', 'Library accession', 'ACC-', false, 6, false],
     ];
 
     /**

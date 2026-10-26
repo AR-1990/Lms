@@ -57,7 +57,7 @@
                             <td>{{ $slot['period'] }}</td>
                             <td>{{ $slot['starts_at'] }}{{ $slot['ends_at'] ? ' – '.$slot['ends_at'] : '' }}</td>
                             <td>{{ $slot['section'] }}</td>
-                            <td>{{ $slot['subject'] }}</td>
+                            <td>{{ $slot['subject'] }}@if ($slot['is_cover'] ?? false) <span class="dash-badge dash-badge-warn">Cover</span>@endif</td>
                             <td>{{ $slot['room'] ?? '—' }}</td>
                         </tr>
                     @endforeach

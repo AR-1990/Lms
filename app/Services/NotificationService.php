@@ -19,9 +19,9 @@ use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Delivers a message to users: the in-app bell (web + mobile) plus email / SMS / push / WhatsApp rows in
- * the delivery log. Email and push (Firebase, once configured; every bell item is also pushed to the
- * user's phones) are sent on the queue; SMS and WhatsApp are logged as failed until a provider is chosen
- * (PLAN.md §27).
+ * the delivery log. Email, push (Firebase; every bell item is also pushed to the user's phones) and SMS /
+ * WhatsApp (the provider's HTTP gateway) are sent on the queue once configured; until then a channel's
+ * messages are logged as not sent (PLAN.md §27).
  */
 class NotificationService
 {
@@ -81,7 +81,7 @@ class NotificationService
     private function log(string $channel, array $userIds, string $eventKey, string $subject, string $body, ?int $templateId): void
     {
         $users = User::whereIn('id', $userIds)->with('devices:id,user_id,push_token,is_active')->get(['id', 'email', 'phone']);
-        $queued = $channel === 'email' || ($channel === 'push' && app(PushService::class)->isConfigured());
+        $queued = $channel === 'email' || ($channel === 'push' && app(PushService::class)->isConfigured()) || app(MessagingGatewayService::class)->isConfigured($channel);
 
         foreach ($users as $user) {
             $recipient = match ($channel) {

@@ -34,6 +34,21 @@ return [
         'credentials' => env('FIREBASE_CREDENTIALS'),
     ],
 
+    // SMS / WhatsApp provider HTTP API: URL with {to} {message} {sender}; GET or POST (form fields).
+    'sms' => [
+        'url' => env('SMS_GATEWAY_URL'),
+        'method' => env('SMS_GATEWAY_METHOD', 'GET'),
+        'token' => env('SMS_GATEWAY_TOKEN'),
+        'sender' => env('SMS_GATEWAY_SENDER'),
+    ],
+
+    'whatsapp' => [
+        'url' => env('WHATSAPP_GATEWAY_URL'),
+        'method' => env('WHATSAPP_GATEWAY_METHOD', 'POST'),
+        'token' => env('WHATSAPP_GATEWAY_TOKEN'),
+        'sender' => env('WHATSAPP_GATEWAY_SENDER'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
