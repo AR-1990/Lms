@@ -2,18 +2,22 @@
 
 namespace App\Services;
 
+use App\Models\AdmitCard;
+use App\Models\Employee;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamSubject;
 use App\Models\ExamTerm;
 use App\Models\Mark;
 use App\Models\ReportCard;
+use App\Models\Section;
 use App\Models\Student;
 use App\Models\SystemSetting;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,6 +33,7 @@ class ResultService
         private ActivityLogger $activityLogger,
         private PerformanceService $performanceService,
         private NotificationService $notificationService,
+        private SystemSettingsService $settingsService,
     ) {}
 
     /**
@@ -151,24 +156,118 @@ class ResultService
             })->all();
     }
 
+    /**
+     * Published result cards to write remarks on: the exam cell sees every section and writes both remarks;
+     * a class teacher sees their own sections and writes the class teacher's remarks.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function remarks(Exam $exam, ?int $sectionId, User $user): array
+    {
+        $exam->loadMissing('gradingScale.items');
+        $own = $this->remarkSections($user);
+
+        return ReportCard::where('exam_id', $exam->id)
+            ->when($sectionId, fn ($query, int $id) => $query->where('section_id', $id))
+            ->when($own !== null, fn ($query) => $query->whereIn('section_id', $own))
+            ->with(['student:id,first_name,middle_name,last_name,admission_no', 'enrollment:id,roll_no,section_id', 'enrollment.section:id,name'])
+            ->orderBy('section_id')->orderBy('position_in_section')->get()
+            ->map(fn (ReportCard $card): array => [
+                'id' => $card->id,
+                'name' => $card->student?->fullName(),
+                'admission_no' => $card->student?->admission_no,
+                'section' => $card->enrollment?->section?->name,
+                'roll_no' => $card->enrollment?->roll_no,
+                'percentage' => $card->percentage,
+                'grade' => $card->grade,
+                'result' => $card->result,
+                'grade_remark' => $exam->gradingScale?->items->firstWhere('grade', $card->grade)?->remark,
+                'class_teacher_remarks' => $card->class_teacher_remarks,
+                'principal_remarks' => $card->principal_remarks,
+            ])->all();
+    }
+
+    /**
+     * @param  array<int, array{id: int, class_teacher_remarks?: string|null, principal_remarks?: string|null}>  $rows
+     */
+    public function saveRemarks(Exam $exam, array $rows, User $user): int
+    {
+        $own = $this->remarkSections($user);
+        $cards = ReportCard::where('exam_id', $exam->id)->whereIn('id', array_column($rows, 'id'))->get()->keyBy('id');
+
+        foreach ($rows as $index => $row) {
+            $card = $cards->get($row['id']);
+
+            if ($card === null || ($own !== null && ! in_array($card->section_id, $own, true))) {
+                throw ValidationException::withMessages(["rows.{$index}.id" => ['You can write remarks only for your own class.']]);
+            }
+        }
+
+        $saved = 0;
+
+        DB::transaction(function () use ($rows, $cards, $own, &$saved): void {
+            foreach ($rows as $row) {
+                $card = $cards->get($row['id']);
+                $card->fill([
+                    'class_teacher_remarks' => array_key_exists('class_teacher_remarks', $row) ? $row['class_teacher_remarks'] : $card->class_teacher_remarks,
+                    // Only the exam cell writes the principal's remarks.
+                    'principal_remarks' => $own === null && array_key_exists('principal_remarks', $row) ? $row['principal_remarks'] : $card->principal_remarks,
+                ]);
+
+                if ($card->isDirty()) {
+                    $card->save();
+                    $saved++;
+                }
+            }
+        });
+
+        $this->activityLogger->record('exams', 'remarks', "{$user->name} wrote remarks on {$saved} result card(s) of {$exam->name}", $exam);
+
+        return $saved;
+    }
+
+    /**
+     * Sections whose remarks this user may write; null = every section (exam cell).
+     *
+     * @return array<int, int>|null
+     */
+    private function remarkSections(User $user): ?array
+    {
+        if ($user->hasPermission('manage-exams')) {
+            return null;
+        }
+
+        return Section::where('class_teacher_id', Employee::where('user_id', $user->id)->value('id') ?? 0)->pluck('id')->all();
+    }
+
     public function reportCardsPdf(Exam $exam, ?int $sectionId, ?int $studentId = null): Response
     {
         $exam = $this->examService->find($exam);
         $cards = ReportCard::where('exam_id', $exam->id)->when($sectionId, fn ($query, int $id) => $query->where('section_id', $id))->when($studentId, fn ($query, int $id) => $query->where('student_id', $id))
-            ->with(['student:id,first_name,last_name,admission_no', 'enrollment:id,roll_no,section_id', 'enrollment.section:id,name'])
+            ->with(['student:id,first_name,middle_name,last_name,admission_no,date_of_birth,photo_path', 'student.guardians:id,name', 'enrollment:id,roll_no,section_id', 'enrollment.section:id,name'])
             ->orderBy('section_id')->orderBy('position_in_section')->get();
 
         abort_if($cards->isEmpty(), 404, 'Results are not published for this exam yet.');
 
-        $marks = Mark::whereIn('exam_subject_id', $exam->subjects->pluck('id'))->whereIn('enrollment_id', $cards->pluck('enrollment_id'))->get()->groupBy('enrollment_id');
-        $this->activityLogger->record('exams', 'printed', (auth()->user()?->name ?? 'System').' printed '.$cards->count()." report cards for {$exam->name}", $exam);
+        // The whole class's marks give each paper's highest score; the printed cards use their own.
+        $classMarks = Mark::whereIn('exam_subject_id', $exam->subjects->pluck('id'))->get();
+        $settings = SystemSetting::query()->first(['school_name', 'school_address', 'school_phone', 'contact_email']);
+        $this->activityLogger->record('exams', 'printed', (auth()->user()?->name ?? 'System').' printed '.$cards->count()." result cards for {$exam->name}", $exam);
 
         return Pdf::loadView('pdf.report-cards', [
-            'exam' => $exam,
+            'exam' => $exam->loadMissing('term.academicSession:id,name'),
             'cards' => $cards,
-            'marks' => $marks,
-            'schoolName' => SystemSetting::query()->value('school_name'),
-        ])->setPaper('a4')->stream('report-cards.pdf');
+            'marks' => $classMarks->whereIn('enrollment_id', $cards->pluck('enrollment_id'))->groupBy('enrollment_id'),
+            'highest' => $classMarks->where('is_absent', false)->groupBy('exam_subject_id')->map(fn ($paperMarks) => $paperMarks->max(fn (Mark $mark): float => $mark->obtained())),
+            'sectionSizes' => ReportCard::where('exam_id', $exam->id)->selectRaw('section_id, count(*) as total')->groupBy('section_id')->pluck('total', 'section_id'),
+            'classSize' => ReportCard::where('exam_id', $exam->id)->count(),
+            'rollNumbers' => AdmitCard::where('exam_id', $exam->id)->whereIn('enrollment_id', $cards->pluck('enrollment_id'))->pluck('exam_roll_no', 'enrollment_id'),
+            'photos' => $cards->mapWithKeys(fn (ReportCard $card): array => [$card->id => $card->student?->photo_path && Storage::disk('public')->exists($card->student->photo_path) ? Storage::disk('public')->path($card->student->photo_path) : null]),
+            'logo' => $this->settingsService->logoFile(),
+            'school' => ['name' => $settings?->school_name, 'address' => $settings?->school_address, 'phone' => $settings?->school_phone, 'email' => $settings?->contact_email],
+            'session' => $exam->term?->academicSession?->name,
+            'issuedOn' => today()->format('d M Y'),
+        ])->setPaper('a4')->stream('result-cards.pdf');
     }
 
     /**

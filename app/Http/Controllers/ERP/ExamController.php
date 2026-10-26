@@ -187,6 +187,26 @@ class ExamController extends Controller
         return $this->successResponse(['id' => $exam->id, 'status' => $exam->status, 'published_at' => $exam->published_at?->toIso8601String()], 'Results published to students and parents.');
     }
 
+    /**
+     * Remarks on published result cards (class teacher's; the principal's for the exam cell).
+     */
+    public function remarks(Request $request, Exam $exam): JsonResponse
+    {
+        return $this->successResponse($this->resultService->remarks($exam, $request->integer('section_id') ?: null, $request->user()), 'Result cards retrieved.');
+    }
+
+    public function saveRemarks(Request $request, Exam $exam): JsonResponse
+    {
+        $rows = $request->validate([
+            'rows' => ['required', 'array', 'max:300'],
+            'rows.*.id' => ['required', 'integer'],
+            'rows.*.class_teacher_remarks' => ['nullable', 'string', 'max:500'],
+            'rows.*.principal_remarks' => ['nullable', 'string', 'max:500'],
+        ])['rows'];
+
+        return $this->successResponse(['saved' => $this->resultService->saveRemarks($exam, $rows, $request->user())], 'Remarks saved.');
+    }
+
     public function reportCardsPdf(Request $request, Exam $exam): Response
     {
         return $this->resultService->reportCardsPdf($exam, $request->integer('section_id') ?: null);

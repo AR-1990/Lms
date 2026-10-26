@@ -669,6 +669,8 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::post('marks', [MarksController::class, 'store'])->name('marks.store');
         Route::get('exams/list', [ExamController::class, 'index'])->name('exams.list');
         Route::get('exams/{exam}/summary', [ExamController::class, 'show'])->name('exams.summary');
+        Route::get('exams/{exam}/remarks', [ExamController::class, 'remarks'])->name('exams.remarks');
+        Route::put('exams/{exam}/remarks', [ExamController::class, 'saveRemarks'])->name('exams.remarks.update');
         Route::get('online-tests/datatable', [OnlineTestController::class, 'datatable'])->name('online-tests.datatable');
         Route::post('online-tests/{online_test}/status', [OnlineTestController::class, 'changeStatus'])->name('online-tests.status');
         Route::get('online-tests/{online_test}/results', [OnlineTestController::class, 'results'])->name('online-tests.results');

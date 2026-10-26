@@ -174,10 +174,32 @@
             </label>
             <button type="button" class="dash-btn dash-btn-ghost dash-btn-sm" data-tabulate>Show tabulation</button>
             <button type="button" class="dash-btn dash-btn-primary dash-btn-sm" data-publish>Publish results</button>
-            <button type="button" class="dash-btn dash-btn-ghost dash-btn-sm" data-report-cards>Print report cards</button>
+            <button type="button" class="dash-btn dash-btn-ghost dash-btn-sm" data-remarks>Remarks</button>
+            <button type="button" class="dash-btn dash-btn-ghost dash-btn-sm" data-report-cards>Print result cards</button>
         </div>
         <div class="dash-grid-wrap"><table class="dash-table dash-mini-table" data-tabulation></table></div>
     </section>
+</dialog>
+
+<dialog class="dash-modal dash-form-modal dash-modal-wide" id="remarksModal" aria-labelledby="remarksTitle">
+    <div class="dash-modal-head">
+        <span class="dash-modal-icon dash-modal-icon-brand">@include('partials.dashboard-icon', ['name' => 'pen'])</span>
+        <div>
+            <h3 id="remarksTitle">Result card remarks</h3>
+            <p>Printed on each student's result card. Results must be published first.</p>
+        </div>
+        <button type="button" class="dash-icon-btn" data-modal-close aria-label="Close">@include('partials.dashboard-icon', ['name' => 'close'])</button>
+    </div>
+    <div class="dash-form-scroll">
+        <div class="dash-grid-wrap"><table class="dash-table dash-remarks-table">
+            <thead><tr><th>Student</th><th>Class teacher's remarks</th><th>Principal's remarks</th></tr></thead>
+            <tbody data-remarks-rows></tbody>
+        </table></div>
+    </div>
+    <div class="dash-modal-actions">
+        <button type="button" class="dash-btn dash-btn-ghost" data-remarks-fill>Fill empty from grade</button>
+        <button type="button" class="dash-btn dash-btn-primary" data-remarks-save>@include('partials.dashboard-icon', ['name' => 'check']) Save remarks</button>
+    </div>
 </dialog>
 @endsection
 

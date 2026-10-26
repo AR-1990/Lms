@@ -250,6 +250,51 @@
             act('POST', '/exams/' + exam.id + '/publish', undefined, 'Calculating results and positions…').then(function () { open(exam.id); }).catch(function () {});
         });
 
+        // Remarks printed on the result cards (class teacher's and principal's), for the chosen section.
+        const remarksDialog = document.getElementById('remarksModal');
+        const remarksRows = remarksDialog.querySelector('[data-remarks-rows]');
+        let remarksExam = null;
+
+        kit.wireDialog(remarksDialog);
+
+        detail.querySelector('[data-remarks]').addEventListener('click', function () {
+            remarksExam = exam.id;
+            ui.api('GET', api + '/exams/' + exam.id + '/remarks' + sectionQuery()).then(function (envelope) {
+                remarksRows.innerHTML = envelope.data.map(function (row) {
+                    return '<tr data-card="' + row.id + '" data-grade-remark="' + escape(row.grade_remark || '') + '"><td><span class="dash-cell-title">' + escape(row.name) + '</span><span class="dash-muted">' + escape([row.section, row.percentage + '%', row.grade, row.result].filter(Boolean).join(' · ')) + '</span></td>'
+                        + '<td><textarea rows="2" maxlength="500" data-teacher aria-label="Class teacher remarks">' + escape(row.class_teacher_remarks || '') + '</textarea></td>'
+                        + '<td><textarea rows="2" maxlength="500" data-principal aria-label="Principal remarks">' + escape(row.principal_remarks || '') + '</textarea></td></tr>';
+                }).join('') || '<tr><td colspan="3" class="dash-muted">No published results for this section yet.</td></tr>';
+                remarksDialog.showModal();
+            }).catch(function (envelope) { ui.toast(fieldError(envelope, 'Could not load the result cards.'), 'error'); });
+        });
+
+        remarksDialog.querySelector('[data-remarks-fill]').addEventListener('click', function () {
+            remarksRows.querySelectorAll('tr[data-card]').forEach(function (tr) {
+                const box = tr.querySelector('[data-teacher]');
+
+                if (!box.value.trim() && tr.dataset.gradeRemark) {
+                    box.value = tr.dataset.gradeRemark + '.';
+                }
+            });
+        });
+
+        remarksDialog.querySelector('[data-remarks-save]').addEventListener('click', function (event) {
+            const rows = Array.prototype.map.call(remarksRows.querySelectorAll('tr[data-card]'), function (tr) {
+                return { id: Number(tr.dataset.card), class_teacher_remarks: tr.querySelector('[data-teacher]').value.trim() || null, principal_remarks: tr.querySelector('[data-principal]').value.trim() || null };
+            });
+
+            if (!rows.length) {
+                return;
+            }
+
+            event.currentTarget.disabled = true;
+            ui.api('PUT', api + '/exams/' + remarksExam + '/remarks', { rows: rows })
+                .then(function (envelope) { ui.toast(envelope.message); remarksDialog.close(); })
+                .catch(function (envelope) { ui.toast(fieldError(envelope, 'Could not save the remarks.'), 'error'); })
+                .finally(function () { remarksDialog.querySelector('[data-remarks-save]').disabled = false; });
+        });
+
         detail.querySelector('[data-report-cards]').addEventListener('click', function () {
             ui.openFile(api + '/exams/' + exam.id + '/report-cards' + sectionQuery(), 'Generating report cards…').catch(function () {});
         });

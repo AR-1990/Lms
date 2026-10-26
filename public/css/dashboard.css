@@ -11447,3 +11447,10 @@ tr.is-today td {
     align-items: end;
     padding-bottom: 1rem;
 }
+
+/* Exams → result card remarks */
+.dash-remarks-table textarea {
+    width: 100%;
+    min-width: 12rem;
+    resize: vertical;
+}

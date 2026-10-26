@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdmitCard;
 use App\Models\ClassSubject;
+use App\Models\Employee;
 use App\Models\Enrollment;
 use App\Models\ExamHall;
 use App\Models\ExamTerm;
@@ -189,5 +190,41 @@ class ExamTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.exams.setup.scales'))->assertOk()->assertSee('data-exam-setup="scales"', false);
         $this->actingAs($this->teacher)->get(route('admin.exams.marks'))->assertOk()->assertSee('data-marks', false)->assertSee('js/resource-screen.js', false)->assertSee('Mid Term — Grade 5');
         $this->actingAs($this->teacher)->get(route('admin.exams.index'))->assertForbidden();
+    }
+
+    public function test_result_cards_carry_remarks_from_the_class_teacher_and_the_principal(): void
+    {
+        $exam = $this->exam(['require_fee_clearance' => false]);
+        [$teacherPaper, $otherPaper] = [$exam['papers'][0]['id'], $exam['papers'][1]['id']];
+        $this->actingAs($this->admin, 'sanctum')->postJson("/api/erp/exams/{$exam['id']}/status", ['status' => 'scheduled'])->assertOk();
+        $this->actingAs($this->admin, 'sanctum')->postJson("/api/erp/exams/{$exam['id']}/status", ['status' => 'marks_entry'])->assertOk();
+        $this->enter($this->admin, $teacherPaper, [45, 30, 12])->assertOk();
+        $this->enter($this->admin, $otherPaper, [40, 35, 30])->assertOk();
+
+        foreach ([$teacherPaper, $otherPaper] as $paperId) {
+            $this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/marks/approve', ['exam_subject_id' => $paperId, 'section_id' => $this->grade5A->id])->assertOk();
+        }
+
+        $this->actingAs($this->admin, 'sanctum')->postJson("/api/erp/exams/{$exam['id']}/status", ['status' => 'review'])->assertOk();
+        $this->actingAs($this->admin, 'sanctum')->postJson("/api/erp/exams/{$exam['id']}/publish")->assertOk();
+
+        // Not the class teacher: no cards to write on.
+        $this->grade5A->update(['class_teacher_id' => null]);
+        $this->actingAs($this->teacher, 'sanctum')->getJson("/api/erp/exams/{$exam['id']}/remarks")->assertOk()->assertJsonCount(0, 'data');
+
+        $rows = $this->actingAs($this->admin, 'sanctum')->getJson("/api/erp/exams/{$exam['id']}/remarks?section_id={$this->grade5A->id}")->assertOk()->json('data');
+        $this->assertSame('Excellent', $rows[0]['grade_remark']);
+        $this->actingAs($this->admin, 'sanctum')->putJson("/api/erp/exams/{$exam['id']}/remarks", ['rows' => [['id' => $rows[0]['id'], 'class_teacher_remarks' => 'Works hard.', 'principal_remarks' => 'Well done.']]])
+            ->assertOk()->assertJsonPath('data.saved', 1);
+
+        $this->actingAs($this->teacher, 'sanctum')->putJson("/api/erp/exams/{$exam['id']}/remarks", ['rows' => [['id' => $rows[0]['id'], 'class_teacher_remarks' => 'Not my class']]])->assertUnprocessable();
+
+        // The class teacher writes their own remark but cannot change the principal's.
+        $this->grade5A->update(['class_teacher_id' => Employee::where('user_id', $this->teacher->id)->value('id')]);
+        $this->actingAs($this->teacher, 'sanctum')->putJson("/api/erp/exams/{$exam['id']}/remarks", ['rows' => [['id' => $rows[0]['id'], 'class_teacher_remarks' => 'Very attentive in class.', 'principal_remarks' => 'Changed by teacher']]])->assertOk();
+        $card = ReportCard::findOrFail($rows[0]['id']);
+        $this->assertSame(['Very attentive in class.', 'Well done.'], [$card->class_teacher_remarks, $card->principal_remarks]);
+
+        $this->actingAs($this->admin)->get("/api/erp/exams/{$exam['id']}/report-cards?section_id={$this->grade5A->id}")->assertOk()->assertHeader('content-type', 'application/pdf');
     }
 }
