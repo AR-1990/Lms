@@ -184,6 +184,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/leave', [AttendancePortalController::class, 'leaves'])->name('leaves');
             });
             Route::get('/staff', [AttendancePortalController::class, 'staff'])->middleware('permission:manage-staff-attendance')->name('staff');
+            Route::get('/live', [AttendancePortalController::class, 'live'])->middleware('permission:record-attendance,manage-staff-attendance')->name('live');
             Route::get('/scan', [AttendancePortalController::class, 'scan'])->middleware('permission:record-attendance,manage-staff-attendance')->name('scan');
             Route::get('/kiosks', [AttendancePortalController::class, 'kiosks'])->middleware('permission:manage-staff-attendance')->name('kiosks');
         });
@@ -252,6 +253,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/receipts', [FeesPortalController::class, 'receipts'])->name('receipts');
             });
             Route::get('/refunds', [FeesPortalController::class, 'refunds'])->middleware('permission:issue-refunds')->name('refunds');
+            Route::get('/online-payments', [FeesPortalController::class, 'onlinePayments'])->middleware('permission:manage-fees')->name('online-payments');
             Route::middleware('permission:manage-fee-setup')->group(function () {
                 Route::get('/structures', [FeesPortalController::class, 'structures'])->name('structures');
                 Route::get('/heads', [FeesPortalController::class, 'heads'])->name('heads');

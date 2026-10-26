@@ -157,6 +157,13 @@
             }
         });
 
+        // Opened from the live board: start on that section for manual marking.
+        const wanted = new URLSearchParams(window.location.search).get('section');
+
+        if (sectionSelect && wanted && sectionSelect.querySelector('option[value="' + Number(wanted) + '"]')) {
+            sectionSelect.value = String(Number(wanted));
+        }
+
         load();
     }
 

@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\EmployeeLoan;
 use App\Models\Expense;
 use App\Models\LeaveRequest;
+use App\Models\PaymentProof;
 use App\Models\PurchaseOrder;
 use App\Models\Section;
 use App\Models\StudentConcession;
@@ -58,6 +59,12 @@ class ApprovalInboxService
                 $concession->id, ($concession->concessionType?->name ?? 'Concession').' — '.$concession->student?->fullName(), $concession->calculation === 'percent' ? ($concession->value / 100).'% off'.($concession->reason ? ' · '.$concession->reason : '') : $concession->reason, $concession->calculation === 'percent' ? null : $concession->value, $concession->creator?->name, $concession->created_at,
                 ['method' => 'POST', 'url' => "/api/erp/fees/concessions/{$concession->id}/decision", 'body' => ['decision' => 'approved']],
                 ['method' => 'POST', 'url' => "/api/erp/fees/concessions/{$concession->id}/decision", 'body' => ['decision' => 'rejected']],
+            )) : null,
+
+            $user->hasPermission('manage-fees') ? $this->section('payment_proofs', 'Online fee payments', PaymentProof::with(['student:id,first_name,middle_name,last_name,admission_no', 'paymentMethod:id,name', 'creator:id,name'])->where('status', 'pending')->latest('id'), fn (PaymentProof $proof): array => $this->item(
+                $proof->id, ($proof->paymentMethod?->name ?? 'Online').' — '.$proof->student?->fullName(), 'Transaction '.$proof->reference_no.' on '.$proof->paid_on?->format('d M Y').' · check the screenshot in Fees → Online Payments', $proof->amount, $proof->creator?->name, $proof->created_at,
+                ['method' => 'POST', 'url' => "/api/erp/fees/payment-proofs/{$proof->id}/approve", 'body' => []],
+                ['method' => 'POST', 'url' => "/api/erp/fees/payment-proofs/{$proof->id}/reject", 'reason_field' => 'reason'],
             )) : null,
 
             $this->section('staff_leave', 'Staff leave', $this->leaveService->requestsQuery($user, ['status' => 'pending'])->whereHas('employee', fn ($query) => $query->where('user_id', '!=', $user->id)->orWhereNull('user_id'))->latest('id'), fn (LeaveRequest $leave): array => $this->item(

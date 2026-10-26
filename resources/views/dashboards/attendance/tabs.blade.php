@@ -2,6 +2,7 @@
     'label' => 'Attendance',
     'current' => $current,
     'tabs' => [
+        'admin.attendance.live' => ['Live Today', 'activity', ['record-attendance', 'manage-staff-attendance']],
         'admin.attendance.register' => ['Daily Register', 'check', 'record-attendance'],
         'admin.attendance.monthly' => ['Monthly Summary', 'chart', 'record-attendance'],
         'admin.attendance.leaves' => ['Leave Requests', 'mail', 'record-attendance'],

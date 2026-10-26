@@ -55,6 +55,7 @@ use App\Http\Controllers\ERP\NumberSequenceController;
 use App\Http\Controllers\ERP\OnlineTestController;
 use App\Http\Controllers\ERP\ParentController;
 use App\Http\Controllers\ERP\PaymentMethodController;
+use App\Http\Controllers\ERP\PaymentProofController;
 use App\Http\Controllers\ERP\PayrollController;
 use App\Http\Controllers\ERP\PerformanceController;
 use App\Http\Controllers\ERP\PeriodController;
@@ -507,7 +508,15 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
             Route::post('payments', [FeePaymentController::class, 'store'])->name('payments.store');
             Route::get('payments/{fee_payment}', [FeePaymentController::class, 'show'])->name('payments.show');
             Route::post('payments/{fee_payment}/reverse', [FeePaymentController::class, 'reverse'])->name('payments.reverse');
+
+            Route::get('payment-proofs/datatable', [PaymentProofController::class, 'datatable'])->name('payment-proofs.datatable');
+            Route::post('payment-proofs/{payment_proof}/approve', [PaymentProofController::class, 'approve'])->name('payment-proofs.approve');
+            Route::post('payment-proofs/{payment_proof}/reject', [PaymentProofController::class, 'reject'])->name('payment-proofs.reject');
         });
+
+        // Online payments by screenshot: the student's family (or fee staff) send and list them (checked in the service).
+        Route::get('students/{student}/payment-proofs', [PaymentProofController::class, 'index'])->name('payment-proofs.index');
+        Route::post('students/{student}/payment-proofs', [PaymentProofController::class, 'store'])->middleware('throttle:10,1')->name('payment-proofs.store');
 
         Route::get('invoices/{fee_invoice}', [FeeInvoiceController::class, 'show'])->middleware('permission:manage-fees,view-fees')->name('invoices.show');
 
@@ -577,6 +586,7 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
         Route::post('attendance-kiosks/{attendance_kiosk}/renew', [AttendanceKioskController::class, 'renew'])->name('attendance-kiosks.renew');
     });
     Route::get('my-attendance-qr', [IdCardController::class, 'myQr'])->name('my-attendance-qr');
+    Route::get('attendance/live', [AttendanceController::class, 'live'])->middleware('permission:record-attendance,manage-staff-attendance')->name('attendance.live');
     Route::post('attendance/scan', [AttendanceController::class, 'scan'])->middleware(['permission:record-attendance,manage-staff-attendance', 'throttle:120,1'])->name('attendance.scan');
 
     Route::middleware('permission:record-attendance')->group(function () {

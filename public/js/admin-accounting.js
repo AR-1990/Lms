@@ -233,6 +233,7 @@
                 form.elements.requires_reference.checked = Boolean(row && row.requires_reference);
                 form.elements.requires_bank_details.checked = Boolean(row && row.requires_bank_details);
                 form.elements.is_online.checked = Boolean(row && row.is_online);
+                set(form, 'payment_instructions', row && row.payment_instructions);
                 form.elements.is_active.checked = row ? row.is_active : true;
             },
             payload: function (form) {
@@ -245,6 +246,7 @@
                     requires_reference: form.elements.requires_reference.checked,
                     requires_bank_details: form.elements.requires_bank_details.checked,
                     is_online: form.elements.is_online.checked,
+                    payment_instructions: text(form, 'payment_instructions'),
                     is_active: form.elements.is_active.checked
                 };
             }

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * How money is received or paid (Cash, bank deposit, JazzCash…) and which ledger account it posts to.
  */
-#[Fillable(['name', 'code', 'account_id', 'requires_reference', 'requires_bank_details', 'is_online', 'charges_percent', 'is_active', 'sort_order'])]
+#[Fillable(['name', 'code', 'account_id', 'requires_reference', 'requires_bank_details', 'is_online', 'payment_instructions', 'charges_percent', 'is_active', 'sort_order'])]
 class PaymentMethod extends Model
 {
     use LogsActivity, SoftDeletes, TracksAuthor;

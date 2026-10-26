@@ -47,6 +47,11 @@ class AttendancePortalController extends PortalController
         return $this->attendancePage('scan');
     }
 
+    public function live(): View
+    {
+        return $this->attendancePage('live');
+    }
+
     public function kiosks(): View
     {
         return $this->page('dashboards.attendance.kiosks', 'admin', 'attendance', ['campuses' => Campus::where('is_active', true)->orderBy('name')->get(['id', 'name'])]);

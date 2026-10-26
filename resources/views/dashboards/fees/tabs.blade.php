@@ -4,6 +4,7 @@
     'tabs' => [
         'accounts.fees.challans' => ['Challans', 'hash', 'manage-fees'],
         'accounts.fees.receipts' => ['Receipts', 'check', 'manage-fees'],
+        'accounts.fees.online-payments' => ['Online Payments', 'wallet', 'manage-fees'],
         'accounts.fees.refunds' => ['Refunds', 'wallet', 'issue-refunds'],
         'accounts.fees.structures' => ['Fee Structures', 'layers', 'manage-fee-setup'],
         'accounts.fees.concessions' => ['Concessions', 'heart', 'manage-fee-setup'],

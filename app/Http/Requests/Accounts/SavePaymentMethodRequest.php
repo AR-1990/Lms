@@ -32,6 +32,7 @@ class SavePaymentMethodRequest extends FormRequest
             'requires_reference' => ['sometimes', 'boolean'],
             'requires_bank_details' => ['sometimes', 'boolean'],
             'is_online' => ['sometimes', 'boolean'],
+            'payment_instructions' => ['nullable', 'string', 'max:1000'],
             'charges_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:32000'],

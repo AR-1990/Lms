@@ -51,6 +51,14 @@ class FeesPortalController extends PortalController
         return $this->screen('refunds');
     }
 
+    /**
+     * Online payments families sent with a screenshot, to check against the bank / wallet account.
+     */
+    public function onlinePayments(): View
+    {
+        return $this->screen('online-payments');
+    }
+
     public function lateFees(): View
     {
         return $this->screen('late-fees', ['all_heads' => FeeHead::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'code'])]);

@@ -93,6 +93,14 @@ class AttendanceController extends Controller
         return $this->successResponse($result, $this->attendanceService->scanMessage($result));
     }
 
+    /**
+     * Today's live board (web page refreshes it; the app polls the same endpoint).
+     */
+    public function live(Request $request): JsonResponse
+    {
+        return $this->successResponse($this->attendanceService->live($request->user()), 'Live attendance.');
+    }
+
     /* ---------- Leave requests ---------- */
 
     /**

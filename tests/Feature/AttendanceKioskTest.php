@@ -102,4 +102,27 @@ class AttendanceKioskTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data', null);
     }
+
+    public function test_the_live_board_shows_gate_arrivals_and_manual_register_marks_together(): void
+    {
+        $token = basename($this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/attendance-kiosks', ['name' => 'Main gate'])->json('data.url'));
+        $this->app['auth']->forgetGuards();
+        $this->postJson("/api/kiosk/{$token}/scan", ['code' => IdCard::where('holder_type', 'student')->value('qr_token')])->assertOk();
+        $this->postJson("/api/kiosk/{$token}/scan", ['code' => IdCard::where('holder_type', 'employee')->value('qr_token')])->assertOk();
+
+        $enrollment = $this->student->currentEnrollment;
+        $live = $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/attendance/live')->assertOk()->json('data');
+        $this->assertSame(1, collect($live['students']['sections'])->firstWhere('section_id', $enrollment->section_id)['present']);
+        $this->assertSame(1, $live['staff']['in']);
+        $this->assertSame(['kiosk'], collect($live['recent'])->pluck('source')->unique()->values()->all());
+
+        // The teacher still marks the register by hand: correcting a gate arrival makes it a manual mark.
+        $this->actingAs($this->admin, 'sanctum')->postJson('/api/erp/attendance', ['section_id' => $enrollment->section_id, 'date' => '2026-10-22', 'rows' => [['enrollment_id' => $enrollment->id, 'status' => 'late']]])->assertOk();
+        $row = StudentAttendance::where('enrollment_id', $enrollment->id)->first();
+        $this->assertSame(['late', 'manual'], [$row->status, $row->source]);
+        $this->actingAs($this->admin, 'sanctum')->getJson('/api/erp/attendance/live')->assertJsonPath('data.students.totals.late', 1);
+
+        $this->actingAs(User::where('email', 'parent@lms.test')->first(), 'sanctum')->getJson('/api/erp/attendance/live')->assertForbidden();
+        $this->actingAs($this->admin)->get(route('admin.attendance.live'))->assertOk()->assertSee('data-live-board', false);
+    }
 }

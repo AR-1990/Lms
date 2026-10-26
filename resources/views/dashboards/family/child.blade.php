@@ -15,6 +15,7 @@
      data-results-url="{{ route('erp.exams.results.student', $student) }}"
      data-history-url="{{ route('erp.students.history', $student) }}"
      data-leave-url="{{ route('erp.leave-requests.store') }}"
+     data-proofs-url="{{ route('erp.fees.payment-proofs.index', $student) }}"
      data-sign-url="{{ url('/api/erp/diaries') }}"
      data-can-sign="{{ $data['is_parent'] ? 1 : 0 }}">
 
@@ -97,6 +98,38 @@
             <div class="dash-table-wrap"><table class="dash-table">
                 <thead><tr><th>Challan</th><th>Due date</th><th class="dash-col-num">Amount due</th><th class="dash-col-actions"><span class="dash-visually-hidden">Download</span></th></tr></thead>
                 <tbody data-open-challans></tbody>
+            </table></div>
+        </section>
+        <section class="dash-panel" data-pay-online hidden>
+            <div class="dash-panel-head"><div><h2>Paid online? Send the screenshot</h2><p>Pay by JazzCash, EasyPaisa or bank transfer to the account below, then send the screenshot with the transaction ID. The school checks it and the receipt appears under Payments.</p></div></div>
+            <div class="dash-pay-to" data-pay-to></div>
+            <form class="dash-form-grid" data-proof-form novalidate>
+                <div class="dash-field">
+                    <label for="proofChallan">Challan</label>
+                    <select id="proofChallan" name="fee_invoice_id" data-proof-challan></select>
+                    <p class="dash-field-error" data-error-for="fee_invoice_id" hidden></p>
+                </div>
+                <div class="dash-field">
+                    <label for="proofMethod">Paid by</label>
+                    <select id="proofMethod" name="payment_method_id" required data-proof-method></select>
+                    <p class="dash-field-error" data-error-for="payment_method_id" hidden></p>
+                </div>
+                @include('dashboards.partials.field', ['name' => 'amount', 'label' => 'Amount paid (Rs)', 'type' => 'number', 'required' => true, 'min' => 1, 'step' => '1', 'id' => 'proofAmount'])
+                @include('dashboards.partials.field', ['name' => 'paid_on', 'label' => 'Paid on', 'type' => 'date', 'required' => true, 'id' => 'proofDate'])
+                @include('dashboards.partials.field', ['name' => 'reference_no', 'label' => 'Transaction ID', 'required' => true, 'placeholder' => 'From the screenshot / SMS', 'id' => 'proofReference'])
+                @include('dashboards.partials.field', ['name' => 'payer_name', 'label' => 'Paid from (name or number)', 'id' => 'proofPayer'])
+                <div class="dash-field dash-field-wide">
+                    <label for="proofShot">Screenshot</label>
+                    <input id="proofShot" type="file" name="screenshot" accept="image/*,application/pdf" required>
+                    <p class="dash-field-hint">A photo or screenshot of the payment (image or PDF, up to 5 MB).</p>
+                    <p class="dash-field-error" data-error-for="screenshot" hidden></p>
+                </div>
+                <p class="dash-form-error dash-field-wide" data-form-error hidden></p>
+                <div><button type="submit" class="dash-btn dash-btn-primary" data-submit>@include('partials.dashboard-icon', ['name' => 'send']) Send to school</button></div>
+            </form>
+            <div class="dash-table-wrap"><table class="dash-table">
+                <thead><tr><th>Transaction</th><th>Sent</th><th class="dash-col-num">Amount</th><th>Status</th></tr></thead>
+                <tbody data-proofs></tbody>
             </table></div>
         </section>
         <section class="dash-panel">

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AcademicSession;
 use App\Models\AttendanceKiosk;
 use App\Models\Employee;
 use App\Models\Enrollment;
@@ -11,6 +12,7 @@ use App\Models\StaffAttendance;
 use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Models\StudentLeaveRequest;
+use App\Models\TeacherAssignment;
 use App\Models\User;
 use App\Models\WorkShift;
 use Illuminate\Database\Eloquent\Builder;
@@ -112,6 +114,10 @@ class AttendanceService
                     'status' => $row['status'],
                     'remarks' => $row['remarks'] ?? null,
                 ]);
+
+                if ($attendance->exists && $attendance->isDirty('status')) {
+                    $attendance->source = 'manual';
+                }
 
                 if ($attendance->isDirty('status') && $attendance->status === 'absent') {
                     $newlyAbsent[] = $attendance->student_id;
@@ -308,11 +314,11 @@ class AttendanceService
             throw ValidationException::withMessages(['code' => ["{$student->fullName()} has no class section this session."]]);
         }
 
-        return DB::transaction(function () use ($student, $enrollment, $today, $time, $markedBy): array {
+        return DB::transaction(function () use ($student, $enrollment, $today, $time, $markedBy, $source): array {
             $attendance = StudentAttendance::where('enrollment_id', $enrollment->id)->whereDate('date', $today)->first();
 
             if ($attendance === null) {
-                StudentAttendance::create(['enrollment_id' => $enrollment->id, 'student_id' => $student->id, 'section_id' => $enrollment->section_id, 'date' => $today, 'status' => 'present', 'check_in_at' => $time, 'marked_by' => $markedBy]);
+                StudentAttendance::create(['enrollment_id' => $enrollment->id, 'student_id' => $student->id, 'section_id' => $enrollment->section_id, 'date' => $today, 'status' => 'present', 'check_in_at' => $time, 'source' => $source, 'marked_by' => $markedBy]);
             }
 
             return ['name' => $student->fullName(), 'holder_type' => 'student', 'status' => $attendance?->status ?? 'present', 'time' => substr($time, 0, 5), 'action' => $attendance ? 'already_marked' : 'checked_in'];
@@ -332,6 +338,76 @@ class AttendanceService
             $result['status'] === 'late' => "{$result['name']} checked in late at {$result['time']}.",
             default => "{$result['name']} marked present at {$result['time']}.",
         };
+    }
+
+    /**
+     * Today's live attendance: students per section (present / late / absent / leave / not marked yet) and
+     * staff (in / out / late / not in), with the latest arrivals from the gate, scanners and registers.
+     * Teachers see only the sections they teach; staff counts need manage-staff-attendance.
+     *
+     * @return array<string, mixed>
+     */
+    public function live(User $user): array
+    {
+        $today = today()->toDateString();
+        $recent = collect();
+        $result = ['date' => $today, 'time' => now()->format('H:i:s'), 'holiday' => $this->calendarService->holidayOn($today)?->title, 'students' => null, 'staff' => null];
+
+        if ($user->hasPermission('record-attendance')) {
+            $employeeId = Employee::where('user_id', $user->id)->value('id') ?? 0;
+            $sections = Section::query()
+                ->join('classes', 'classes.id', '=', 'sections.class_id')
+                ->select(['sections.id', 'sections.name', 'classes.name as class_name'])
+                ->whereIn('sections.academic_session_id', AcademicSession::where('is_current', true)->select('id'))
+                ->when(! $user->hasPermission('manage-students'), fn (Builder $query) => $query->where(fn (Builder $own) => $own->where('sections.class_teacher_id', $employeeId)
+                    ->orWhereIn('sections.id', TeacherAssignment::where('employee_id', $employeeId)->select('section_id'))))
+                ->withCount(['enrollments as total' => fn (Builder $query) => $query->where('status', 'active')])
+                ->orderBy('classes.level_order')->orderBy('sections.name')
+                ->get();
+            $counts = StudentAttendance::whereDate('date', $today)->whereIn('section_id', $sections->pluck('id'))
+                ->selectRaw('section_id, status, count(*) as total')->groupBy('section_id', 'status')->get()->groupBy('section_id');
+
+            $rows = $sections->map(function (Section $section) use ($counts): array {
+                $status = ($counts->get($section->id) ?? collect())->pluck('total', 'status');
+                $marked = (int) $status->sum();
+
+                return [
+                    'section_id' => $section->id, 'name' => trim($section->class_name.' '.$section->name), 'total' => (int) $section->total,
+                    'present' => (int) $status->get('present', 0) + (int) $status->get('late', 0) + (int) $status->get('half_day', 0),
+                    'late' => (int) $status->get('late', 0), 'absent' => (int) $status->get('absent', 0), 'leave' => (int) $status->get('leave', 0),
+                    'unmarked' => max(0, $section->total - $marked),
+                ];
+            });
+
+            $rows = $rows->where('total', '>', 0)->values();
+            $result['students'] = ['totals' => collect(['total', 'present', 'late', 'absent', 'leave', 'unmarked'])->mapWithKeys(fn (string $key): array => [$key => $rows->sum($key)])->all(), 'sections' => $rows->values()->all()];
+            $recent = $recent->merge(StudentAttendance::whereDate('date', $today)->whereIn('section_id', $sections->pluck('id'))->whereNotNull('check_in_at')
+                ->with('student:id,first_name,middle_name,last_name')->latest('updated_at')->limit(25)->get()
+                ->map(fn (StudentAttendance $row): array => ['type' => 'student', 'name' => $row->student?->fullName(), 'detail' => $rows->firstWhere('section_id', $row->section_id)['name'] ?? null, 'status' => $row->status, 'action' => 'checked_in', 'time' => substr((string) $row->check_in_at, 0, 5), 'source' => $row->source, 'at' => $row->updated_at]));
+        }
+
+        if ($user->hasPermission('manage-staff-attendance')) {
+            $staffRows = StaffAttendance::whereDate('date', $today)->get(['id', 'employee_id', 'status', 'check_in_at', 'check_out_at', 'source', 'updated_at']);
+            $total = Employee::whereIn('status', Employee::CURRENT_STATUSES)->count();
+            $result['staff'] = [
+                'total' => $total,
+                'in' => $staffRows->whereNotNull('check_in_at')->whereNull('check_out_at')->count(),
+                'out' => $staffRows->whereNotNull('check_out_at')->count(),
+                'late' => $staffRows->where('status', 'late')->count(),
+                'absent' => $staffRows->where('status', 'absent')->count(),
+                'leave' => $staffRows->where('status', 'leave')->count(),
+                'not_in' => max(0, $total - $staffRows->count()),
+            ];
+            $employees = Employee::whereIn('id', $staffRows->sortByDesc('updated_at')->take(25)->pluck('employee_id'))->with('designation:id,name')->get(['id', 'first_name', 'middle_name', 'last_name', 'designation_id'])->keyBy('id');
+            $recent = $recent->merge($staffRows->whereNotNull('check_in_at')->sortByDesc('updated_at')->take(25)->map(fn (StaffAttendance $row): array => [
+                'type' => 'staff', 'name' => $employees->get($row->employee_id)?->fullName(), 'detail' => $employees->get($row->employee_id)?->designation?->name, 'status' => $row->status,
+                'action' => $row->check_out_at ? 'checked_out' : 'checked_in', 'time' => substr((string) ($row->check_out_at ?? $row->check_in_at), 0, 5), 'source' => $row->source, 'at' => $row->updated_at,
+            ]));
+        }
+
+        $result['recent'] = $recent->sortByDesc('at')->take(30)->map(fn (array $event): array => [...$event, 'at' => $event['at']?->toIso8601String()])->values()->all();
+
+        return $result;
     }
 
     /**

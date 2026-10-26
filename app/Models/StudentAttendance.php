@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * One student, one day. Corrections update the row; every change is in the activity log.
  */
-#[Fillable(['enrollment_id', 'student_id', 'section_id', 'date', 'status', 'check_in_at', 'remarks', 'marked_by'])]
+#[Fillable(['enrollment_id', 'student_id', 'section_id', 'date', 'status', 'check_in_at', 'source', 'remarks', 'marked_by'])]
 class StudentAttendance extends Model
 {
     use LogsActivity;

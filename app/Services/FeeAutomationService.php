@@ -228,9 +228,11 @@ class FeeAutomationService
     }
 
     /**
+     * Active users who manage fees (told about overdue challans, fines and online payment proofs).
+     *
      * @return array<int, int>
      */
-    private function feeStaff(): array
+    public function feeStaff(): array
     {
         return User::where('is_active', true)->whereHas('roles.permissions', fn (Builder $query) => $query->where('slug', 'manage-fees'))->pluck('id')->all();
     }

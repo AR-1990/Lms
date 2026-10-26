@@ -11224,3 +11224,146 @@ tr.is-today td {
         display: none;
     }
 }
+
+/* Fees → Online Payments: screenshot next to the details */
+.dash-proof {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1rem 1.5rem;
+}
+
+.dash-proof-shot {
+    display: grid;
+    place-items: center;
+    min-height: 12rem;
+    max-height: 60vh;
+    overflow: hidden;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 10px;
+    background: #f8fafc;
+    cursor: zoom-in;
+}
+
+.dash-proof-shot img {
+    display: block;
+    max-width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+}
+
+.dash-proof-shot [hidden],
+.dash-proof [hidden],
+.dash-modal-actions[hidden] {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .dash-proof {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Family → Fees: where to pay online */
+.dash-pay-to {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem;
+    padding: 0 1.5rem;
+}
+
+.dash-pay-to:empty {
+    display: none;
+}
+
+.dash-pay-to > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px dashed var(--brand-300, #c7d2fe);
+    border-radius: 10px;
+    background: #fffdf7;
+    font-size: 0.88rem;
+}
+
+.dash-pay-to span {
+    color: var(--muted, #64748b);
+    word-break: break-word;
+}
+
+[data-pay-online][hidden],
+[data-proof-form][hidden] {
+    display: none;
+}
+
+/* Attendance → Live Today */
+.dash-live-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.dash-live-bar {
+    display: block;
+    height: 4px;
+    margin-top: 0.35rem;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--line, #e2e8f0);
+}
+
+.dash-live-bar span {
+    display: block;
+    height: 100%;
+    background: #059669;
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.dash-live-feed {
+    max-height: 32rem;
+    overflow-y: auto;
+}
+
+.dash-live-holiday {
+    padding: 0.85rem 1.25rem;
+    color: var(--brand-700, #1d2b45);
+    font-weight: 600;
+}
+
+.dash-live-dot::before {
+    content: "";
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-right: 0.35rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: dash-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dash-live-pulse {
+    50% { opacity: 0.3; }
+}
+
+[data-live-board] [hidden] {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .dash-live-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-live-dot::before {
+        animation: none;
+    }
+
+    .dash-live-bar span {
+        transition: none;
+    }
+}

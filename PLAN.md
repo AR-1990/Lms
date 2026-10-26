@@ -540,9 +540,12 @@ Guardian data captured before a student exists (copied into `guardians` on enrol
 | date | date R | |
 | status | string(20) R | `present`, `absent`, `late`, `leave`, `half_day` |
 | check_in_at | time | |
+| source | string(20) default `manual` | `manual` (register), `qr` (staff scanner), `kiosk` (gate); a register change makes it `manual` |
 | remarks | string | |
 | marked_by | → users | |
 | | | unique (enrollment, date) |
+
+**Live Today** (Attendance → Live Today, `GET /api/erp/attendance/live`, `record-attendance` or `manage-staff-attendance`): today's students per class (present / late / absent / leave / not marked; teachers see their own classes) and staff (in / out / late / not in), with the latest arrivals and how each was recorded. The page refreshes every 15 seconds; each class opens the register for manual marking, so gate scans and the teacher's register work side by side.
 
 ### `student_leave_requests`
 `student_id` R, `requested_by` → users (parent), `from_date` R, `to_date` R, `reason` text R, `status` (`pending`/`approved`/`rejected`), `reviewed_by` → users, `reviewed_at`, `review_remarks`. Supporting note via `attachments`.
@@ -803,6 +806,7 @@ One-off waivers that are not a standing concession: `fee_invoice_id` R, `fee_inv
 | requires_reference | boolean default false | transaction / cheque no mandatory |
 | requires_bank_details | boolean default false | cheque bank + date |
 | is_online | boolean default false | |
+| payment_instructions | text | what families see to pay online ("JazzCash 0300…"); a method with instructions, a transaction ID and no cheque is offered for screenshot payments |
 | charges_percent | decimal(5,2) | gateway charges, optional |
 | is_active | boolean R | |
 | sort_order | smallInteger | |
@@ -829,6 +833,9 @@ One-off waivers that are not a standing concession: `fee_invoice_id` R, `fee_inv
 | reversal_reason | string | |
 | remarks | text | |
 | **[C] [AU]** | | proof scan via `attachments` |
+
+### `payment_proofs` (online payment by screenshot)
+`student_id` R, `fee_invoice_id` → fee_invoices (empty = oldest unpaid challans), `payment_method_id` R, `amount` bigInteger R, `paid_on` date R, `reference_no` R (transaction ID, upper-case; the same ID cannot be pending or approved twice for a method), `payer_name`, `note`, `status` (`pending`/`approved`/`rejected`), `reviewed_by`, `reviewed_at`, `reject_reason`, `fee_payment_id` → fee_payments. **[SD] [AU]** The screenshot is an attachment (owner `payment_proofs`). Families pay by JazzCash / EasyPaisa / bank transfer and send the screenshot from the child's Fees tab (or the app); fee staff are notified, check it in Fees → Online Payments (or the Approvals Inbox) and approve — a normal receipt is made with the transaction ID, the challan is settled and the family gets the receipt notification — or reject with a reason the family sees. APIs: `GET/POST /api/erp/fees/students/{id}/payment-proofs` (family or `manage-fees`), `GET fees/payment-proofs/datatable`, `POST fees/payment-proofs/{id}/approve|reject` (`manage-fees`); screenshot `fees/payment-proofs/{id}/screenshot`.
 
 ### `fee_payment_allocations`
 One payment can settle many invoices; one invoice can be paid in parts.

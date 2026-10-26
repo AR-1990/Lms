@@ -10,6 +10,7 @@ use App\Http\Controllers\ERP\FeePaymentController;
 use App\Http\Controllers\ERP\IdCardController;
 use App\Http\Controllers\ERP\ImportController;
 use App\Http\Controllers\ERP\MyHrController;
+use App\Http\Controllers\ERP\PaymentProofController;
 use App\Http\Controllers\ERP\PayrollController;
 use App\Http\Controllers\ERP\ReportController;
 use App\Http\Controllers\ERP\StudentCareController;
@@ -54,6 +55,7 @@ Route::middleware(['api', ForceJsonResponse::class, 'auth:sanctum'])->prefix('ap
     Route::get('student-certificates/{student_certificate}/pdf', [StudentCareController::class, 'certificatePdf'])->middleware('permission:manage-students')->name('student-certificates.pdf');
     Route::get('students/{student}/leaving-certificate/pdf', [StudentLeavingController::class, 'certificatePdf'])->name('students.leaving-certificate.pdf');
     Route::get('fees/payments/{fee_payment}/pdf', [FeePaymentController::class, 'pdf'])->middleware('permission:manage-fees,view-fees')->name('fees.payments.pdf');
+    Route::get('fees/payment-proofs/{payment_proof}/screenshot', [PaymentProofController::class, 'screenshot'])->name('fees.payment-proofs.screenshot');
     Route::get('fees/batches/{fee_invoice_batch}/pdf', [FeeInvoiceController::class, 'batchPdf'])->middleware('permission:manage-fees')->name('fees.batches.pdf');
 
     // Transport (PLAN.md §18)

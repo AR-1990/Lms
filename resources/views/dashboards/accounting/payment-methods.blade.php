@@ -110,6 +110,12 @@
                 <span class="dash-switch-track" aria-hidden="true"><span class="dash-switch-thumb"></span></span>
                 <span>Online / mobile wallet</span>
             </label>
+            <div class="dash-field dash-field-wide">
+                <label for="f_payment_instructions">How families pay to this <span class="dash-optional">optional</span></label>
+                <textarea id="f_payment_instructions" name="payment_instructions" rows="2" maxlength="1000" placeholder="JazzCash 0300 1234567 — Pinnacle International Academy"></textarea>
+                <p class="dash-field-hint">Shown to parents with the screenshot upload. Fill it to let families pay online with this method.</p>
+                <p class="dash-field-error" data-error-for="payment_instructions" hidden></p>
+            </div>
             <label class="dash-switch">
                 <input type="checkbox" name="is_active" checked>
                 <span class="dash-switch-track" aria-hidden="true"><span class="dash-switch-thumb"></span></span>

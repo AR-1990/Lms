@@ -16,7 +16,7 @@ class PaymentMethodService
     public function query(array $filters = []): Builder
     {
         return PaymentMethod::query()
-            ->select(['id', 'name', 'code', 'account_id', 'requires_reference', 'requires_bank_details', 'is_online', 'charges_percent', 'is_active', 'sort_order', 'created_at', 'updated_at'])
+            ->select(['id', 'name', 'code', 'account_id', 'requires_reference', 'requires_bank_details', 'is_online', 'payment_instructions', 'charges_percent', 'is_active', 'sort_order', 'created_at', 'updated_at'])
             ->with('account:id,code,name')
             ->when(isset($filters['is_active']) && $filters['is_active'] !== '', fn (Builder $query) => $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN)));
     }

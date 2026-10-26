@@ -7,6 +7,7 @@ use App\Models\Attachment;
 use App\Models\Employee;
 use App\Models\Expense;
 use App\Models\JobApplication;
+use App\Models\PaymentProof;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -35,6 +36,7 @@ class AttachmentService
         'employees' => ['model' => Employee::class, 'permission' => 'manage-hr'],
         'expenses' => ['model' => Expense::class, 'permission' => 'manage-expenses'],
         'job_applications' => ['model' => JobApplication::class, 'permission' => 'manage-recruitment'],
+        'payment_proofs' => ['model' => PaymentProof::class, 'permission' => 'manage-fees'],
     ];
 
     private const DISK = 'local';

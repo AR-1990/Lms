@@ -200,6 +200,81 @@
         }).join('') : '<tr><td colspan="5" class="dash-muted">No payments yet.</td></tr>';
     }
 
+    /* ---------- Online payment by screenshot ---------- */
+
+    const payBox = root.querySelector('[data-pay-online]');
+    const proofForm = payBox.querySelector('[data-proof-form]');
+
+    function renderProofs(data) {
+        const PROOF_TONES = { approved: 'dash-badge-ok', pending: 'dash-badge-warn', rejected: 'dash-badge-danger' };
+        const LABELS = { approved: 'Receipt made', pending: 'School is checking', rejected: 'Not accepted' };
+        const methods = data.pay_to.methods;
+
+        // Only offered once the school has written how to pay (Accounts → Payment Methods).
+        payBox.hidden = methods.length === 0 && data.proofs.length === 0;
+        proofForm.hidden = methods.length === 0;
+        payBox.querySelector('[data-pay-to]').innerHTML = methods.map(function (method) {
+            return '<div><strong>' + esc(method.name) + '</strong><span>' + esc(method.payment_instructions) + '</span></div>';
+        }).join('') + (data.pay_to.bank ? '<div><strong>Bank transfer</strong><span>' + esc([data.pay_to.bank.bank, data.pay_to.bank.account_title, data.pay_to.bank.account_number, data.pay_to.bank.iban ? 'IBAN ' + data.pay_to.bank.iban : null].filter(Boolean).join(' · ')) + '</span></div>' : '');
+        payBox.querySelector('[data-proof-method]').innerHTML = methods.map(function (method) { return '<option value="' + method.id + '">' + esc(method.name) + '</option>'; }).join('');
+        payBox.querySelector('[data-proofs]').innerHTML = data.proofs.length ? data.proofs.map(function (proof) {
+            return '<tr><td><span class="dash-cell-title">' + esc(proof.reference_no) + '</span><span class="dash-muted">' + esc(proof.method || '') + (proof.invoice_no ? ' · ' + esc(proof.invoice_no) : '') + '</span></td><td>' + date(proof.paid_on) + '</td>'
+                + '<td class="dash-col-num">' + esc(money(proof.amount)) + '</td><td>' + badge(LABELS[proof.status], PROOF_TONES[proof.status]) + (proof.reject_reason ? '<span class="dash-muted">' + esc(proof.reject_reason) + '</span>' : '') + (proof.receipt_no ? '<span class="dash-muted">' + esc(proof.receipt_no) + '</span>' : '') + '</td></tr>';
+        }).join('') : '<tr><td colspan="4" class="dash-muted">Nothing sent yet.</td></tr>';
+    }
+
+    function loadProofs() {
+        return ui.api('GET', root.dataset.proofsUrl).then(function (envelope) { renderProofs(envelope.data); }).catch(function () {});
+    }
+
+    function fillChallans(openChallans) {
+        payBox.querySelector('[data-proof-challan]').innerHTML = openChallans.map(function (challan) {
+            return '<option value="' + challan.id + '" data-balance="' + challan.balance + '">' + esc(challan.invoice_no) + ' — ' + esc(money(challan.balance)) + '</option>';
+        }).join('') + '<option value="">Oldest unpaid challans</option>';
+        proofForm.elements.amount.value = openChallans.length ? Math.round(openChallans[0].balance / 100) : '';
+        proofForm.elements.paid_on.value = today();
+    }
+
+    payBox.querySelector('[data-proof-challan]').addEventListener('change', function (event) {
+        const option = event.target.selectedOptions[0];
+
+        if (option && option.dataset.balance) {
+            proofForm.elements.amount.value = Math.round(Number(option.dataset.balance) / 100);
+        }
+    });
+
+    proofForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        window.PinnacleResource.clearErrors(proofForm);
+
+        const body = new window.FormData();
+        body.append('payment_method_id', proofForm.elements.payment_method_id.value);
+        body.append('amount', String(Math.round(Number(proofForm.elements.amount.value) * 100)));
+        body.append('paid_on', proofForm.elements.paid_on.value);
+        body.append('reference_no', proofForm.elements.reference_no.value.trim());
+        body.append('payer_name', proofForm.elements.payer_name.value.trim());
+
+        if (proofForm.elements.fee_invoice_id.value) {
+            body.append('fee_invoice_id', proofForm.elements.fee_invoice_id.value);
+        }
+
+        if (proofForm.elements.screenshot.files[0]) {
+            body.append('screenshot', proofForm.elements.screenshot.files[0]);
+        }
+
+        const submit = proofForm.querySelector('[data-submit]');
+        submit.disabled = true;
+        ui.api('POST', root.dataset.proofsUrl, body).then(function (envelope) {
+            ui.toast(envelope.message);
+            proofForm.elements.reference_no.value = '';
+            proofForm.elements.payer_name.value = '';
+            proofForm.elements.screenshot.value = '';
+            loadProofs();
+        }).catch(function (envelope) {
+            window.PinnacleResource.showErrors(proofForm, envelope);
+        }).finally(function () { submit.disabled = false; });
+    });
+
     function renderLeave(requests) {
         const TONES = { approved: 'dash-badge-ok', pending: 'dash-badge-warn', rejected: 'dash-badge-danger' };
 
@@ -226,6 +301,8 @@
             renderToday(overview.timetable);
             renderExams(overview.exams);
             renderFees(overview.fees);
+            fillChallans(overview.fees.open_challans);
+            loadProofs();
             renderLeave(overview.leave_requests);
             renderRecords(overview.records);
         }).catch(function () {
