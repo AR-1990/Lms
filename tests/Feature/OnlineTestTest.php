@@ -7,12 +7,14 @@ use App\Models\ExamTerm;
 use App\Models\FeeHead;
 use App\Models\Mark;
 use App\Models\OnlineTest;
+use App\Models\OnlineTestAttempt;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\TeacherAssignment;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\OnlineTestService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -146,5 +148,33 @@ class OnlineTestTest extends TestCase
 
         $this->actingAs($this->teacher)->get(route('admin.exams.online-tests'))->assertOk()->assertSee('Online Tests');
         $this->actingAs($this->studentUser)->get(route('student.online-tests'))->assertOk()->assertSee('data-student-tests', false);
+    }
+
+    public function test_answers_are_saved_as_the_student_goes_and_an_abandoned_attempt_is_marked_when_time_ends(): void
+    {
+        $test = $this->actingAs($this->teacher, 'sanctum')->postJson('/api/erp/online-tests', $this->payload())->assertCreated()->json('data');
+        $this->actingAs($this->teacher, 'sanctum')->postJson("/api/erp/online-tests/{$test['id']}/status", ['status' => 'published'])->assertOk();
+        $questions = OnlineTest::find($test['id'])->questions()->with('options')->get();
+        $right = $questions[1]->options->firstWhere('is_correct', true)->id;
+
+        $this->actingAs($this->studentUser, 'sanctum')->putJson("/api/erp/online-tests/{$test['id']}/answers", ['answers' => [['question_id' => $questions[1]->id, 'option_id' => $right]]])->assertUnprocessable();
+        $this->actingAs($this->studentUser, 'sanctum')->postJson("/api/erp/online-tests/{$test['id']}/start")->assertOk();
+        $this->actingAs($this->studentUser, 'sanctum')->putJson("/api/erp/online-tests/{$test['id']}/answers", ['answers' => [['question_id' => $questions[1]->id, 'option_id' => $right]]])->assertOk();
+
+        // The connection drops; on another device the saved answer comes back.
+        $this->actingAs($this->studentUser, 'sanctum')->postJson("/api/erp/online-tests/{$test['id']}/start")->assertOk()->assertJsonPath("data.saved.{$questions[1]->id}", $right);
+
+        $this->travel(10)->minutes();
+        $this->assertSame(0, app(OnlineTestService::class)->finishExpired());
+        $this->travel(15)->minutes();
+        $this->assertSame(1, app(OnlineTestService::class)->finishExpired());
+
+        $attempt = OnlineTestAttempt::firstOrFail();
+        $this->assertSame(['submitted', 3, 1], [$attempt->status, $attempt->score, $attempt->correct_count]);
+
+        $parent = User::where('email', 'parent@lms.test')->first();
+        $childId = Student::where('user_id', $this->studentUser->id)->value('id');
+        $this->actingAs($parent, 'sanctum')->getJson("/api/erp/my-online-tests?student_id={$childId}")->assertOk()->assertJsonPath('data.0.score', 3);
+        $this->actingAs($this->teacher, 'sanctum')->getJson("/api/erp/my-online-tests?student_id={$childId}")->assertNotFound();
     }
 }

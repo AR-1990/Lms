@@ -395,6 +395,16 @@
     function loadResults() {
         const box = root.querySelector('[data-results]');
 
+        ui.api('GET', root.dataset.onlineTestsUrl).then(function (envelope) {
+            root.querySelector('[data-online-tests]').innerHTML = envelope.data.length ? envelope.data.map(function (test) {
+                const score = test.attempt_status === 'submitted' ? badge(test.score + ' / ' + test.total_marks, 'dash-badge-ok') : (test.is_open ? badge(test.attempt_status === 'in_progress' ? 'Started' : 'Open now', 'dash-badge-warn') : badge('Not taken', 'dash-badge-system'));
+
+                return '<tr><td><span class="dash-cell-title">' + esc(test.title) + '</span>' + (test.closes_at ? '<span class="dash-muted">Until ' + esc(dayFormat.format(new Date(test.closes_at))) + '</span>' : '') + '</td><td>' + esc(test.subject || '') + '</td><td class="dash-col-num">' + score + '</td></tr>';
+            }).join('') : '<tr><td colspan="3" class="dash-muted">No online tests yet.</td></tr>';
+        }).catch(function () {
+            root.querySelector('[data-online-tests]').innerHTML = '<tr><td colspan="3" class="dash-muted">Could not load the online tests.</td></tr>';
+        });
+
         ui.api('GET', root.dataset.resultsUrl).then(function (envelope) {
             box.innerHTML = envelope.data.length ? envelope.data.map(function (result) {
                 return '<div class="dash-family-result"><header><strong>' + esc(result.exam) + '</strong>'

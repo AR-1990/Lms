@@ -636,6 +636,7 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     // Online MCQ tests: students attempt their own section's tests (checked in the service).
     Route::get('my-online-tests', [OnlineTestController::class, 'mine'])->name('online-tests.mine');
     Route::post('online-tests/{online_test}/start', [OnlineTestController::class, 'start'])->name('online-tests.start');
+    Route::put('online-tests/{online_test}/answers', [OnlineTestController::class, 'saveAnswers'])->middleware('throttle:120,1')->name('online-tests.answers');
     Route::post('online-tests/{online_test}/submit', [OnlineTestController::class, 'submit'])->middleware('throttle:20,1')->name('online-tests.submit');
     Route::get('online-tests/{online_test}/review', [OnlineTestController::class, 'review'])->name('online-tests.review');
 

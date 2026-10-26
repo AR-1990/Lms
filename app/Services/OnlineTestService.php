@@ -220,9 +220,13 @@ class OnlineTestService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function forStudent(User $user): array
+    public function forStudent(User $user, ?Student $child = null): array
     {
-        $enrollment = $this->ownEnrollment($user);
+        if ($child !== null) {
+            abort_unless($user->hasPermission(['manage-exams', 'manage-students']) || in_array($child->id, Student::ownIdsFor($user), true), 404, 'Student not found.');
+        }
+
+        $enrollment = $child !== null ? ($child->currentEnrollment ?? abort(404, 'Student not found.')) : $this->ownEnrollment($user);
         $tests = OnlineTest::where('section_id', $enrollment->section_id)->whereIn('status', ['published', 'closed'])
             ->with(['subject:id,name', 'attempts' => fn ($attempts) => $attempts->where('student_id', $enrollment->student_id)])
             ->latest('id')
@@ -277,6 +281,7 @@ class OnlineTestService
             'instructions' => $test->instructions,
             'total_marks' => $test->total_marks,
             'seconds_left' => max(0, (int) now()->diffInSeconds($this->deadline($test, $attempt), false)),
+            'saved' => $attempt->answers()->whereNotNull('online_test_option_id')->pluck('online_test_option_id', 'online_test_question_id')->all(),
             'questions' => $questions->map(fn (OnlineTestQuestion $question): array => [
                 'id' => $question->id,
                 'question' => $question->question,
@@ -302,26 +307,95 @@ class OnlineTestService
         }
 
         $late = now()->gt($this->deadline($test, $attempt)->addMinutes(self::GRACE_MINUTES));
-        $chosen = $late ? [] : collect($answers)->pluck('option_id', 'question_id')->all();
-        $questions = $test->questions()->with('options:id,online_test_question_id,is_correct')->get();
+        $this->finish($test, $attempt, $late ? [] : collect($answers)->pluck('option_id', 'question_id')->all());
 
-        DB::transaction(function () use ($test, $attempt, $questions, $chosen, $enrollment): void {
+        return [...$this->review($test, $attempt->refresh()), 'late' => $late];
+    }
+
+    /**
+     * Save answers while the test is running (each click), so a dropped connection or a closed tab loses
+     * nothing: the student continues on any device, and an attempt left open is marked when its time ends.
+     *
+     * @param  array<int, array{question_id: int, option_id?: int|null}>  $answers
+     */
+    public function saveAnswers(OnlineTest $test, User $user, array $answers): int
+    {
+        $enrollment = $this->ownEnrollment($user, $test);
+        $attempt = $test->attempts()->where('student_id', $enrollment->student_id)->where('status', 'in_progress')->first();
+
+        if ($attempt === null || now()->gt($this->deadline($test, $attempt)->addMinutes(self::GRACE_MINUTES))) {
+            throw ValidationException::withMessages(['online_test' => ['This test is no longer running.']]);
+        }
+
+        $options = $test->questions()->with('options:id,online_test_question_id')->get()->mapWithKeys(fn (OnlineTestQuestion $question): array => [$question->id => $question->options->pluck('id')->all()]);
+        $saved = $attempt->answers()->get()->keyBy('online_test_question_id');
+
+        DB::transaction(function () use ($answers, $options, $saved, $attempt): void {
+            foreach ($answers as $answer) {
+                $optionId = isset($answer['option_id']) ? (int) $answer['option_id'] : null;
+
+                if (! $options->has($answer['question_id']) || ($optionId !== null && ! in_array($optionId, $options[$answer['question_id']], true))) {
+                    continue;
+                }
+
+                ($saved->get($answer['question_id']) ?? $attempt->answers()->make(['online_test_question_id' => $answer['question_id']]))
+                    ->fill(['online_test_option_id' => $optionId])->save();
+            }
+        });
+
+        return count($answers);
+    }
+
+    /**
+     * Mark attempts whose time ran out without a submit (connection lost, tab closed), from their saved answers.
+     */
+    public function finishExpired(): int
+    {
+        $finished = 0;
+
+        OnlineTestAttempt::where('status', 'in_progress')->with('test')->chunkById(100, function ($attempts) use (&$finished): void {
+            foreach ($attempts as $attempt) {
+                if ($attempt->test !== null && now()->gt($this->deadline($attempt->test, $attempt)->addMinutes(self::GRACE_MINUTES))) {
+                    $this->finish($attempt->test, $attempt, []);
+                    $finished++;
+                }
+            }
+        });
+
+        return $finished;
+    }
+
+    /**
+     * Mark an attempt: the answers saved during the test, overridden by those sent with the submit.
+     *
+     * @param  array<int, int|null>  $chosen  question id => option id
+     */
+    private function finish(OnlineTest $test, OnlineTestAttempt $attempt, array $chosen): void
+    {
+        $questions = $test->questions()->with('options:id,online_test_question_id,is_correct')->get();
+        $saved = $attempt->answers()->get()->keyBy('online_test_question_id');
+        $enrollment = Enrollment::find($attempt->enrollment_id);
+
+        DB::transaction(function () use ($test, $attempt, $questions, $chosen, $saved, $enrollment): void {
             $score = 0;
             $correct = 0;
 
             foreach ($questions as $question) {
-                $optionId = isset($chosen[$question->id]) ? (int) $chosen[$question->id] : null;
+                $optionId = array_key_exists($question->id, $chosen) ? $chosen[$question->id] : $saved->get($question->id)?->online_test_option_id;
+                $optionId = $optionId !== null && $question->options->contains('id', (int) $optionId) ? (int) $optionId : null;
                 $isCorrect = $optionId !== null && $question->options->firstWhere('id', $optionId)?->is_correct === true;
-                $attempt->answers()->create(['online_test_question_id' => $question->id, 'online_test_option_id' => $question->options->contains('id', $optionId) ? $optionId : null, 'is_correct' => $isCorrect]);
+                ($saved->get($question->id) ?? $attempt->answers()->make(['online_test_question_id' => $question->id]))
+                    ->fill(['online_test_option_id' => $optionId, 'is_correct' => $isCorrect])->save();
                 $score += $isCorrect ? $question->marks : 0;
                 $correct += $isCorrect ? 1 : 0;
             }
 
             $attempt->update(['submitted_at' => now(), 'score' => $score, 'correct_count' => $correct, 'status' => 'submitted']);
-            $this->writeMark($test, $enrollment, $score);
-        });
 
-        return [...$this->review($test, $attempt->refresh()), 'late' => $late];
+            if ($enrollment !== null) {
+                $this->writeMark($test, $enrollment, $score);
+            }
+        });
     }
 
     /**

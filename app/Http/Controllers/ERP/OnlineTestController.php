@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ERP;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exams\SaveOnlineTestRequest;
 use App\Models\OnlineTest;
+use App\Models\Student;
 use App\Services\OnlineTestService;
 use App\Traits\ApiResponse;
 use App\Traits\DeletesWithApproval;
@@ -64,9 +65,28 @@ class OnlineTestController extends Controller
 
     /* ---------- Students ---------- */
 
+    /**
+     * The student's own tests, or with ?student_id= a parent's view of one child (scores only).
+     */
     public function mine(Request $request): JsonResponse
     {
-        return $this->successResponse($this->onlineTestService->forStudent($request->user()), 'Your online tests.');
+        $studentId = $request->validate(['student_id' => ['nullable', 'integer']])['student_id'] ?? null;
+
+        return $this->successResponse($this->onlineTestService->forStudent($request->user(), $studentId ? Student::findOrFail($studentId) : null), 'Online tests.');
+    }
+
+    /**
+     * Answers saved while the test runs (the app and the web page send each choice).
+     */
+    public function saveAnswers(Request $request, OnlineTest $onlineTest): JsonResponse
+    {
+        $answers = $request->validate([
+            'answers' => ['required', 'array', 'max:200'],
+            'answers.*.question_id' => ['required', 'integer'],
+            'answers.*.option_id' => ['nullable', 'integer'],
+        ])['answers'];
+
+        return $this->successResponse(['saved' => $this->onlineTestService->saveAnswers($onlineTest, $request->user(), $answers)], 'Saved.');
     }
 
     public function start(Request $request, OnlineTest $onlineTest): JsonResponse

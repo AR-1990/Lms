@@ -8,6 +8,7 @@ use App\Services\BackupService;
 use App\Services\ChatService;
 use App\Services\CounsellingService;
 use App\Services\FeeAutomationService;
+use App\Services\OnlineTestService;
 use App\Services\PerformanceService;
 use App\Services\StickyNoteService;
 use App\Services\TaskService;
@@ -71,6 +72,9 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->name(
 Artisan::command('backup:run', function (): void {
     $this->info('Backup '.app(BackupService::class)->run()['file'].' created.');
 })->purpose('Back up the database to storage/app/private/backups');
+// Online tests left open (connection lost, tab closed) are marked from their saved answers once time is up.
+Schedule::call(fn () => app(OnlineTestService::class)->finishExpired())->name('online-tests:finish-expired')->everyFiveMinutes();
+
 Schedule::command('backup:run')->name('backup:nightly')->dailyAt('02:30')->withoutOverlapping();
 
 // Admins and accounts staff get a morning reminder of students who have not paid by the due date.

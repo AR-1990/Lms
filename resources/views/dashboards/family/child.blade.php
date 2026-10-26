@@ -15,6 +15,7 @@
      data-results-url="{{ route('erp.exams.results.student', $student) }}"
      data-history-url="{{ route('erp.students.history', $student) }}"
      data-leave-url="{{ route('erp.leave-requests.store') }}"
+     data-online-tests-url="{{ route('erp.online-tests.mine', ['student_id' => $student->id]) }}"
      data-proofs-url="{{ route('erp.fees.payment-proofs.index', $student) }}"
      data-sign-url="{{ url('/api/erp/diaries') }}"
      data-can-sign="{{ $data['is_parent'] ? 1 : 0 }}">
@@ -88,6 +89,13 @@
         <section class="dash-panel">
             <div class="dash-panel-head"><div><h2>Published results</h2><p>Subject marks of every published exam.</p></div></div>
             <div data-results><p class="dash-muted">Loading…</p></div>
+        </section>
+        <section class="dash-panel">
+            <div class="dash-panel-head"><div><h2>Online tests</h2><p>MCQ tests set by the teachers and the score of each.</p></div></div>
+            <div class="dash-table-wrap"><table class="dash-table">
+                <thead><tr><th>Test</th><th>Subject</th><th class="dash-col-num">Score</th></tr></thead>
+                <tbody data-online-tests><tr><td colspan="3" class="dash-muted">Loading…</td></tr></tbody>
+            </table></div>
         </section>
     </div>
 

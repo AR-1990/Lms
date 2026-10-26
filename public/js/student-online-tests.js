@@ -1,6 +1,6 @@
 /**
- * Student → Online Tests: the list, the timed attempt (answers kept in this browser until submitted, so a
- * refresh loses nothing; auto-submits when the time runs out) and the result / review.
+ * Student → Online Tests: the list, the timed attempt (each answer is saved on the server and in this browser,
+ * so a refresh or lost connection loses nothing; auto-submits when the time runs out) and the result / review.
  * Same endpoints as the mobile app: /api/erp/my-online-tests and /api/erp/online-tests/{id}/start|submit|review.
  */
 (function () {
@@ -99,7 +99,8 @@
     function start(testId) {
         ui.api('POST', base + '/online-tests/' + testId + '/start').then(function (envelope) {
             current = Object.assign({ test_id: testId }, envelope.data);
-            const answers = saved();
+            // Answers saved on the server (another device) first, then any not yet sent from this browser.
+            const answers = Object.assign({}, current.saved || {}, saved());
 
             take.querySelector('[data-take-title]').textContent = current.title;
             take.querySelector('[data-take-instructions]').textContent = current.instructions || current.questions.length + ' questions · ' + current.total_marks + ' marks';
@@ -167,6 +168,8 @@
             answers[event.target.dataset.question] = event.target.value;
             remember(answers);
             updateAnswered();
+            // Saved on the server too, so a lost connection or closed tab loses nothing.
+            ui.api('PUT', base + '/online-tests/' + current.test_id + '/answers', { answers: [{ question_id: Number(event.target.dataset.question), option_id: Number(event.target.value) }] }).catch(function () {});
         }
     });
 
