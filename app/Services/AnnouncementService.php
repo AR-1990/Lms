@@ -318,11 +318,8 @@ class AnnouncementService
 
     private function deliver(Announcement $announcement): int
     {
-        $channels = array_merge($announcement->send_push ? ['in_app', 'push'] : [], $announcement->send_sms ? ['sms'] : [], $announcement->send_email ? ['email'] : []);
-
-        if ($channels === []) {
-            return 0;
-        }
+        // Always in the portal; push, SMS and email only when ticked.
+        $channels = array_merge(['in_app'], $announcement->send_push ? ['push'] : [], $announcement->send_sms ? ['sms'] : [], $announcement->send_email ? ['email'] : []);
 
         return $this->notificationService->notify(
             $this->recipientIds($announcement), 'announcement', $announcement->title, $announcement->summary ?? Str::limit(strip_tags($announcement->body), 300),

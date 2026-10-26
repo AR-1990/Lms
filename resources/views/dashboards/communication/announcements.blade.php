@@ -118,7 +118,7 @@
                 'is_pinned' => ['Pin to the top', false],
                 'is_urgent' => ['Urgent (red banner)', false],
                 'requires_acknowledgement' => ['Ask people to confirm "I have read this"', false],
-                'send_push' => ['Bell + mobile push', true],
+                'send_push' => ['Mobile push (always shown in the portal bell)', true],
                 'send_sms' => ['SMS', false],
                 'send_email' => ['Email', false],
             ] as $switchName => [$switchLabel, $switchOn])

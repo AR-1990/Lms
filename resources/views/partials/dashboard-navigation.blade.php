@@ -32,6 +32,13 @@
     </nav>
 
     <div class="dash-sidebar-foot">
+        <a href="{{ route('guide') }}" class="dash-nav-link {{ ($active ?? null) === 'guide' ? 'is-active' : '' }}" data-tooltip="User Guide" @if (($active ?? null) === 'guide') aria-current="page" @endif>
+            <span class="dash-nav-tile dash-tone-amber">
+                @include('partials.dashboard-icon', ['name' => 'book', 'class' => 'dash-nav-icon'])
+            </span>
+            <span class="dash-nav-label">User Guide</span>
+        </a>
+
         <a href="{{ route('home') }}" class="dash-nav-link" data-tooltip="Main Website">
             <span class="dash-nav-tile dash-tone-sky">
                 @include('partials.dashboard-icon', ['name' => 'globe', 'class' => 'dash-nav-icon'])

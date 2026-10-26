@@ -11454,3 +11454,145 @@ tr.is-today td {
     min-width: 12rem;
     resize: vertical;
 }
+
+/* User guide */
+.dash-guide {
+    display: grid;
+    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.dash-guide-index {
+    position: sticky;
+    top: 5.5rem;
+    padding: 0.9rem;
+}
+
+.dash-guide-index nav {
+    display: grid;
+    gap: 0.15rem;
+    margin-top: 0.75rem;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.dash-guide-index nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    color: var(--ink, #1f2937);
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+
+.dash-guide-index nav a:hover {
+    background: rgba(29, 43, 69, 0.06);
+}
+
+.dash-guide-index nav a[hidden],
+.dash-guide-topic[hidden],
+.dash-guide-empty[hidden] {
+    display: none;
+}
+
+.dash-guide-index svg,
+.dash-guide-topic h2 svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+}
+
+.dash-guide-search {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.dash-guide-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.dash-guide-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.dash-guide-topic,
+.dash-guide-empty {
+    padding: 1.1rem 1.35rem;
+    scroll-margin-top: 5.5rem;
+}
+
+.dash-guide-topic h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+}
+
+.dash-guide-topic > p {
+    margin: 0 0 0.75rem;
+    color: var(--muted, #64748b);
+}
+
+.dash-guide-topic details {
+    border-top: 1px solid var(--line, #e2e8f0);
+}
+
+.dash-guide-topic summary {
+    padding: 0.7rem 0;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dash-guide-topic details[open] summary {
+    color: var(--brand-700, #1d2b45);
+}
+
+.dash-guide-topic ol {
+    margin: 0 0 0.75rem 1.25rem;
+    padding: 0;
+    line-height: 1.6;
+}
+
+.dash-guide-where {
+    margin: 0 0 0.4rem;
+    color: var(--muted, #64748b);
+    font-size: 0.82rem;
+}
+
+.dash-guide-tip {
+    margin: 0 0 0.85rem;
+    padding: 0.55rem 0.75rem;
+    border-left: 3px solid #c9a227;
+    border-radius: 0 8px 8px 0;
+    background: #fffdf2;
+    font-size: 0.88rem;
+}
+
+.dash-guide-tip:empty {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .dash-guide {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-guide-index {
+        position: static;
+    }
+}

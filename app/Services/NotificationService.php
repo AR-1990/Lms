@@ -38,7 +38,8 @@ class NotificationService
         }
 
         $now = now();
-        $channels = in_array('in_app', $channels, true) && app(PushService::class)->isConfigured() ? array_values(array_unique([...$channels, 'push'])) : $channels;
+        // The portal (bell) always gets the notification; push, SMS, WhatsApp and email are optional extras.
+        $channels = array_values(array_unique(['in_app', ...$channels, ...(app(PushService::class)->isConfigured() ? ['push'] : [])]));
 
         if (in_array('in_app', $channels, true)) {
             foreach (array_chunk($userIds, 500) as $chunk) {
@@ -60,7 +61,8 @@ class NotificationService
     }
 
     /**
-     * Send every active template of a system event (absent alert, result published…) with its placeholders filled.
+     * A system event (absent alert, result published…): always to the portal, plus every active SMS / email /
+     * WhatsApp template of the event, with its placeholders filled.
      *
      * @param  array<int, int>  $userIds
      * @param  array<string, string|null>  $placeholders
@@ -70,8 +72,13 @@ class NotificationService
         $placeholders['school_name'] ??= SystemSetting::query()->value('school_name');
         $fill = fn (?string $text): ?string => $text === null ? null : strtr($text, collect($placeholders)->mapWithKeys(fn (?string $value, string $key): array => ['{'.$key.'}' => (string) $value])->all());
 
-        foreach (MessageTemplate::where('event_key', $eventKey)->where('is_active', true)->get() as $template) {
-            $this->notify($userIds, $eventKey, $fill($template->subject) ?? MessageTemplate::EVENTS[$eventKey][0], $fill($template->body), $url, $subject, false, [$template->channel], $template->id);
+        $templates = MessageTemplate::where('event_key', $eventKey)->where('is_active', true)->get();
+        // The portal always gets it: the bell template's words, else another template's, else the event's name.
+        $bell = $templates->firstWhere('channel', 'in_app') ?? $templates->first();
+        $this->notify($userIds, $eventKey, $fill($bell?->subject) ?? MessageTemplate::EVENTS[$eventKey][0], $fill($bell?->body), $url, $subject, false, [], $bell?->id);
+
+        foreach ($templates->where('channel', '!=', 'in_app') as $template) {
+            $this->log($template->channel, array_values(array_unique(array_filter($userIds))), $eventKey, $fill($template->subject) ?? MessageTemplate::EVENTS[$eventKey][0], (string) $fill($template->body), $template->id);
         }
     }
 

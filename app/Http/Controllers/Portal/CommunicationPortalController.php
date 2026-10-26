@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Models\AnnouncementCategory;
 use App\Models\Department;
+use App\Models\Employee;
 use App\Models\MessageTemplate;
 use App\Models\Role;
 use App\Models\SchoolClass;
@@ -59,6 +60,18 @@ class CommunicationPortalController extends PortalController
         return $this->page('dashboards.communication.notices', $user->roles->first()->slug ?? 'user', 'notices', [
             'announcements' => $announcementService->feedFor($user)->paginate(10)->withQueryString(),
             'open_id' => $request->integer('announcement') ?: null,
+        ]);
+    }
+
+    /**
+     * User guide: how to use each screen, showing only the topics this user's permissions open.
+     */
+    public function guide(): View
+    {
+        $user = $this->portalUser();
+
+        return $this->page('dashboards.guide', $user->roles->first()->slug ?? 'user', 'guide', [
+            'is_staff' => Employee::where('user_id', $user->id)->exists(),
         ]);
     }
 

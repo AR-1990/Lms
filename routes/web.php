@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/boards', [CollaborationPortalController::class, 'boards'])->name('boards');
         Route::get('/boards/{board}', [CollaborationPortalController::class, 'board'])->name('board');
     });
+    Route::get('/guide', [CommunicationPortalController::class, 'guide'])->name('guide');
     Route::get('/my-notes', [CommunicationPortalController::class, 'notes'])->defaults('view', 'active')->name('my-notes');
     Route::get('/my-notes/done', [CommunicationPortalController::class, 'notes'])->defaults('view', 'done')->name('my-notes.done');
     Route::get('/my-notes/archived', [CommunicationPortalController::class, 'notes'])->defaults('view', 'archived')->name('my-notes.archived');

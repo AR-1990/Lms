@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\MessageTemplate;
 use App\Models\NotificationLog;
 use App\Models\User;
+use App\Models\UserNotification;
 use App\Services\NotificationService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,5 +62,18 @@ class MessagingGatewayTest extends TestCase
         $failed = NotificationLog::where('channel', 'whatsapp')->latest('id')->first();
         $this->assertSame('failed', $failed->status);
         $this->assertStringContainsString('429', $failed->error);
+    }
+
+    public function test_every_notification_reaches_the_portal_even_when_only_other_channels_are_chosen(): void
+    {
+        MessageTemplate::where('event_key', 'payment_received')->where('channel', 'in_app')->update(['is_active' => false]);
+
+        $this->sendPaymentMessage();
+        $bell = UserNotification::where('user_id', $this->parent->id)->where('event_key', 'payment_received')->firstOrFail();
+        $this->assertStringContainsString('John Doe', $bell->body);
+        $this->assertSame(1, NotificationLog::where('channel', 'sms')->count());
+
+        app(NotificationService::class)->notify([$this->parent->id], 'notice', 'School closed', 'Closed tomorrow.', null, null, false, ['whatsapp']);
+        $this->assertTrue(UserNotification::where('user_id', $this->parent->id)->where('title', 'School closed')->exists());
     }
 }
