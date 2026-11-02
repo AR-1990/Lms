@@ -137,4 +137,22 @@ class AuthDeviceTest extends TestCase
         $this->withToken($phoneToken)->getJson('/api/erp/devices')->assertUnauthorized();
         $this->assertDatabaseHas('activity_logs', ['module' => 'auth', 'action' => 'device_revoked']);
     }
+
+    public function test_a_signed_in_user_changes_their_own_password_only_with_the_current_one(): void
+    {
+        $token = $this->apiLogin('parent@lms.test', ['device_id' => 'parent-phone', 'platform' => 'android']);
+
+        $this->withToken($token)->putJson('/api/password', ['current_password' => 'wrong-one', 'password' => 'NewPass123', 'password_confirmation' => 'NewPass123'])
+            ->assertUnprocessable()->assertJsonPath('success', false)->assertJsonValidationErrors('current_password', 'errors.fields');
+        $this->withToken($token)->putJson('/api/password', ['current_password' => 'password', 'password' => 'NewPass123', 'password_confirmation' => 'Different1'])
+            ->assertUnprocessable()->assertJsonValidationErrors('password', 'errors.fields');
+
+        $this->withToken($token)->putJson('/api/password', ['current_password' => 'password', 'password' => 'NewPass123', 'password_confirmation' => 'NewPass123'])
+            ->assertOk()->assertJsonPath('message', 'Your password has been changed.');
+
+        $this->postJson('/api/login', ['email' => 'parent@lms.test', 'password' => 'NewPass123'])->assertOk();
+        $this->assertDatabaseHas('activity_logs', ['module' => 'auth', 'action' => 'password_changed']);
+        $this->app['auth']->forgetGuards();
+        $this->flushHeaders()->putJson('/api/password', ['current_password' => 'NewPass123', 'password' => 'Another123', 'password_confirmation' => 'Another123'])->assertUnauthorized();
+    }
 }

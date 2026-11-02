@@ -161,10 +161,15 @@ class AttendanceController extends Controller
      */
     private function leaveFilters(Request $request): array
     {
-        $filters = ['status' => $request->validate(['status' => ['nullable', Rule::in(StudentLeaveRequest::STATUSES)]])['status'] ?? null];
+        $validated = $request->validate(['status' => ['nullable', Rule::in(StudentLeaveRequest::STATUSES)], 'student_id' => ['nullable', 'integer']]);
+        $filters = ['status' => $validated['status'] ?? null];
 
         if (! $request->user()->hasPermission('record-attendance')) {
             $filters['student_ids'] = Student::ownIdsFor($request->user());
+        }
+
+        if (isset($validated['student_id'])) {
+            $filters['student_ids'] = array_values(array_intersect($filters['student_ids'] ?? [(int) $validated['student_id']], [(int) $validated['student_id']]));
         }
 
         return $filters;

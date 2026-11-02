@@ -37,6 +37,9 @@ class PushService
                 'token' => $device->push_token,
                 'notification' => ['title' => $title, 'body' => (string) $body],
                 'data' => array_map('strval', $data),
+                // High priority so a sleeping phone shows it at once instead of batching it for later.
+                'android' => ['priority' => 'high', 'notification' => ['channel_id' => 'school_alerts', 'sound' => 'default']],
+                'apns' => ['headers' => ['apns-priority' => '10'], 'payload' => ['aps' => ['sound' => 'default']]],
             ]]);
 
             if ($response->successful()) {

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SystemSetting;
 use App\Services\PublicSiteService;
+use App\Services\PushService;
 use App\Services\SystemSettingsService;
 use App\Services\WebsitePageService;
 use App\Traits\ApiResponse;
@@ -29,6 +31,31 @@ class PublicSiteController extends Controller
             'shared' => $this->pageService->present($site['page']),
             'home' => $this->siteService->home(),
         ], 'Site retrieved.');
+    }
+
+    /**
+     * What the mobile app needs after the user enters this school's address, before sign-in: name, logo
+     * (the URL changes with each upload, so the phone keeps its saved copy until then) and the live-updates server.
+     */
+    public function appConfig(PushService $pushService): JsonResponse
+    {
+        $settings = SystemSetting::query()->first(['school_name', 'school_tagline', 'logo_path']);
+        $reverb = config('broadcasting.connections.reverb');
+
+        return $this->successResponse([
+            'school_name' => $settings?->school_name ?? config('app.name'),
+            'school_tagline' => $settings?->school_tagline,
+            'logo_url' => $settings?->logo_path ? route('school-logo', ['v' => basename($settings->logo_path)]) : null,
+            'logo_version' => $settings?->logo_path ? basename($settings->logo_path) : null,
+            'realtime' => config('broadcasting.default') === 'reverb' ? [
+                'key' => $reverb['key'],
+                'host' => $reverb['options']['host'],
+                'port' => (int) $reverb['options']['port'],
+                'scheme' => $reverb['options']['scheme'],
+                'auth_url' => url('/api/broadcasting/auth'),
+            ] : null,
+            'push_enabled' => $pushService->isConfigured(),
+        ], 'App settings retrieved.');
     }
 
     public function page(string $slug): JsonResponse

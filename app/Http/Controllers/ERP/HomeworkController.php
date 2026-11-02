@@ -84,11 +84,15 @@ class HomeworkController extends Controller
      */
     private function filters(Request $request): array
     {
-        $validated = $request->validate(['section_id' => ['nullable', 'integer'], 'subject_id' => ['nullable', 'integer']]);
+        $validated = $request->validate(['section_id' => ['nullable', 'integer'], 'subject_id' => ['nullable', 'integer'], 'student_id' => ['nullable', 'integer']]);
         $filters = ['section_id' => isset($validated['section_id']) ? (int) $validated['section_id'] : null, 'subject_id' => isset($validated['subject_id']) ? (int) $validated['subject_id'] : null];
 
         if (! $request->user()->hasPermission('manage-diary')) {
-            $filters['section_ids'] = Enrollment::whereIn('student_id', Student::ownIdsFor($request->user()))->where('status', 'active')->pluck('section_id')->filter()->all();
+            // A family may pick one child: only that child's class, with the child's own submission.
+            $studentIds = Student::ownIdsFor($request->user());
+            $studentIds = isset($validated['student_id']) ? array_values(array_intersect($studentIds, [(int) $validated['student_id']])) : $studentIds;
+            $filters['section_ids'] = Enrollment::whereIn('student_id', $studentIds)->where('status', 'active')->pluck('section_id')->filter()->all();
+            $filters['student_id'] = isset($validated['student_id']) ? ($studentIds[0] ?? 0) : null;
         }
 
         return $filters;

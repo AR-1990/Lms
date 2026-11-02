@@ -100,6 +100,7 @@ use Illuminate\Support\Facades\Route;
 // Public website content for the mobile apps (the same data as the website pages; no sign-in).
 Route::prefix('site')->name('site.')->middleware([ForceJsonResponse::class, 'throttle:60,1'])->group(function () {
     Route::get('/', [PublicSiteController::class, 'index'])->name('index');
+    Route::get('app-config', [PublicSiteController::class, 'appConfig'])->name('app-config');
     Route::get('news', [PublicSiteController::class, 'news'])->name('news');
     Route::get('contact', [PublicSiteController::class, 'contact'])->name('contact');
     Route::get('pages/{slug}', [PublicSiteController::class, 'page'])->where('slug', '[a-z0-9-]+')->name('pages.show');
@@ -123,6 +124,7 @@ Route::middleware(ForceJsonResponse::class)->name('api.')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me', [AuthController::class, 'me'])->name('me');
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+        Route::put('password', [AuthController::class, 'changePassword'])->middleware('throttle:password-reset')->name('password.change');
     });
 });
 
@@ -1001,6 +1003,7 @@ Route::middleware([ForceJsonResponse::class, 'auth:sanctum'])->prefix('erp')->na
     Route::prefix('teacher')->group(function () {
         Route::get('dashboard', [TeacherController::class, 'dashboard'])->middleware('permission:manage-classes,record-attendance,submit-grades')->name('teacher.dashboard');
         Route::get('classes', [TeacherController::class, 'classes'])->middleware('permission:manage-classes')->name('teacher.classes');
+        Route::get('options', [TeacherController::class, 'options'])->middleware('permission:manage-classes,record-attendance,submit-grades,manage-diary')->name('teacher.options');
     });
 
     // ---------- Student ----------

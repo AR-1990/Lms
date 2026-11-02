@@ -36,4 +36,21 @@ class PublicSiteApiTest extends TestCase
             $this->get($url)->assertOk();
         }
     }
+
+    public function test_the_mobile_app_gets_the_schools_name_logo_and_live_server_before_sign_in(): void
+    {
+        config(['broadcasting.default' => 'reverb', 'broadcasting.connections.reverb.key' => 'school-key', 'broadcasting.connections.reverb.options' => ['host' => 'ws.school.test', 'port' => 443, 'scheme' => 'https']]);
+
+        $this->getJson('/api/site/app-config')->assertOk()
+            ->assertJsonPath('data.school_name', SystemSetting::query()->value('school_name'))
+            ->assertJsonPath('data.logo_url', null)
+            ->assertJsonPath('data.realtime.key', 'school-key')
+            ->assertJsonPath('data.realtime.host', 'ws.school.test')
+            ->assertJsonPath('data.push_enabled', false)
+            ->assertJsonMissingPath('data.realtime.secret');
+
+        SystemSetting::query()->update(['logo_path' => 'branding/logo-20261102.png']);
+        $this->getJson('/api/site/app-config')->assertJsonPath('data.logo_version', 'logo-20261102.png')
+            ->assertJsonPath('data.logo_url', route('school-logo', ['v' => 'logo-20261102.png']));
+    }
 }

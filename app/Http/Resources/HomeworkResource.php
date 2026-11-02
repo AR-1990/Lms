@@ -30,6 +30,8 @@ class HomeworkResource extends JsonResource
             'max_marks' => $this->max_marks,
             'allow_submission' => $this->allow_submission,
             'submitted_count' => $this->submitted_count,
+            // Only when a family asks for one child (student_id): that child's own work, or null if not handed in.
+            'my_submission' => $this->whenLoaded('submissions', fn (): ?array => ($submission = $this->submissions->first()) === null ? null : [...$submission->only(['status', 'content', 'marks', 'feedback']), 'submitted_at' => $submission->submitted_at?->toIso8601String()]),
         ];
     }
 }

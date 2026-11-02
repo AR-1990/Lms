@@ -24,6 +24,11 @@ class ChatMessage extends Model
         return ['edited_at' => 'datetime', 'deleted_for_everyone_at' => 'datetime'];
     }
 
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(ChatConversation::class, 'conversation_id');
+    }
+
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');

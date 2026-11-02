@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ChatEvent;
+use App\Jobs\SendChatPush;
 use App\Models\ChatConversation;
 use App\Models\ChatMention;
 use App\Models\ChatMessage;
@@ -399,6 +400,7 @@ class ChatService
 
         $user->forceFill(['last_seen_at' => now()])->saveQuietly();
         $this->broadcastMessage($conversation, $message, 'message.sent');
+        SendChatPush::dispatch($message->id);
 
         return $message;
     }

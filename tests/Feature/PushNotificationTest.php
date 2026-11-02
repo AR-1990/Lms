@@ -65,4 +65,32 @@ class PushNotificationTest extends TestCase
         $this->assertSame('fcm-token-1', $device->refresh()->push_token);
         $this->assertNull(UserDevice::where('device_id', 'old-iphone')->value('push_token'), 'an uninstalled app loses its token');
     }
+
+    public function test_a_chat_message_is_pushed_to_the_other_members_phones_unless_they_muted_the_chat(): void
+    {
+        $teacher = User::where('email', 'teacher@lms.test')->first();
+        $accountant = User::where('email', 'accounts@lms.test')->first();
+        UserDevice::create(['user_id' => $teacher->id, 'platform' => 'android', 'device_id' => 'teacher-phone', 'push_token' => 'teacher-token', 'is_active' => true]);
+        UserDevice::create(['user_id' => $accountant->id, 'platform' => 'android', 'device_id' => 'accounts-phone', 'push_token' => 'accounts-token', 'is_active' => true]);
+        $this->configureFirebase();
+        Http::fake([
+            'oauth2.googleapis.com/*' => Http::response(['access_token' => 'google-access', 'expires_in' => 3600]),
+            'fcm.googleapis.com/*' => Http::response(['name' => 'projects/pinnacle-school/messages/1']),
+        ]);
+
+        $chatId = $this->actingAs($teacher, 'sanctum')->postJson('/api/erp/chat/direct', ['user_id' => $accountant->id])->json('data.id');
+        $this->actingAs($teacher, 'sanctum')->postJson("/api/erp/chat/conversations/{$chatId}/messages", ['body' => 'Salary sheet ready?'])->assertCreated();
+
+        Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'messages:send')
+            && $request['message']['token'] === 'accounts-token'
+            && $request['message']['notification']['title'] === $teacher->name
+            && $request['message']['notification']['body'] === 'Salary sheet ready?'
+            && $request['message']['data']['conversation_id'] === (string) $chatId);
+        Http::assertNotSent(fn (Request $request): bool => ($request['message']['token'] ?? null) === 'teacher-token');
+
+        $this->actingAs($accountant, 'sanctum')->patchJson("/api/erp/chat/conversations/{$chatId}/preferences", ['muted' => true])->assertOk();
+        Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/pinnacle-school/messages/2'])]);
+        $this->actingAs($teacher, 'sanctum')->postJson("/api/erp/chat/conversations/{$chatId}/messages", ['body' => 'Reminder'])->assertCreated();
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'messages:send'));
+    }
 }

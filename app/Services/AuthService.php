@@ -181,6 +181,7 @@ class AuthService
         $user->update([
             'password' => Hash::make($newPassword),
         ]);
+        $this->activityLogger->record('auth', 'password_changed', "{$user->name} changed their password", $user, actor: $user);
 
         return true;
     }

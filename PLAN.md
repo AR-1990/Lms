@@ -1672,6 +1672,14 @@ Every feature is built **once** as an API. The same endpoints are used by the we
 - Chat, tasks, and live counters use the same Laravel Reverb WebSocket channels on web and mobile.
 - When the app is closed, the same events go out as push notifications through `user_devices.push_token`.
 
+**The Flutter app (`mobile/`)**
+- One app for every school. First screen asks for the school's address; `GET /api/site/app-config` (public) returns `school_name`, `school_tagline`, `logo_url` + `logo_version` (the phone keeps the logo file and downloads it again only when the version changes), the Reverb connection (`realtime`: key, host, port, scheme, auth_url; never the secret) and `push_enabled`. Then sign-in (`POST /api/login` with device_id / platform / app_version) and the role's home: parent, student, or staff (teacher screens by permission).
+- Change password: `PUT /api/password` (`current_password`, `password`, `password_confirmation`; activity-logged).
+- Teacher pickers: `GET /api/erp/teacher/options` → `sections` (own + class-teacher sections with `class_id`, `is_class_teacher` and the class's curriculum `subjects` with `is_mine`) and `exams` open for marks in those classes with their `papers`.
+- One child: `GET homework?student_id=` (families only see that child's class; each item gets `my_submission` {status, content, marks, feedback, submitted_at} or null) and `GET leave-requests?student_id=` (never another family's child).
+- Live while open: the user's `App.Models.User.{id}` channel (`notification.created`, `conversation.updated`) and `chat.{id}`. Closed: FCM push, high priority, Android channel `school_alerts`; a new chat message pushes to every other member who has not muted the chat (`SendChatPush` job). Firebase queues pushes for an offline phone and delivers them as soon as it is back online.
+- Firebase: one Firebase project for the app; every school's server uses that project's service-account key (`FIREBASE_PROJECT_ID`, `FIREBASE_CREDENTIALS`) because the push tokens belong to the app.
+
 **Mobile-friendly extras**
 - `?updated_since=` on list endpoints for incremental sync and offline caching.
 - `Accept-Language: en | ur` for translated messages.

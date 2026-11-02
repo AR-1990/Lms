@@ -31,7 +31,8 @@ class HomeworkService
             ->withCount(['submissions as submitted_count' => fn (Builder $query) => $query->whereIn('status', ['submitted', 'late', 'graded'])])
             ->when($filters['section_id'] ?? null, fn (Builder $query, int $id) => $query->where('section_id', $id))
             ->when($filters['subject_id'] ?? null, fn (Builder $query, int $id) => $query->where('subject_id', $id))
-            ->when(array_key_exists('section_ids', $filters), fn (Builder $query) => $query->whereIn('section_id', $filters['section_ids']));
+            ->when(array_key_exists('section_ids', $filters), fn (Builder $query) => $query->whereIn('section_id', $filters['section_ids']))
+            ->when($filters['student_id'] ?? null, fn (Builder $query, int $id) => $query->with(['submissions' => fn ($submissions) => $submissions->where('student_id', $id)]));
     }
 
     /**

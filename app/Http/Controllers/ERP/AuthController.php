@@ -83,6 +83,20 @@ class AuthController extends Controller
     }
 
     /**
+     * Change the signed-in user's own password (web and mobile).
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'max:100', 'confirmed', 'different:current_password'],
+        ]);
+        $this->authService->changePassword($request->user(), $data['current_password'], $data['password']);
+
+        return $this->successResponse(null, 'Your password has been changed.');
+    }
+
+    /**
      * Logout and invalidate access token.
      */
     public function logout(Request $request): JsonResponse

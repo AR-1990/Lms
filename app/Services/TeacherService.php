@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Models\AcademicSession;
+use App\Models\ClassSubject;
 use App\Models\Employee;
 use App\Models\Enrollment;
+use App\Models\Exam;
+use App\Models\ExamTerm;
+use App\Models\Section;
 use App\Models\StudentAttendance;
 use App\Models\TeacherAssignment;
 use App\Models\TimetableSlot;
@@ -76,6 +80,60 @@ class TeacherService
             'schedule' => $slots->where('section_id', $assignment->section_id)->where('subject_id', $assignment->subject_id)->sortBy('day_of_week')
                 ->map(fn (TimetableSlot $slot): string => ($days[$slot->day_of_week] ?? '').' '.$slot->period?->name)->values()->implode(', '),
         ])->values()->all();
+    }
+
+    /**
+     * Picker data for the teacher's screens (attendance, diary, homework, marks): the sections they teach or
+     * class-teach this session, each with its curriculum subjects (is_mine marks the ones they teach), and the
+     * exams of those classes that are open for marks.
+     *
+     * @return array{sections: array<int, array<string, mixed>>, exams: array<int, array<string, mixed>>}
+     */
+    public function options(User $user): array
+    {
+        $employeeId = $this->employeeFor($user)?->id ?? 0;
+        $sessionId = AcademicSession::where('is_current', true)->value('id');
+        $assignments = TeacherAssignment::where('employee_id', $employeeId)->where('academic_session_id', $sessionId)->get(['section_id', 'subject_id']);
+        $sections = Section::query()
+            ->join('classes', 'classes.id', '=', 'sections.class_id')
+            ->where('sections.academic_session_id', $sessionId)
+            ->where(fn ($query) => $query->where('sections.class_teacher_id', $employeeId)->orWhereIn('sections.id', $assignments->pluck('section_id')))
+            ->orderBy('classes.level_order')->orderBy('sections.name')
+            ->get(['sections.id', 'sections.name', 'sections.class_id', 'sections.class_teacher_id', 'classes.name as class_name']);
+        $subjects = ClassSubject::query()->join('subjects', 'subjects.id', '=', 'class_subject.subject_id')
+            ->where('class_subject.academic_session_id', $sessionId)->whereIn('class_subject.class_id', $sections->pluck('class_id')->unique())
+            ->orderBy('class_subject.sort_order')->orderBy('subjects.name')
+            ->get(['class_subject.class_id', 'subjects.id', 'subjects.name']);
+        $exams = Exam::whereIn('class_id', $sections->pluck('class_id')->unique())->whereIn('status', ['scheduled', 'admit_cards_issued', 'marks_entry', 'review', 'published'])
+            ->whereIn('exam_term_id', ExamTerm::where('academic_session_id', $sessionId)->select('id'))
+            ->with('subjects.subject:id,name')->latest('id')->get(['id', 'name', 'class_id', 'status']);
+
+        return [
+            'sections' => $sections->map(fn (Section $section): array => [
+                'id' => $section->id,
+                'name' => trim($section->class_name.' '.$section->name),
+                'class_id' => $section->class_id,
+                'is_class_teacher' => $section->class_teacher_id === $employeeId,
+                'subjects' => $subjects->where('class_id', $section->class_id)->map(fn ($subject): array => [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                    'is_mine' => $assignments->contains(fn ($assignment): bool => $assignment->section_id === $section->id && $assignment->subject_id === $subject->id),
+                ])->values()->all(),
+            ])->values()->all(),
+            'exams' => $exams->map(fn (Exam $exam): array => [
+                'id' => $exam->id,
+                'name' => $exam->name,
+                'class_id' => $exam->class_id,
+                'status' => $exam->status,
+                'papers' => $exam->subjects->map(fn ($paper): array => [
+                    'id' => $paper->id,
+                    'subject_id' => $paper->subject_id,
+                    'subject' => $paper->subject?->name,
+                    'theory_max_marks' => $paper->theory_max_marks,
+                    'practical_max_marks' => $paper->practical_max_marks,
+                ])->values()->all(),
+            ])->values()->all(),
+        ];
     }
 
     public function employeeFor(User $user): ?Employee

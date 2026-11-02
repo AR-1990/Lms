@@ -23,6 +23,14 @@ class TeacherController extends Controller
         return $this->successResponse($this->teacherService->getTeacherDashboard($request->user()), 'Teacher dashboard retrieved successfully.');
     }
 
+    /**
+     * The teacher's sections, subjects and open exams for the attendance, diary, homework and marks pickers.
+     */
+    public function options(Request $request): JsonResponse
+    {
+        return $this->successResponse($this->teacherService->options($request->user()), 'Teacher options retrieved.');
+    }
+
     public function classes(Request $request): JsonResponse
     {
         return $this->successResponse($this->teacherService->getAssignedClasses($request->user()), 'Assigned classes retrieved successfully.');
