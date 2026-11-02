@@ -37,6 +37,7 @@ class ChatService
         private AttachmentService $attachmentService,
         private NotificationService $notificationService,
         private ActivityLogger $activityLogger,
+        private PushService $pushService,
     ) {}
 
     /* ---------- Conversations ---------- */
@@ -400,7 +401,9 @@ class ChatService
 
         $user->forceFill(['last_seen_at' => now()])->saveQuietly();
         $this->broadcastMessage($conversation, $message, 'message.sent');
-        SendChatPush::dispatch($message->id);
+        if ($this->pushService->isConfigured()) {
+            SendChatPush::dispatch($message->id);
+        }
 
         return $message;
     }
